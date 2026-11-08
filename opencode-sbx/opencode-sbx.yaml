@@ -1,0 +1,14 @@
+schemaVersion: 1
+useSandbox: false
+canonicalDirectory: ./
+workingDirectory: ./
+name: ide-ocwp-6d1b6da13a38
+memory: 4g
+cpus: 2
+kits: []
+extraMounts: []
+shareHostOpencodeConfig: false
+openCodeVersion: 1.x
+enableIntellijMcp: true
+protectSandboxFiles: true
+persistSandboxSessions: true
