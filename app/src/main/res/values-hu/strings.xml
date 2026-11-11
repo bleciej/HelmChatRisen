@@ -1,0 +1,83 @@
+<resources>
+    <string name="app_name">HelmChatReborn</string>
+
+    <!-- Home / join screen -->
+    <string name="home_title">HelmChat - Reborn</string>
+    <string name="home_tagline">Hangos interkom motorosoknak</string>
+    <string name="home_mode_badge">Csak hang mód</string>
+    <string name="home_recent_section">Legutóbbi szobák</string>
+    <string name="home_recent_clear">Törlés</string>
+    <string name="home_recent_delete">Szoba törlése: %1$s</string>
+    <string name="home_room_section">Szoba</string>
+    <string name="home_room_label">Szoba neve</string>
+    <string name="home_room_placeholder">pl. vasarnapi-tura</string>
+    <string name="home_display_name_label">Neved (nem kötelező)</string>
+    <string name="home_server_section">Szerver</string>
+    <string name="home_server_custom_label">Jitsi szerver címe</string>
+    <string name="home_server_custom_support">pl. https://sajat-szerver.hu</string>
+    <string name="home_server_invalid">Adj meg érvényes szervercímet</string>
+    <string name="home_jwt_label">JWT token (nem kötelező)</string>
+    <string name="home_jwt_placeholder">pl. eyJhbGciOiJIUzI1NiIs…</string>
+    <string name="home_jwt_support">Csak JWT-hitelesítést használó szervereknél szükséges</string>
+    <string name="home_meet_jitsi_title">A meet.jit.si bejelentkezést igényel</string>
+    <string name="home_meet_jitsi_warning">Ez a szerver bejelentkezett moderátort igényel (Google/GitHub/Facebook). Nyisd meg a szobát a böngészőben, jelentkezz be és indítsd el a megbeszélést, majd gyere vissza és csatlakozz résztvevőként.</string>
+    <string name="home_meet_jitsi_password_note">Megjegyzés: a jelszóval védett szobák ebben az alkalmazásban nem feltétlenül nyílnak meg — használj jelszó nélküli szobát vagy másik szervert.</string>
+    <string name="home_meet_jitsi_open">Szoba megnyitása böngészőben</string>
+    <string name="home_meet_jitsi_host">Én vagyok a házigazda</string>
+    <string name="home_join">Csatlakozás a híváshoz</string>
+    <string name="home_join_hint">Csak hangkapcsolat — nincs videó, kevesebb adat és hosszabb akkumulátor-élettartam.</string>
+    <string name="home_invite">Meghívás</string>
+    <string name="home_invite_message">Csatlakozz a HelmChat interkomomhoz!\nSzoba: %1$s\nLink: %2$s</string>
+
+    <!-- Call screen -->
+    <string name="call_connecting">Csatlakozás…</string>
+    <string name="call_connected">Csatlakozva</string>
+    <string name="call_mute">Mikrofon némítása</string>
+    <string name="call_unmute">Mikrofon bekapcsolása</string>
+    <string name="call_leave">Hívás befejezése</string>
+    <string name="call_speaker_on">Telefon hangszóró</string>
+    <string name="call_speaker_off">Interkom / headset</string>
+    <string name="call_route_bluetooth">Interkom: %1$s</string>
+    <string name="call_route_connecting">Csatlakozás az interkomhoz…</string>
+    <string name="call_participants">Résztvevők: %1$d</string>
+    <string name="call_error">Kapcsolódási hiba: %1$s</string>
+    <string name="call_reconnecting">Újracsatlakozás…</string>
+    <string name="call_reconnecting_hint">A kapcsolat megszakadt — automatikus újracsatlakozás…</string>
+    <string name="call_pip_enter">Kicsinyítés kép a képben módba</string>
+    <string name="call_host_setup_title">Házigazda bejelentkezés</string>
+    <string name="call_host_setup_body">Jelentkezzen be Google, GitHub vagy Facebook fiókkal, és indítsa el a megbeszélést. Ezután koppintson a „Kész” gombra.</string>
+    <string name="call_host_setup_done">Kész</string>
+    <string name="call_placeholder_title">Nincs aktív hívás</string>
+    <string name="call_placeholder_body">Add meg a szoba nevét és csatlakozz az interkom indításához.</string>
+
+    <!-- Runtime permissions -->
+    <string name="permission_title">Engedélyek szükségesek</string>
+    <string name="permission_body">A hanghíváshoz a HelmChatnak hozzáférésre van szüksége a mikrofonhoz, Android 12+ esetén pedig a Bluetooth-eszközökhöz is. Engedélyezd ezeket az alkalmazás beállításaiban.</string>
+    <string name="permission_open_settings">Beállítások megnyitása</string>
+    <string name="permission_cancel">Mégse</string>
+
+    <!-- Ongoing call notification -->
+    <string name="notification_channel_name">HelmChat hívás</string>
+    <string name="notification_channel_description">Értesítések az aktív interkomhívásról</string>
+    <string name="notification_title">HelmChat — %1$s</string>
+    <string name="notification_connected">Csatlakozva</string>
+    <string name="notification_connecting">Csatlakozás…</string>
+    <string name="notification_reconnecting">Újracsatlakozás…</string>
+    <string name="notification_mute">Némítás</string>
+    <string name="notification_unmute">Mikrofon bekapcsolása</string>
+    <string name="notification_end">Befejezés</string>
+
+    <!-- Public server presets -->
+    <string name="home_server_custom_switch">Egyéni szerver</string>
+    <string name="server_netcup_description">Legjobb kapcsolatminőség — Netcup adatközpont Németországban.</string>
+    <string name="server_ffmuc_description">Stabil közösségi projekt a Freifunk Münchentől.</string>
+    <string name="server_ccc_description">Biztonság és adatvédelem — Chaos Computer Club München.</string>
+    <string name="server_fairmeeting_description">Osztrák Fairkom szerver — tiszta hang.</string>
+    <string name="server_systemli_description">Névtelenség — a Systemli hálózati kollektíva.</string>
+
+    <!-- Language selection -->
+    <string name="language_button">Nyelv módosítása</string>
+    <string name="language_dialog_title">Alkalmazás nyelve</string>
+    <string name="language_system">Rendszer nyelve</string>
+    <string name="language_close">Bezárás</string>
+</resources>

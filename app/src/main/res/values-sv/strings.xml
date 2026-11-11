@@ -1,0 +1,83 @@
+<resources>
+    <string name="app_name">HelmChatReborn</string>
+
+    <!-- Home / join screen -->
+    <string name="home_title">HelmChat - Reborn</string>
+    <string name="home_tagline">Röstintercom för motorcyklister</string>
+    <string name="home_mode_badge">Endast ljudläge</string>
+    <string name="home_recent_section">Senaste rum</string>
+    <string name="home_recent_clear">Rensa</string>
+    <string name="home_recent_delete">Ta bort rum %1$s</string>
+    <string name="home_room_section">Rum</string>
+    <string name="home_room_label">Rumsnamn</string>
+    <string name="home_room_placeholder">t.ex. söndagstur</string>
+    <string name="home_display_name_label">Ditt namn (valfritt)</string>
+    <string name="home_server_section">Server</string>
+    <string name="home_server_custom_label">Jitsi-serveradress</string>
+    <string name="home_server_custom_support">t.ex. https://min-server.se</string>
+    <string name="home_server_invalid">Ange en giltig serveradress</string>
+    <string name="home_jwt_label">JWT-token (valfritt)</string>
+    <string name="home_jwt_placeholder">t.ex. eyJhbGciOiJIUzI1NiIs…</string>
+    <string name="home_jwt_support">Krävs endast av servrar med JWT-autentisering</string>
+    <string name="home_meet_jitsi_title">meet.jit.si kräver inloggning</string>
+    <string name="home_meet_jitsi_warning">Den här servern kräver en inloggad moderator (Google/GitHub/Facebook). Öppna rummet i webbläsaren, logga in och starta mötet, kom sedan tillbaka hit och anslut som deltagare.</string>
+    <string name="home_meet_jitsi_password_note">Obs: lösenordsskyddade rum kanske inte öppnas i den här appen — använd ett rum utan lösenord eller en annan server.</string>
+    <string name="home_meet_jitsi_open">Öppna rummet i webbläsaren</string>
+    <string name="home_meet_jitsi_host">Jag är värden</string>
+    <string name="home_join">Anslut till samtal</string>
+    <string name="home_join_hint">Endast röstanslutning — ingen video, mindre data och längre batteritid.</string>
+    <string name="home_invite">Bjud in</string>
+    <string name="home_invite_message">Gå med i min HelmChat-intercom!\nRum: %1$s\nLänk: %2$s</string>
+
+    <!-- Call screen -->
+    <string name="call_connecting">Ansluter…</string>
+    <string name="call_connected">Ansluten</string>
+    <string name="call_mute">Stäng av mikrofonen</string>
+    <string name="call_unmute">Slå på mikrofonen</string>
+    <string name="call_leave">Avsluta samtal</string>
+    <string name="call_speaker_on">Telefonhögtalare</string>
+    <string name="call_speaker_off">Intercom / headset</string>
+    <string name="call_route_bluetooth">Intercom: %1$s</string>
+    <string name="call_route_connecting">Ansluter till intercom…</string>
+    <string name="call_participants">Deltagare: %1$d</string>
+    <string name="call_error">Anslutningsfel: %1$s</string>
+    <string name="call_reconnecting">Återansluter…</string>
+    <string name="call_reconnecting_hint">Anslutningen bröts — återansluter automatiskt…</string>
+    <string name="call_pip_enter">Minimera till bild-i-bild</string>
+    <string name="call_host_setup_title">Värdinloggning</string>
+    <string name="call_host_setup_body">Logga in med Google, GitHub eller Facebook och starta mötet. Tryck sedan på ”Klart”.</string>
+    <string name="call_host_setup_done">Klart</string>
+    <string name="call_placeholder_title">Inget aktivt samtal</string>
+    <string name="call_placeholder_body">Ange ett rumsnamn och anslut för att starta intercomen.</string>
+
+    <!-- Runtime permissions -->
+    <string name="permission_title">Behörigheter krävs</string>
+    <string name="permission_body">För att ringa röstsamtal behöver HelmChat åtkomst till mikrofonen och, på Android 12+, även till Bluetooth-enheter. Tillåt dessa behörigheter i appens inställningar.</string>
+    <string name="permission_open_settings">Öppna inställningar</string>
+    <string name="permission_cancel">Avbryt</string>
+
+    <!-- Ongoing call notification -->
+    <string name="notification_channel_name">HelmChat-samtal</string>
+    <string name="notification_channel_description">Aviseringar om ett aktivt intercomsamtal</string>
+    <string name="notification_title">HelmChat — %1$s</string>
+    <string name="notification_connected">Ansluten</string>
+    <string name="notification_connecting">Ansluter…</string>
+    <string name="notification_reconnecting">Återansluter…</string>
+    <string name="notification_mute">Tysta</string>
+    <string name="notification_unmute">Slå på mikrofonen</string>
+    <string name="notification_end">Avsluta</string>
+
+    <!-- Public server presets -->
+    <string name="home_server_custom_switch">Anpassad server</string>
+    <string name="server_netcup_description">Bästa länkkvalitet — Netcup-datacenter i Tyskland.</string>
+    <string name="server_ffmuc_description">Stabilt communityprojekt av Freifunk München.</string>
+    <string name="server_ccc_description">Säkerhet och integritet — Chaos Computer Club München.</string>
+    <string name="server_fairmeeting_description">Österrikisk Fairkom-server — rent ljud.</string>
+    <string name="server_systemli_description">Anonymitet — nätverkskollektivet Systemli.</string>
+
+    <!-- Language selection -->
+    <string name="language_button">Byt språk</string>
+    <string name="language_dialog_title">Appens språk</string>
+    <string name="language_system">Systemets språk</string>
+    <string name="language_close">Stäng</string>
+</resources>

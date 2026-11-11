@@ -30,9 +30,10 @@ sealed class AudioRoutingState {
 /**
  * Audio and Bluetooth SCO routing helper for helmet intercom headsets (Sena, Cardo, Packtalk, etc.)
  *
- * Jitsi's own `AudioModeModule` owns audio focus and the normal in-call route. This router is a
- * singleton used by the UI only for the manual speaker/helmet toggle and for exposing a route
- * label. It intentionally does not request audio focus or start SCO on its own during a call.
+ * Jitsi's own `AudioModeModule` audio focus handling is disabled (`audio-focus.disabled`), so
+ * this router owns the in-call audio mode, the helmet route and audio focus. It requests
+ * transient-may-duck focus so background music keeps playing quietly instead of pausing, and
+ * navigation voice prompts do not tear the call down.
  */
 class BluetoothAudioRouter private constructor(private val context: Context) {
 
@@ -69,7 +70,9 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
             }
             AudioManager.AUDIOFOCUS_LOSS,
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
-                Log.w(TAG, "Audio focus LOST or LOST_TRANSIENT")
+                // Keep the communication mode and microphone alive. Navigation prompts and
+                // other short announcements may take focus, but must not stop the intercom.
+                Log.w(TAG, "Audio focus LOST or LOST_TRANSIENT, keeping call audio alive")
             }
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
                 Log.d(TAG, "Audio focus LOST_TRANSIENT_CAN_DUCK")
@@ -310,7 +313,7 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
                 .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                 .build()
 
-            val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+            val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
                 .setAudioAttributes(playbackAttributes)
                 .setAcceptsDelayedFocusGain(true)
                 .setOnAudioFocusChangeListener(audioFocusChangeListener)
@@ -323,7 +326,7 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
             audioManager.requestAudioFocus(
                 audioFocusChangeListener,
                 AudioManager.STREAM_VOICE_CALL,
-                AudioManager.AUDIOFOCUS_GAIN
+                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
             )
         }
 

@@ -48,4 +48,15 @@ class JitsiCallManagerTest {
 
         assertNotNull(options)
     }
+
+    @Test
+    fun buildConferenceOptions_setsJwtToken() {
+        val options = callManager.buildConferenceOptions(
+            roomName = "TestRideGroup123",
+            serverUrl = "https://jitsi.example.com",
+            token = "abc.def.ghi",
+        )
+
+        assertEquals("abc.def.ghi", options.token)
+    }
 }

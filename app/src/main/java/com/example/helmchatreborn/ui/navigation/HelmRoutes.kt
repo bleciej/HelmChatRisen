@@ -20,4 +20,11 @@ data class CallRoute(
     val roomName: String,
     val serverUrl: String,
     val displayName: String? = null,
+    val token: String? = null,
+    /**
+     * When true the embedded Jitsi UI is shown interactively so the rider can sign in and
+     * start a meet.jit.si room as its moderator. Once the room is running the normal
+     * motorcycle overlay can be restored.
+     */
+    val hostSetup: Boolean = false,
 ) : NavKey

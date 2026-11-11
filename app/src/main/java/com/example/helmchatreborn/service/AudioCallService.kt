@@ -16,6 +16,7 @@ import androidx.core.content.ContextCompat
 import com.example.helmchatreborn.MainActivity
 import com.example.helmchatreborn.R
 import com.example.helmchatreborn.audio.BluetoothAudioRouter
+import com.example.helmchatreborn.data.AppLanguage
 import com.example.helmchatreborn.jitsi.CallState
 import com.example.helmchatreborn.jitsi.JitsiCallManager
 import kotlinx.coroutines.CoroutineScope
@@ -34,6 +35,14 @@ import kotlinx.coroutines.flow.onEach
  * does that from the Compose UI.
  */
 class AudioCallService : Service() {
+
+    /**
+     * Keeps the foreground notification (channel name, description, actions) in the language
+     * chosen by the rider on Android 12L and lower.
+     */
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLanguage.wrapContext(newBase))
+    }
 
     companion object {
         private const val TAG = "AudioCallService"
@@ -74,7 +83,6 @@ class AudioCallService : Service() {
     private lateinit var jitsiCallManager: JitsiCallManager
 
     private var callActive = false
-    private var isConnected = false
     private var activeRoomName: String = ""
     private var activeServerUrl: String = JitsiCallManager.DEFAULT_SERVER_URL
 
@@ -88,11 +96,18 @@ class AudioCallService : Service() {
         jitsiCallManager.callState.onEach { state ->
             when (state) {
                 is CallState.Connecting -> {
-                    isConnected = false
                     updateNotification()
                 }
                 is CallState.Connected -> {
-                    isConnected = true
+                    if (activeRoomName.isBlank()) {
+                        activeRoomName = state.roomName
+                    }
+                    activeServerUrl = state.serverUrl
+                    updateNotification()
+                }
+                is CallState.Reconnecting -> {
+                    // Jitsi is reloading the conference; keep the service, mic and audio route
+                    // alive so the call resumes without the rider doing anything.
                     if (activeRoomName.isBlank()) {
                         activeRoomName = state.roomName
                     }
@@ -101,7 +116,6 @@ class AudioCallService : Service() {
                 }
                 is CallState.Error -> {
                     Log.e(TAG, "Call error: ${state.message}")
-                    isConnected = false
                     updateNotification()
                 }
                 is CallState.Idle -> {
@@ -114,6 +128,12 @@ class AudioCallService : Service() {
         }.launchIn(serviceScope)
 
         jitsiCallManager.isMuted.onEach {
+            if (callActive) {
+                updateNotification()
+            }
+        }.launchIn(serviceScope)
+
+        jitsiCallManager.isNetworkAvailable.onEach {
             if (callActive) {
                 updateNotification()
             }
@@ -143,6 +163,7 @@ class AudioCallService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "AudioCallService destroyed")
+        bluetoothAudioRouter.stopAudioRouting()
         bluetoothAudioRouter.resetForNewCall()
         serviceScope.cancel()
     }
@@ -156,9 +177,11 @@ class AudioCallService : Service() {
 
         activeRoomName = roomName
         activeServerUrl = serverUrl
-        isConnected = false
         callActive = true
         bluetoothAudioRouter.resetForNewCall()
+        // Own the communication audio mode and helmet route for the whole call. Jitsi's own
+        // audio focus handling is disabled so music keeps playing (ducked).
+        bluetoothAudioRouter.startAudioRouting()
 
         val notification = buildNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -239,10 +262,14 @@ class AudioCallService : Service() {
         )
 
         val muted = jitsiCallManager.isMuted.value
-        val status = if (isConnected) {
-            getString(R.string.notification_connected)
-        } else {
-            getString(R.string.notification_connecting)
+        val status = when {
+            !jitsiCallManager.isNetworkAvailable.value ->
+                getString(R.string.notification_reconnecting)
+            jitsiCallManager.callState.value is CallState.Connected ->
+                getString(R.string.notification_connected)
+            jitsiCallManager.callState.value is CallState.Reconnecting ->
+                getString(R.string.notification_reconnecting)
+            else -> getString(R.string.notification_connecting)
         }
 
         return NotificationCompat.Builder(this, CHANNEL_ID)

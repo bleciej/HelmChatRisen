@@ -1,0 +1,83 @@
+<resources>
+    <string name="app_name">HelmChatReborn</string>
+
+    <!-- Home / join screen -->
+    <string name="home_title">HelmChat - Reborn</string>
+    <string name="home_tagline">Гласов интерком за мотоциклетисти</string>
+    <string name="home_mode_badge">Режим само звук</string>
+    <string name="home_recent_section">Последни стаи</string>
+    <string name="home_recent_clear">Изчисти</string>
+    <string name="home_recent_delete">Изтрий стая %1$s</string>
+    <string name="home_room_section">Стая</string>
+    <string name="home_room_label">Име на стаята</string>
+    <string name="home_room_placeholder">напр. nedelna-razhodka</string>
+    <string name="home_display_name_label">Вашето име (по избор)</string>
+    <string name="home_server_section">Сървър</string>
+    <string name="home_server_custom_label">Адрес на Jitsi сървър</string>
+    <string name="home_server_custom_support">напр. https://moyat-server.bg</string>
+    <string name="home_server_invalid">Въведете валиден адрес на сървър</string>
+    <string name="home_jwt_label">JWT токен (по избор)</string>
+    <string name="home_jwt_placeholder">напр. eyJhbGciOiJIUzI1NiIs…</string>
+    <string name="home_jwt_support">Изисква се само от сървъри с JWT удостоверяване</string>
+    <string name="home_meet_jitsi_title">meet.jit.si изисква влизане</string>
+    <string name="home_meet_jitsi_warning">Този сървър изисква влязъл модератор (Google/GitHub/Facebook). Отворете стаята в браузъра, влезте и започнете срещата, след което се върнете тук и се присъединете като участник.</string>
+    <string name="home_meet_jitsi_password_note">Забележка: стаите със парола може да не се отворят в това приложение — използвайте стая без парола или друг сървър.</string>
+    <string name="home_meet_jitsi_open">Отвори стаята в браузъра</string>
+    <string name="home_meet_jitsi_host">Аз съм домакинът</string>
+    <string name="home_join">Присъедини се към разговора</string>
+    <string name="home_join_hint">Връзка само с глас — без видео, по-малко данни и по-дълъг живот на батерията.</string>
+    <string name="home_invite">Покани</string>
+    <string name="home_invite_message">Присъедини се към моя интерком HelmChat!\nСтая: %1$s\nВръзка: %2$s</string>
+
+    <!-- Call screen -->
+    <string name="call_connecting">Свързване…</string>
+    <string name="call_connected">Свързано</string>
+    <string name="call_mute">Заглуши микрофона</string>
+    <string name="call_unmute">Включи микрофона</string>
+    <string name="call_leave">Край на разговора</string>
+    <string name="call_speaker_on">Високоговорител на телефона</string>
+    <string name="call_speaker_off">Интерком / слушалки</string>
+    <string name="call_route_bluetooth">Интерком: %1$s</string>
+    <string name="call_route_connecting">Свързване с интеркома…</string>
+    <string name="call_participants">Участници: %1$d</string>
+    <string name="call_error">Грешка при свързване: %1$s</string>
+    <string name="call_reconnecting">Повторно свързване…</string>
+    <string name="call_reconnecting_hint">Връзката е загубена — автоматично повторно свързване…</string>
+    <string name="call_pip_enter">Минимизиране в картина в картина</string>
+    <string name="call_host_setup_title">Вход за домакин</string>
+    <string name="call_host_setup_body">Влезте с Google, GitHub или Facebook и започнете срещата. След това докоснете „Готово“.</string>
+    <string name="call_host_setup_done">Готово</string>
+    <string name="call_placeholder_title">Няма активен разговор</string>
+    <string name="call_placeholder_body">Въведете име на стая и се присъединете, за да стартирате интеркома.</string>
+
+    <!-- Runtime permissions -->
+    <string name="permission_title">Необходими са разрешения</string>
+    <string name="permission_body">За гласово обаждане HelmChat се нуждае от достъп до микрофона, а на Android 12+ и до Bluetooth устройства. Разрешете тези разрешения в настройките на приложението.</string>
+    <string name="permission_open_settings">Отвори настройките</string>
+    <string name="permission_cancel">Отказ</string>
+
+    <!-- Ongoing call notification -->
+    <string name="notification_channel_name">Разговор в HelmChat</string>
+    <string name="notification_channel_description">Известия за активен интерком разговор</string>
+    <string name="notification_title">HelmChat — %1$s</string>
+    <string name="notification_connected">Свързано</string>
+    <string name="notification_connecting">Свързване…</string>
+    <string name="notification_reconnecting">Повторно свързване…</string>
+    <string name="notification_mute">Заглуши</string>
+    <string name="notification_unmute">Включи микрофона</string>
+    <string name="notification_end">Край</string>
+
+    <!-- Public server presets -->
+    <string name="home_server_custom_switch">Персонализиран сървър</string>
+    <string name="server_netcup_description">Най-добро качество на връзката — център за данни Netcup в Германия.</string>
+    <string name="server_ffmuc_description">Стабилен общностен проект на Freifunk München.</string>
+    <string name="server_ccc_description">Сигурност и поверителност — Chaos Computer Club München.</string>
+    <string name="server_fairmeeting_description">Австрийски сървър Fairkom — чист звук.</string>
+    <string name="server_systemli_description">Анонимност — мрежовият колектив Systemli.</string>
+
+    <!-- Language selection -->
+    <string name="language_button">Промяна на езика</string>
+    <string name="language_dialog_title">Език на приложението</string>
+    <string name="language_system">Език на системата</string>
+    <string name="language_close">Затвори</string>
+</resources>

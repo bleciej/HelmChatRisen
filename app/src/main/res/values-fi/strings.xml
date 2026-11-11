@@ -1,0 +1,83 @@
+<resources>
+    <string name="app_name">HelmChatReborn</string>
+
+    <!-- Home / join screen -->
+    <string name="home_title">HelmChat - Reborn</string>
+    <string name="home_tagline">Puheintercom moottoripyöräilijöille</string>
+    <string name="home_mode_badge">Vain ääni -tila</string>
+    <string name="home_recent_section">Viimeisimmät huoneet</string>
+    <string name="home_recent_clear">Tyhjennä</string>
+    <string name="home_recent_delete">Poista huone %1$s</string>
+    <string name="home_room_section">Huone</string>
+    <string name="home_room_label">Huoneen nimi</string>
+    <string name="home_room_placeholder">esim. sunnuntaiajelu</string>
+    <string name="home_display_name_label">Nimesi (valinnainen)</string>
+    <string name="home_server_section">Palvelin</string>
+    <string name="home_server_custom_label">Jitsi-palvelimen osoite</string>
+    <string name="home_server_custom_support">esim. https://oma-palvelin.fi</string>
+    <string name="home_server_invalid">Anna kelvollinen palvelimen osoite</string>
+    <string name="home_jwt_label">JWT-tunniste (valinnainen)</string>
+    <string name="home_jwt_placeholder">esim. eyJhbGciOiJIUzI1NiIs…</string>
+    <string name="home_jwt_support">Tarvitaan vain palvelimilla, joissa on JWT-todennus</string>
+    <string name="home_meet_jitsi_title">meet.jit.si vaatii kirjautumisen</string>
+    <string name="home_meet_jitsi_warning">Tämä palvelin vaatii kirjautuneen moderaattorin (Google/GitHub/Facebook). Avaa huone selaimessa, kirjaudu sisään ja aloita kokous, palaa sitten tänne ja liity osallistujana.</string>
+    <string name="home_meet_jitsi_password_note">Huomautus: salasanalla suojatut huoneet eivät ehkä avaudu tässä sovelluksessa — käytä huonetta ilman salasanaa tai toista palvelinta.</string>
+    <string name="home_meet_jitsi_open">Avaa huone selaimessa</string>
+    <string name="home_meet_jitsi_host">Olen isäntä</string>
+    <string name="home_join">Liity puheluun</string>
+    <string name="home_join_hint">Vain puheyhteys — ei videota, vähemmän dataa ja pidempi akunkesto.</string>
+    <string name="home_invite">Kutsu</string>
+    <string name="home_invite_message">Liity HelmChat-intercomiini!\nHuone: %1$s\nLinkki: %2$s</string>
+
+    <!-- Call screen -->
+    <string name="call_connecting">Yhdistetään…</string>
+    <string name="call_connected">Yhdistetty</string>
+    <string name="call_mute">Mykistä mikrofoni</string>
+    <string name="call_unmute">Kytke mikrofoni päälle</string>
+    <string name="call_leave">Lopeta puhelu</string>
+    <string name="call_speaker_on">Puhelimen kaiutin</string>
+    <string name="call_speaker_off">Intercom / kuulokkeet</string>
+    <string name="call_route_bluetooth">Intercom: %1$s</string>
+    <string name="call_route_connecting">Yhdistetään intercomiin…</string>
+    <string name="call_participants">Osallistujat: %1$d</string>
+    <string name="call_error">Yhteysvirhe: %1$s</string>
+    <string name="call_reconnecting">Yhdistetään uudelleen…</string>
+    <string name="call_reconnecting_hint">Yhteys katkesi — yhdistetään automaattisesti uudelleen…</string>
+    <string name="call_pip_enter">Pienennä kuva-kuvassa-tilaan</string>
+    <string name="call_host_setup_title">Isännän kirjautuminen</string>
+    <string name="call_host_setup_body">Kirjaudu sisään Googlella, GitHubilla tai Facebookilla ja aloita kokous. Napauta sitten ”Valmis”.</string>
+    <string name="call_host_setup_done">Valmis</string>
+    <string name="call_placeholder_title">Ei aktiivista puhelua</string>
+    <string name="call_placeholder_body">Anna huoneen nimi ja liity käynnistääksesi intercomin.</string>
+
+    <!-- Runtime permissions -->
+    <string name="permission_title">Käyttöoikeudet vaaditaan</string>
+    <string name="permission_body">Puhelua varten HelmChat tarvitsee pääsyn mikrofoniin ja Android 12+ -versiossa myös Bluetooth-laitteisiin. Salli nämä käyttöoikeudet sovelluksen asetuksissa.</string>
+    <string name="permission_open_settings">Avaa asetukset</string>
+    <string name="permission_cancel">Peruuta</string>
+
+    <!-- Ongoing call notification -->
+    <string name="notification_channel_name">HelmChat-puhelu</string>
+    <string name="notification_channel_description">Ilmoitukset aktiivisesta intercom-puhelusta</string>
+    <string name="notification_title">HelmChat — %1$s</string>
+    <string name="notification_connected">Yhdistetty</string>
+    <string name="notification_connecting">Yhdistetään…</string>
+    <string name="notification_reconnecting">Yhdistetään uudelleen…</string>
+    <string name="notification_mute">Mykistä</string>
+    <string name="notification_unmute">Kytke mikrofoni päälle</string>
+    <string name="notification_end">Lopeta</string>
+
+    <!-- Public server presets -->
+    <string name="home_server_custom_switch">Mukautettu palvelin</string>
+    <string name="server_netcup_description">Paras yhteyden laatu — Netcupin datakeskus Saksassa.</string>
+    <string name="server_ffmuc_description">Vakaa yhteisöprojekti Freifunk Müncheniltä.</string>
+    <string name="server_ccc_description">Turvallisuus ja yksityisyys — Chaos Computer Club München.</string>
+    <string name="server_fairmeeting_description">Itävaltalainen Fairkom-palvelin — puhdas ääni.</string>
+    <string name="server_systemli_description">Anonyymius — Systemli-verkkokollektiivi.</string>
+
+    <!-- Language selection -->
+    <string name="language_button">Vaihda kieli</string>
+    <string name="language_dialog_title">Sovelluksen kieli</string>
+    <string name="language_system">Järjestelmän kieli</string>
+    <string name="language_close">Sulje</string>
+</resources>

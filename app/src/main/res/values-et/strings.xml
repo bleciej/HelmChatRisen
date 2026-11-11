@@ -1,0 +1,83 @@
+<resources>
+    <string name="app_name">HelmChatReborn</string>
+
+    <!-- Home / join screen -->
+    <string name="home_title">HelmChat - Reborn</string>
+    <string name="home_tagline">Häälinterkom mootorratturitele</string>
+    <string name="home_mode_badge">Ainult heli režiim</string>
+    <string name="home_recent_section">Viimased ruumid</string>
+    <string name="home_recent_clear">Tühjenda</string>
+    <string name="home_recent_delete">Kustuta ruum %1$s</string>
+    <string name="home_room_section">Ruum</string>
+    <string name="home_room_label">Ruumi nimi</string>
+    <string name="home_room_placeholder">nt pühapäevane-sõit</string>
+    <string name="home_display_name_label">Sinu nimi (valikuline)</string>
+    <string name="home_server_section">Server</string>
+    <string name="home_server_custom_label">Jitsi serveri aadress</string>
+    <string name="home_server_custom_support">nt https://minu-server.ee</string>
+    <string name="home_server_invalid">Sisesta kehtiv serveri aadress</string>
+    <string name="home_jwt_label">JWT luba (valikuline)</string>
+    <string name="home_jwt_placeholder">nt eyJhbGciOiJIUzI1NiIs…</string>
+    <string name="home_jwt_support">Nõutav ainult JWT-autentimisega serveritel</string>
+    <string name="home_meet_jitsi_title">meet.jit.si nõuab sisselogimist</string>
+    <string name="home_meet_jitsi_warning">See server nõuab sisselogitud moderaatorit (Google/GitHub/Facebook). Ava ruum brauseris, logi sisse ja alusta koosolekut, seejärel tule siia tagasi ja liitu osalejana.</string>
+    <string name="home_meet_jitsi_password_note">Märkus: parooliga kaitstud ruumid ei pruugi selles rakenduses avaneda — kasuta paroolita ruumi või teist serverit.</string>
+    <string name="home_meet_jitsi_open">Ava ruum brauseris</string>
+    <string name="home_meet_jitsi_host">Olen peremees</string>
+    <string name="home_join">Liitu kõnega</string>
+    <string name="home_join_hint">Ainult häälühendus — videot pole, vähem andmeid ja pikem aku kestvus.</string>
+    <string name="home_invite">Kutsu</string>
+    <string name="home_invite_message">Liitu minu HelmChati interkomiga!\nRuum: %1$s\nLink: %2$s</string>
+
+    <!-- Call screen -->
+    <string name="call_connecting">Ühendamine…</string>
+    <string name="call_connected">Ühendatud</string>
+    <string name="call_mute">Vaigista mikrofon</string>
+    <string name="call_unmute">Lülita mikrofon sisse</string>
+    <string name="call_leave">Lõpeta kõne</string>
+    <string name="call_speaker_on">Telefoni kõlar</string>
+    <string name="call_speaker_off">Interkom / peakomplekt</string>
+    <string name="call_route_bluetooth">Interkom: %1$s</string>
+    <string name="call_route_connecting">Ühendamine interkomiga…</string>
+    <string name="call_participants">Osalejad: %1$d</string>
+    <string name="call_error">Ühenduse viga: %1$s</string>
+    <string name="call_reconnecting">Ühendan uuesti…</string>
+    <string name="call_reconnecting_hint">Ühendus katkes — ühendan automaatselt uuesti…</string>
+    <string name="call_pip_enter">Minimeeri pilt-pildis režiimi</string>
+    <string name="call_host_setup_title">Peremehe sisselogimine</string>
+    <string name="call_host_setup_body">Logi sisse Google\'i, GitHubi või Facebookiga ja alusta koosolekut. Seejärel puuduta „Valmis”.</string>
+    <string name="call_host_setup_done">Valmis</string>
+    <string name="call_placeholder_title">Aktiivset kõnet pole</string>
+    <string name="call_placeholder_body">Sisesta ruumi nimi ja liitu interkomi alustamiseks.</string>
+
+    <!-- Runtime permissions -->
+    <string name="permission_title">Nõutavad load</string>
+    <string name="permission_body">Häälkõne tegemiseks vajab HelmChat juurdepääsu mikrofonile ja Android 12+ puhul ka Bluetooth-seadmetele. Lubage need load rakenduse seadetes.</string>
+    <string name="permission_open_settings">Ava seaded</string>
+    <string name="permission_cancel">Tühista</string>
+
+    <!-- Ongoing call notification -->
+    <string name="notification_channel_name">HelmChati kõne</string>
+    <string name="notification_channel_description">Teated aktiivse interkomikõne kohta</string>
+    <string name="notification_title">HelmChat — %1$s</string>
+    <string name="notification_connected">Ühendatud</string>
+    <string name="notification_connecting">Ühendamine…</string>
+    <string name="notification_reconnecting">Ühendan uuesti…</string>
+    <string name="notification_mute">Vaigista</string>
+    <string name="notification_unmute">Lülita mikrofon sisse</string>
+    <string name="notification_end">Lõpeta</string>
+
+    <!-- Public server presets -->
+    <string name="home_server_custom_switch">Kohandatud server</string>
+    <string name="server_netcup_description">Parim ühenduse kvaliteet — Netcupi andmekeskus Saksamaal.</string>
+    <string name="server_ffmuc_description">Stabiilne kogukonnaprojekt Freifunk München.</string>
+    <string name="server_ccc_description">Turvalisus ja privaatsus — Chaos Computer Club München.</string>
+    <string name="server_fairmeeting_description">Austria Fairkomi server — puhas heli.</string>
+    <string name="server_systemli_description">Anonüümsus — Systemli võrgustikukollektiiv.</string>
+
+    <!-- Language selection -->
+    <string name="language_button">Muuda keelt</string>
+    <string name="language_dialog_title">Rakenduse keel</string>
+    <string name="language_system">Süsteemi keel</string>
+    <string name="language_close">Sulge</string>
+</resources>

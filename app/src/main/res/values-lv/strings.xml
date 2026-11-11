@@ -1,0 +1,83 @@
+<resources>
+    <string name="app_name">HelmChatReborn</string>
+
+    <!-- Home / join screen -->
+    <string name="home_title">HelmChat - Reborn</string>
+    <string name="home_tagline">Balss interkoms motociklistiem</string>
+    <string name="home_mode_badge">Tikai audio režīms</string>
+    <string name="home_recent_section">Nesenās telpas</string>
+    <string name="home_recent_clear">Notīrīt</string>
+    <string name="home_recent_delete">Dzēst telpu %1$s</string>
+    <string name="home_room_section">Telpa</string>
+    <string name="home_room_label">Telpas nosaukums</string>
+    <string name="home_room_placeholder">piem. svētdienas-brauciens</string>
+    <string name="home_display_name_label">Jūsu vārds (neobligāts)</string>
+    <string name="home_server_section">Serveris</string>
+    <string name="home_server_custom_label">Jitsi servera adrese</string>
+    <string name="home_server_custom_support">piem. https://mans-serveris.lv</string>
+    <string name="home_server_invalid">Ievadiet derīgu servera adresi</string>
+    <string name="home_jwt_label">JWT marķieris (neobligāts)</string>
+    <string name="home_jwt_placeholder">piem. eyJhbGciOiJIUzI1NiIs…</string>
+    <string name="home_jwt_support">Nepieciešams tikai serveriem ar JWT autentifikāciju</string>
+    <string name="home_meet_jitsi_title">meet.jit.si prasa pieteikšanos</string>
+    <string name="home_meet_jitsi_warning">Šis serveris prasa pieteikušos moderatoru (Google/GitHub/Facebook). Atveriet telpu pārlūkā, piesakieties un sāciet sapulci, pēc tam atgriezieties šeit un pievienojieties kā dalībnieks.</string>
+    <string name="home_meet_jitsi_password_note">Piezīme: ar paroli aizsargātas telpas šajā lietotnē var neatslēgties — izmantojiet telpu bez paroles vai citu serveri.</string>
+    <string name="home_meet_jitsi_open">Atvērt telpu pārlūkā</string>
+    <string name="home_meet_jitsi_host">Esmu saimnieks</string>
+    <string name="home_join">Pievienoties zvanam</string>
+    <string name="home_join_hint">Savienojums tikai ar balsi — nav video, mazāk datu un ilgāks akumulatora darbības laiks.</string>
+    <string name="home_invite">Uzaicināt</string>
+    <string name="home_invite_message">Pievienojies manam HelmChat interkomam!\nTelpa: %1$s\nSaite: %2$s</string>
+
+    <!-- Call screen -->
+    <string name="call_connecting">Savieno…</string>
+    <string name="call_connected">Savienots</string>
+    <string name="call_mute">Izslēgt mikrofonu</string>
+    <string name="call_unmute">Ieslēgt mikrofonu</string>
+    <string name="call_leave">Beigt zvanu</string>
+    <string name="call_speaker_on">Tālruņa skaļrunis</string>
+    <string name="call_speaker_off">Interkoms / austiņas</string>
+    <string name="call_route_bluetooth">Interkoms: %1$s</string>
+    <string name="call_route_connecting">Savieno ar interkomu…</string>
+    <string name="call_participants">Dalībnieki: %1$d</string>
+    <string name="call_error">Savienojuma kļūda: %1$s</string>
+    <string name="call_reconnecting">Atkārtoti savienojas…</string>
+    <string name="call_reconnecting_hint">Savienojums pārtraukts — automātiski savienojas atkārtoti…</string>
+    <string name="call_pip_enter">Minimizēt uz attēlu attēlā</string>
+    <string name="call_host_setup_title">Saimnieka pieteikšanās</string>
+    <string name="call_host_setup_body">Piesakieties ar Google, GitHub vai Facebook un sāciet sanāksmi. Pēc tam pieskarieties „Gatavs”.</string>
+    <string name="call_host_setup_done">Gatavs</string>
+    <string name="call_placeholder_title">Nav aktīva zvana</string>
+    <string name="call_placeholder_body">Ievadiet telpas nosaukumu un pievienojieties, lai sāktu interkomu.</string>
+
+    <!-- Runtime permissions -->
+    <string name="permission_title">Nepieciešamas atļaujas</string>
+    <string name="permission_body">Lai veiktu balss zvanu, HelmChat nepieciešama piekļuve mikrofonam un Android 12+ arī Bluetooth ierīcēm. Atļaujiet šīs atļaujas lietotnes iestatījumos.</string>
+    <string name="permission_open_settings">Atvērt iestatījumus</string>
+    <string name="permission_cancel">Atcelt</string>
+
+    <!-- Ongoing call notification -->
+    <string name="notification_channel_name">HelmChat zvans</string>
+    <string name="notification_channel_description">Paziņojumi par aktīvu interkoma zvanu</string>
+    <string name="notification_title">HelmChat — %1$s</string>
+    <string name="notification_connected">Savienots</string>
+    <string name="notification_connecting">Savieno…</string>
+    <string name="notification_reconnecting">Atkārtoti savienojas…</string>
+    <string name="notification_mute">Izslēgt skaņu</string>
+    <string name="notification_unmute">Ieslēgt mikrofonu</string>
+    <string name="notification_end">Beigt</string>
+
+    <!-- Public server presets -->
+    <string name="home_server_custom_switch">Pielāgots serveris</string>
+    <string name="server_netcup_description">Labākā savienojuma kvalitāte — Netcup datu centrs Vācijā.</string>
+    <string name="server_ffmuc_description">Stabils kopienas projekts Freifunk München.</string>
+    <string name="server_ccc_description">Drošība un privātums — Chaos Computer Club München.</string>
+    <string name="server_fairmeeting_description">Austrijas Fairkom serveris — tīra skaņa.</string>
+    <string name="server_systemli_description">Anonimitāte — Systemli tīkla kolektīvs.</string>
+
+    <!-- Language selection -->
+    <string name="language_button">Mainīt valodu</string>
+    <string name="language_dialog_title">Lietotnes valoda</string>
+    <string name="language_system">Sistēmas valoda</string>
+    <string name="language_close">Aizvērt</string>
+</resources>

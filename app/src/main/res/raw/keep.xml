@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Resources that the Jitsi SDK looks up by name at runtime with
+    Resources.getIdentifier(). The release resource shrinker cannot see those
+    references, so without this file they are stripped and the SDK crashes when
+    the React context is created (DropboxModule) or the ongoing notification is
+    built (OngoingNotification).
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_notification,@string/dropbox_app_key" />

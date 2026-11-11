@@ -1,0 +1,83 @@
+<resources>
+    <string name="app_name">HelmChatReborn</string>
+
+    <!-- Home / join screen -->
+    <string name="home_title">HelmChat - Reborn</string>
+    <string name="home_tagline">Hlasový interkom pre motocyklistov</string>
+    <string name="home_mode_badge">Režim iba zvuk</string>
+    <string name="home_recent_section">Nedávne miestnosti</string>
+    <string name="home_recent_clear">Vymazať</string>
+    <string name="home_recent_delete">Odstrániť miestnosť %1$s</string>
+    <string name="home_room_section">Miestnosť</string>
+    <string name="home_room_label">Názov miestnosti</string>
+    <string name="home_room_placeholder">napr. nedelna-jazda</string>
+    <string name="home_display_name_label">Vaše meno (voliteľné)</string>
+    <string name="home_server_section">Server</string>
+    <string name="home_server_custom_label">Adresa servera Jitsi</string>
+    <string name="home_server_custom_support">napr. https://moj-server.sk</string>
+    <string name="home_server_invalid">Zadajte platnú adresu servera</string>
+    <string name="home_jwt_label">Token JWT (voliteľné)</string>
+    <string name="home_jwt_placeholder">napr. eyJhbGciOiJIUzI1NiIs…</string>
+    <string name="home_jwt_support">Vyžadujú len servery s autentifikáciou JWT</string>
+    <string name="home_meet_jitsi_title">meet.jit.si vyžaduje prihlásenie</string>
+    <string name="home_meet_jitsi_warning">Tento server vyžaduje prihláseného moderátora (Google/GitHub/Facebook). Otvorte miestnosť v prehliadači, prihláste sa a začnite stretnutie, potom sa sem vráťte a pripojte sa ako účastník.</string>
+    <string name="home_meet_jitsi_password_note">Poznámka: miestnosti chránené heslom sa v tejto aplikácii nemusia otvoriť — použite miestnosť bez hesla alebo iný server.</string>
+    <string name="home_meet_jitsi_open">Otvoriť miestnosť v prehliadači</string>
+    <string name="home_meet_jitsi_host">Som hostiteľ</string>
+    <string name="home_join">Pripojiť sa k hovoru</string>
+    <string name="home_join_hint">Spojenie iba hlasom — žiadne video, menej dát a dlhšia výdrž batérie.</string>
+    <string name="home_invite">Pozvať</string>
+    <string name="home_invite_message">Pripoj sa k môjmu interkomu HelmChat!\nMiestnosť: %1$s\nOdkaz: %2$s</string>
+
+    <!-- Call screen -->
+    <string name="call_connecting">Pripájanie…</string>
+    <string name="call_connected">Pripojené</string>
+    <string name="call_mute">Stlmiť mikrofón</string>
+    <string name="call_unmute">Zapnúť mikrofón</string>
+    <string name="call_leave">Ukončiť hovor</string>
+    <string name="call_speaker_on">Reproduktor telefónu</string>
+    <string name="call_speaker_off">Interkom / slúchadlá</string>
+    <string name="call_route_bluetooth">Interkom: %1$s</string>
+    <string name="call_route_connecting">Pripájanie k interkomu…</string>
+    <string name="call_participants">Účastníci: %1$d</string>
+    <string name="call_error">Chyba pripojenia: %1$s</string>
+    <string name="call_reconnecting">Opätovné pripájanie…</string>
+    <string name="call_reconnecting_hint">Spojenie prerušené — automaticky sa pripájam znova…</string>
+    <string name="call_pip_enter">Minimalizovať do okna Picture-in-Picture</string>
+    <string name="call_host_setup_title">Prihlásenie hostiteľa</string>
+    <string name="call_host_setup_body">Prihláste sa cez Google, GitHub alebo Facebook a začnite stretnutie. Potom klepnite na „Hotovo“.</string>
+    <string name="call_host_setup_done">Hotovo</string>
+    <string name="call_placeholder_title">Žiadny aktívny hovor</string>
+    <string name="call_placeholder_body">Zadajte názov miestnosti a pripojte sa na spustenie interkomu.</string>
+
+    <!-- Runtime permissions -->
+    <string name="permission_title">Vyžadujú sa povolenia</string>
+    <string name="permission_body">Na hlasový hovor potrebuje HelmChat prístup k mikrofónu a v Androide 12+ aj k zariadeniam Bluetooth. Povoľte tieto povolenia v nastaveniach aplikácie.</string>
+    <string name="permission_open_settings">Otvoriť nastavenia</string>
+    <string name="permission_cancel">Zrušiť</string>
+
+    <!-- Ongoing call notification -->
+    <string name="notification_channel_name">Hovor HelmChat</string>
+    <string name="notification_channel_description">Upozornenia o aktívnom hovore interkomu</string>
+    <string name="notification_title">HelmChat — %1$s</string>
+    <string name="notification_connected">Pripojené</string>
+    <string name="notification_connecting">Pripájanie…</string>
+    <string name="notification_reconnecting">Opätovné pripájanie…</string>
+    <string name="notification_mute">Stlmiť</string>
+    <string name="notification_unmute">Zapnúť mikrofón</string>
+    <string name="notification_end">Ukončiť</string>
+
+    <!-- Public server presets -->
+    <string name="home_server_custom_switch">Vlastný server</string>
+    <string name="server_netcup_description">Najlepšia kvalita spojenia — dátové centrum Netcup v Nemecku.</string>
+    <string name="server_ffmuc_description">Stabilný komunitný projekt Freifunk München.</string>
+    <string name="server_ccc_description">Bezpečnosť a súkromie — Chaos Computer Club München.</string>
+    <string name="server_fairmeeting_description">Rakúsky server Fairkom — čistý zvuk.</string>
+    <string name="server_systemli_description">Anonymita — sieťové kolektív Systemli.</string>
+
+    <!-- Language selection -->
+    <string name="language_button">Zmeniť jazyk</string>
+    <string name="language_dialog_title">Jazyk aplikácie</string>
+    <string name="language_system">Jazyk systému</string>
+    <string name="language_close">Zavrieť</string>
+</resources>

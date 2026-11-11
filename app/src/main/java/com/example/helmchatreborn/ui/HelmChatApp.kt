@@ -39,6 +39,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,9 +57,13 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import com.example.helmchatreborn.R
 import com.example.helmchatreborn.audio.AudioRoutingState
+import com.example.helmchatreborn.data.AppLanguage
+import com.example.helmchatreborn.data.RecentRoom
+import com.example.helmchatreborn.data.RecentRoomsRepository
 import com.example.helmchatreborn.audio.BluetoothAudioRouter
 import com.example.helmchatreborn.jitsi.CallState
 import com.example.helmchatreborn.jitsi.JitsiCallManager
+import com.example.helmchatreborn.jitsi.RoomLinks
 import com.example.helmchatreborn.service.AudioCallService
 import com.example.helmchatreborn.ui.call.CallScreen
 import com.example.helmchatreborn.ui.call.CallScreenState
@@ -68,6 +73,7 @@ import com.example.helmchatreborn.ui.home.HomeScreen
 import com.example.helmchatreborn.ui.home.HomeViewModel
 import com.example.helmchatreborn.ui.navigation.CallRoute
 import com.example.helmchatreborn.ui.navigation.HomeRoute
+import kotlinx.coroutines.launch
 
 /**
  * Root of the HelmChatReborn Compose UI.
@@ -78,11 +84,19 @@ import com.example.helmchatreborn.ui.navigation.HomeRoute
  */
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
-fun HelmChatApp() {
+fun HelmChatApp(
+    isInPictureInPicture: Boolean = false,
+    onCallScreenVisibilityChanged: (Boolean) -> Unit = {},
+    onEnterPictureInPicture: () -> Unit = {},
+) {
     val context = LocalContext.current
     val backStack = rememberNavBackStack(HomeRoute)
     val homeViewModel: HomeViewModel = viewModel()
     val homeState by homeViewModel.uiState.collectAsStateWithLifecycle()
+    val recentRoomsRepository = remember(context) { RecentRoomsRepository(context) }
+    val recentRooms by recentRoomsRepository.recentRooms
+        .collectAsStateWithLifecycle(initialValue = emptyList())
+    val coroutineScope = rememberCoroutineScope()
 
     val callManager = remember { JitsiCallManager.getInstance() }
     val audioRouter = remember(context) { BluetoothAudioRouter.getInstance(context) }
@@ -90,21 +104,35 @@ fun HelmChatApp() {
     val callState by callManager.callState.collectAsStateWithLifecycle()
     val isMuted by callManager.isMuted.collectAsStateWithLifecycle()
     val participantCount by callManager.participantCount.collectAsStateWithLifecycle()
+    val isNetworkAvailable by callManager.isNetworkAvailable.collectAsStateWithLifecycle()
     val routingState by audioRouter.routingState.collectAsStateWithLifecycle()
 
     var pendingCall by remember { mutableStateOf<CallRequest?>(null) }
     var showPermissionDialog by remember { mutableStateOf(false) }
     var isSpeakerOn by remember { mutableStateOf(false) }
+    var languageTag by remember { mutableStateOf(AppLanguage.currentTag(context)) }
 
     fun startCall(request: CallRequest) {
         isSpeakerOn = false
         audioRouter.resetForNewCall()
         AudioCallService.startCall(context, request.roomName, request.serverUrl)
+        coroutineScope.launch {
+            recentRoomsRepository.record(
+                RecentRoom(
+                    roomName = request.roomName,
+                    serverUrl = request.serverUrl,
+                    displayName = request.displayName,
+                    lastUsedAt = System.currentTimeMillis(),
+                ),
+            )
+        }
         backStack.add(
             CallRoute(
                 roomName = request.roomName,
                 serverUrl = request.serverUrl,
                 displayName = request.displayName,
+                token = request.token,
+                hostSetup = request.hostSetup,
             )
         )
     }
@@ -129,9 +157,12 @@ fun HelmChatApp() {
     LaunchedEffect(callState, currentRoute) {
         if (currentRoute is CallRoute) {
             when (callState) {
-                is CallState.Connecting, is CallState.Connected -> hasJoinedCall = true
-                is CallState.Idle -> if (hasJoinedCall) {
-                    AudioCallService.stopCall(context)
+                is CallState.Connecting,
+                is CallState.Connected,
+                is CallState.Reconnecting -> hasJoinedCall = true
+                is CallState.Idle -> if (hasJoinedCall && backStack.size > 1) {
+                    // The service stops itself as soon as the call state reaches Idle, and
+                    // leaveCall() stops it explicitly, so no extra stopCall() is needed here.
                     backStack.removeLastOrNull()
                 }
                 is CallState.Error -> Unit
@@ -141,10 +172,16 @@ fun HelmChatApp() {
         }
     }
 
+    LaunchedEffect(currentRoute) {
+        onCallScreenVisibilityChanged(currentRoute is CallRoute)
+    }
+
     fun leaveCall() {
         callManager.hangUp()
         AudioCallService.stopCall(context)
-        backStack.removeLastOrNull()
+        if (backStack.size > 1) {
+            backStack.removeLastOrNull()
+        }
     }
 
     val windowAdaptiveInfo = currentWindowAdaptiveInfoV2()
@@ -167,7 +204,11 @@ fun HelmChatApp() {
                 if (backStack.lastOrNull() is CallRoute) {
                     callManager.hangUp()
                     AudioCallService.stopCall(context)
-                    backStack.removeLastOrNull()
+                    if (backStack.size > 1) {
+                        backStack.removeLastOrNull()
+                    } else {
+                        (context as? Activity)?.finish()
+                    }
                 } else if (backStack.size > 1) {
                     backStack.removeLastOrNull()
                 } else {
@@ -183,10 +224,33 @@ fun HelmChatApp() {
                 ) {
                     HomeScreen(
                         state = homeState,
+                        recentRooms = recentRooms,
                         onRoomNameChange = homeViewModel::onRoomNameChange,
                         onDisplayNameChange = homeViewModel::onDisplayNameChange,
-                        onUseDefaultServerChange = homeViewModel::onUseDefaultServerChange,
+                        onUseCustomServerChange = homeViewModel::onUseCustomServerChange,
+                        onPresetServerSelected = homeViewModel::onPresetServerSelected,
                         onCustomServerUrlChange = homeViewModel::onCustomServerUrlChange,
+                        onJwtTokenChange = homeViewModel::onJwtTokenChange,
+                        onRecentRoomSelected = homeViewModel::applyRecentRoom,
+                        onRecentRoomDelete = { room ->
+                            coroutineScope.launch { recentRoomsRepository.remove(room) }
+                        },
+                        onClearRecentRooms = {
+                            coroutineScope.launch { recentRoomsRepository.clear() }
+                        },
+                        onOpenMeetJitSiInBrowser = {
+                            openMeetJitSiInBrowser(context, homeState.roomName)
+                        },
+                        onHostSetup = {
+                            homeViewModel.createCallRequest(hostSetup = true)?.let { request ->
+                                if (areRequiredPermissionsGranted(context)) {
+                                    startCall(request)
+                                } else {
+                                    pendingCall = request
+                                    permissionLauncher.launch(requestedPermissions())
+                                }
+                            }
+                        },
                         onJoinCall = {
                             homeViewModel.createCallRequest()?.let { request ->
                                 if (areRequiredPermissionsGranted(context)) {
@@ -197,6 +261,21 @@ fun HelmChatApp() {
                                 }
                             }
                         },
+                        onInvite = {
+                            shareRoomInvite(
+                                context = context,
+                                roomName = homeState.roomName,
+                                serverUrl = homeState.effectiveServerUrl,
+                            )
+                        },
+                        currentLanguageTag = languageTag,
+                        onLanguageSelected = { tag ->
+                            AppLanguage.setTag(context, tag)
+                            languageTag = AppLanguage.currentTag(context)
+                            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                                (context as? Activity)?.recreate()
+                            }
+                        },
                     )
                 }
 
@@ -204,7 +283,11 @@ fun HelmChatApp() {
                     metadata = ListDetailSceneStrategy.detailPane(),
                 ) { route ->
                     val isConnected = callState is CallState.Connected
+                    val isReconnecting = callState is CallState.Reconnecting
                     val errorMessage = (callState as? CallState.Error)?.message
+                    var hostSetupActive by remember(route) {
+                        mutableStateOf(route.hostSetup)
+                    }
                     val audioRouteLabel = when (val routing = routingState) {
                         is AudioRoutingState.SpeakerConnected ->
                             stringResource(R.string.call_speaker_on)
@@ -222,6 +305,8 @@ fun HelmChatApp() {
                             roomName = route.roomName,
                             serverUrl = route.serverUrl,
                             isConnected = isConnected,
+                            isReconnecting = isReconnecting,
+                            isOffline = !isNetworkAvailable,
                             isMuted = isMuted,
                             isSpeakerOn = isSpeakerOn,
                             audioRouteLabel = audioRouteLabel,
@@ -235,6 +320,17 @@ fun HelmChatApp() {
                             audioRouter.setSpeakerphone(newSpeaker)
                         },
                         onLeaveCall = { leaveCall() },
+                        onInvite = {
+                            shareRoomInvite(
+                                context = context,
+                                roomName = route.roomName,
+                                serverUrl = route.serverUrl,
+                            )
+                        },
+                        isInPictureInPicture = isInPictureInPicture,
+                        onEnterPictureInPicture = onEnterPictureInPicture,
+                        hostSetup = hostSetupActive,
+                        onHostSetupDone = { hostSetupActive = false },
                         conferenceContent = {
                             JitsiConferenceView(
                                 roomName = route.roomName,
@@ -242,6 +338,8 @@ fun HelmChatApp() {
                                 displayName = route.displayName,
                                 isMuted = isMuted,
                                 modifier = Modifier.fillMaxSize(),
+                                token = route.token,
+                                interactive = hostSetupActive,
                             )
                         },
                     )
@@ -324,6 +422,43 @@ private fun openAppSettings(context: Context) {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     context.startActivity(intent)
+}
+
+/**
+ * meet.jit.si requires a moderator to sign in with Google/GitHub/Facebook before a room can
+ * be started. The embedded Jitsi UI is hidden behind our own overlay, so the rider can
+ * authenticate in the system browser and then join the already-started room from the app.
+ */
+private fun openMeetJitSiInBrowser(context: Context, roomName: String) {
+    val room = roomName.trim()
+    val url = if (room.isBlank()) {
+        "https://meet.jit.si"
+    } else {
+        "https://meet.jit.si/${Uri.encode(room)}"
+    }
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(intent)
+}
+
+/**
+ * Opens the system share sheet with a ready-to-send invitation. The message contains the
+ * room link, so a new rider can join from a browser even without the app installed.
+ */
+private fun shareRoomInvite(context: Context, roomName: String, serverUrl: String) {
+    val room = roomName.trim()
+    if (room.isEmpty()) return
+    val link = RoomLinks.roomLink(serverUrl, room)
+    val message = context.getString(R.string.home_invite_message, room, link)
+    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_SUBJECT, room)
+        putExtra(Intent.EXTRA_TEXT, message)
+    }
+    val chooser = Intent.createChooser(sendIntent, context.getString(R.string.home_invite))
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    context.startActivity(chooser)
 }
 
 /**

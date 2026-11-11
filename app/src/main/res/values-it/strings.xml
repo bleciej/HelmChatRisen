@@ -1,0 +1,83 @@
+<resources>
+    <string name="app_name">HelmChatReborn</string>
+
+    <!-- Home / join screen -->
+    <string name="home_title">HelmChat - Reborn</string>
+    <string name="home_tagline">Intercom vocale per motociclisti</string>
+    <string name="home_mode_badge">Modalità solo audio</string>
+    <string name="home_recent_section">Stanze recenti</string>
+    <string name="home_recent_clear">Cancella</string>
+    <string name="home_recent_delete">Elimina stanza %1$s</string>
+    <string name="home_room_section">Stanza</string>
+    <string name="home_room_label">Nome della stanza</string>
+    <string name="home_room_placeholder">es. giro-della-domenica</string>
+    <string name="home_display_name_label">Il tuo nome (facoltativo)</string>
+    <string name="home_server_section">Server</string>
+    <string name="home_server_custom_label">Indirizzo del server Jitsi</string>
+    <string name="home_server_custom_support">es. https://mio-server.it</string>
+    <string name="home_server_invalid">Inserisci un indirizzo del server valido</string>
+    <string name="home_jwt_label">Token JWT (facoltativo)</string>
+    <string name="home_jwt_placeholder">es. eyJhbGciOiJIUzI1NiIs…</string>
+    <string name="home_jwt_support">Richiesto solo dai server con autenticazione JWT</string>
+    <string name="home_meet_jitsi_title">meet.jit.si richiede l\'accesso</string>
+    <string name="home_meet_jitsi_warning">Questo server richiede un moderatore con accesso effettuato (Google/GitHub/Facebook). Apri la stanza nel browser, accedi e avvia la riunione, poi torna qui e unisciti come partecipante.</string>
+    <string name="home_meet_jitsi_password_note">Nota: le stanze protette da password potrebbero non aprirsi in questa app — usa una stanza senza password o un altro server.</string>
+    <string name="home_meet_jitsi_open">Apri la stanza nel browser</string>
+    <string name="home_meet_jitsi_host">Sono l\'host</string>
+    <string name="home_join">Partecipa alla chiamata</string>
+    <string name="home_join_hint">Connessione solo voce — nessun video, meno dati e batteria più duratura.</string>
+    <string name="home_invite">Invita</string>
+    <string name="home_invite_message">Unisciti al mio intercom HelmChat!\nStanza: %1$s\nLink: %2$s</string>
+
+    <!-- Call screen -->
+    <string name="call_connecting">Connessione…</string>
+    <string name="call_connected">Connesso</string>
+    <string name="call_mute">Disattiva microfono</string>
+    <string name="call_unmute">Attiva microfono</string>
+    <string name="call_leave">Termina chiamata</string>
+    <string name="call_speaker_on">Altoparlante del telefono</string>
+    <string name="call_speaker_off">Intercom / cuffie</string>
+    <string name="call_route_bluetooth">Intercom: %1$s</string>
+    <string name="call_route_connecting">Connessione all\'intercom…</string>
+    <string name="call_participants">Partecipanti: %1$d</string>
+    <string name="call_error">Errore di connessione: %1$s</string>
+    <string name="call_reconnecting">Riconnessione…</string>
+    <string name="call_reconnecting_hint">Connessione persa — riconnessione automatica…</string>
+    <string name="call_pip_enter">Riduci a Picture-in-Picture</string>
+    <string name="call_host_setup_title">Accesso host</string>
+    <string name="call_host_setup_body">Accedi con Google, GitHub o Facebook e avvia la riunione. Poi tocca «Fatto».</string>
+    <string name="call_host_setup_done">Fatto</string>
+    <string name="call_placeholder_title">Nessuna chiamata attiva</string>
+    <string name="call_placeholder_body">Inserisci il nome di una stanza e partecipa per avviare l\'intercom.</string>
+
+    <!-- Runtime permissions -->
+    <string name="permission_title">Autorizzazioni necessarie</string>
+    <string name="permission_body">Per effettuare una chiamata vocale, HelmChat necessita dell\'accesso al microfono e, su Android 12 o versioni successive, ai dispositivi Bluetooth. Consenti queste autorizzazioni nelle impostazioni dell\'app.</string>
+    <string name="permission_open_settings">Apri impostazioni</string>
+    <string name="permission_cancel">Annulla</string>
+
+    <!-- Ongoing call notification -->
+    <string name="notification_channel_name">Chiamata HelmChat</string>
+    <string name="notification_channel_description">Notifiche su una chiamata intercom attiva</string>
+    <string name="notification_title">HelmChat — %1$s</string>
+    <string name="notification_connected">Connesso</string>
+    <string name="notification_connecting">Connessione…</string>
+    <string name="notification_reconnecting">Riconnessione…</string>
+    <string name="notification_mute">Disattiva</string>
+    <string name="notification_unmute">Attiva microfono</string>
+    <string name="notification_end">Termina</string>
+
+    <!-- Public server presets -->
+    <string name="home_server_custom_switch">Server personalizzato</string>
+    <string name="server_netcup_description">Migliore qualità di connessione — data center Netcup in Germania.</string>
+    <string name="server_ffmuc_description">Progetto comunitario stabile di Freifunk München.</string>
+    <string name="server_ccc_description">Sicurezza e privacy — Chaos Computer Club München.</string>
+    <string name="server_fairmeeting_description">Server austriaco Fairkom — audio pulito.</string>
+    <string name="server_systemli_description">Anonimato — collettivo di rete Systemli.</string>
+
+    <!-- Language selection -->
+    <string name="language_button">Cambia lingua</string>
+    <string name="language_dialog_title">Lingua dell\'app</string>
+    <string name="language_system">Lingua di sistema</string>
+    <string name="language_close">Chiudi</string>
+</resources>

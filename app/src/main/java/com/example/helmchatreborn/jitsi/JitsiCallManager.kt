@@ -4,6 +4,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.ConnectivityManager
+import android.net.Network
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -27,6 +29,13 @@ sealed class CallState {
     object Idle : CallState()
     data class Connecting(val roomName: String, val serverUrl: String) : CallState()
     data class Connected(val roomName: String, val serverUrl: String) : CallState()
+
+    /**
+     * The conference dropped unexpectedly (network loss, server restart). Jitsi keeps its view
+     * alive and reloads the conference on its own; the app must not navigate away while this is
+     * in progress.
+     */
+    data class Reconnecting(val roomName: String, val serverUrl: String) : CallState()
     data class Error(val message: String) : CallState()
 }
 
@@ -47,6 +56,15 @@ class JitsiCallManager {
         private const val CONNECT_TIMEOUT_MS = 30_000L
         private const val CONNECT_TIMEOUT_MESSAGE =
             "Nie udało się połączyć. Sprawdź adres serwera i połączenie z internetem."
+
+        /**
+         * How long Jitsi may spend trying to restore a dropped conference before the app gives
+         * up and shows an error. The Jitsi reload dialog is patched to retry after 5 seconds,
+         * so this is only a safety net for unrecoverable failures.
+         */
+        private const val RECONNECT_TIMEOUT_MS = 45_000L
+        private const val RECONNECT_TIMEOUT_MESSAGE =
+            "Nie udało się wznowić połączenia. Sprawdź sieć i dołącz ponownie."
 
         /**
          * Used when the rider leaves the optional name field empty. Supplying a name avoids
@@ -74,6 +92,14 @@ class JitsiCallManager {
     private val _participantCount = MutableStateFlow(0)
     val participantCount: StateFlow<Int> = _participantCount.asStateFlow()
 
+    /**
+     * `false` while the device has no default network. Jitsi pauses the conference audio during
+     * an outage and resumes its XMPP connection on its own; the UI uses this flow to tell the
+     * rider why the intercom went quiet instead of silently appearing connected.
+     */
+    private val _isNetworkAvailable = MutableStateFlow(true)
+    val isNetworkAvailable: StateFlow<Boolean> = _isNetworkAvailable.asStateFlow()
+
     private var currentServerUrl: String = DEFAULT_SERVER_URL
     private var currentRoomName: String? = null
 
@@ -82,7 +108,41 @@ class JitsiCallManager {
     private val participantIds = mutableSetOf<String>()
 
     private var connectTimeout: Runnable? = null
+    private var reconnectTimeout: Runnable? = null
+    private var reconnectPaused = false
+    private var isLeaving = false
     private val mainHandler: Handler by lazy { Handler(Looper.getMainLooper()) }
+
+    private var connectivityManager: ConnectivityManager? = null
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+            _isNetworkAvailable.value = true
+            if (reconnectPaused) {
+                reconnectPaused = false
+                currentRoomName?.let { room ->
+                    if (_callState.value is CallState.Reconnecting) {
+                        Log.i(TAG, "Network restored, restarting reconnect timeout for '$room'")
+                        scheduleReconnectTimeout(room)
+                    }
+                }
+            }
+        }
+
+        override fun onLost(network: Network) {
+            _isNetworkAvailable.value = false
+            // Do not count offline time against the reconnect timeout: Jitsi cannot restore the
+            // conference until a network is back.
+            if (reconnectTimeout != null) {
+                cancelReconnectTimeout()
+                reconnectPaused = true
+            }
+            Log.w(TAG, "Default network lost")
+        }
+
+        override fun onUnavailable() {
+            _isNetworkAvailable.value = false
+        }
+    }
 
     /**
      * Joins [roomName] using the already created [view]. Must be called on the main thread
@@ -93,20 +153,25 @@ class JitsiCallManager {
         roomName: String,
         serverUrl: String = DEFAULT_SERVER_URL,
         displayName: String? = null,
-        isMuted: Boolean = false
+        isMuted: Boolean = false,
+        token: String? = null,
     ) {
         require(roomName.isNotBlank()) { "Room name cannot be empty" }
 
         val activeServerUrl = sanitizeServerUrl(if (serverUrl.isBlank()) DEFAULT_SERVER_URL else serverUrl)
         currentServerUrl = activeServerUrl
         currentRoomName = roomName
+        isLeaving = false
         _isMuted.value = isMuted
         _participantCount.value = 0
         participantIds.clear()
 
         unregisterBroadcastReceiver()
         registerBroadcastReceiver(view.context.applicationContext)
+        registerNetworkCallback(view.context.applicationContext)
 
+        cancelReconnectTimeout()
+        reconnectPaused = false
         _callState.value = CallState.Connecting(roomName, activeServerUrl)
 
         try {
@@ -114,7 +179,8 @@ class JitsiCallManager {
                 roomName = roomName,
                 serverUrl = activeServerUrl,
                 displayName = displayName,
-                isMuted = isMuted
+                isMuted = isMuted,
+                token = token,
             )
 
             Log.i(TAG, "Joining embedded audio-only room '$roomName' on '$activeServerUrl'")
@@ -132,7 +198,10 @@ class JitsiCallManager {
      */
     fun onViewReleased() {
         cancelConnectTimeout()
+        cancelReconnectTimeout()
+        reconnectPaused = false
         unregisterBroadcastReceiver()
+        unregisterNetworkCallback()
         currentRoomName = null
         participantIds.clear()
         _participantCount.value = 0
@@ -158,7 +227,11 @@ class JitsiCallManager {
      */
     fun hangUp() {
         Log.i(TAG, "Leaving Jitsi call for room '$currentRoomName'")
+        isLeaving = true
         cancelConnectTimeout()
+        cancelReconnectTimeout()
+        reconnectPaused = false
+        unregisterNetworkCallback()
         sendBroadcast(BroadcastIntentHelper.buildHangUpIntent())
         currentRoomName = null
         participantIds.clear()
@@ -174,7 +247,8 @@ class JitsiCallManager {
         roomName: String,
         serverUrl: String = DEFAULT_SERVER_URL,
         displayName: String? = null,
-        isMuted: Boolean = false
+        isMuted: Boolean = false,
+        token: String? = null,
     ): JitsiMeetConferenceOptions {
         val sanitizedServerUrl = sanitizeServerUrl(serverUrl)
         val url = try {
@@ -217,6 +291,11 @@ class JitsiCallManager {
             .setFeatureFlag("notifications.enabled", false)
             .setFeatureFlag("call-integration.enabled", false)
             .setFeatureFlag("pip.enabled", false)
+            // HelmChat owns audio focus/mode/routing through BluetoothAudioRouter so music can
+            // keep playing (ducked) and navigation prompts do not end the call.
+            .setFeatureFlag("audio-focus.disabled", true)
+
+        token?.trim()?.takeIf { it.isNotEmpty() }?.let { builder.setToken(it) }
 
         val userInfo = JitsiMeetUserInfo().apply {
             this.displayName = displayName?.takeIf { it.isNotBlank() } ?: DEFAULT_DISPLAY_NAME
@@ -245,6 +324,7 @@ class JitsiCallManager {
             .setConfigOverride("channelLastN", 0)
             .setFeatureFlag("welcomepage.enabled", false)
             .setFeatureFlag("prejoinpage.enabled", false)
+            .setFeatureFlag("audio-focus.disabled", true)
             .build()
 
         JitsiMeet.setDefaultConferenceOptions(defaultOptions)
@@ -299,6 +379,30 @@ class JitsiCallManager {
         broadcastReceiver = null
     }
 
+    private fun registerNetworkCallback(context: Context) {
+        unregisterNetworkCallback()
+        val manager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            ?: return
+        connectivityManager = manager
+        _isNetworkAvailable.value = manager.activeNetwork != null
+        try {
+            manager.registerDefaultNetworkCallback(networkCallback)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to register network callback", e)
+            connectivityManager = null
+        }
+    }
+
+    private fun unregisterNetworkCallback() {
+        val manager = connectivityManager ?: return
+        connectivityManager = null
+        try {
+            manager.unregisterNetworkCallback(networkCallback)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to unregister network callback", e)
+        }
+    }
+
     private fun sendBroadcast(intent: Intent) {
         localBroadcastManager?.sendBroadcast(intent)
     }
@@ -325,16 +429,44 @@ class JitsiCallManager {
         connectTimeout = null
     }
 
+    /**
+     * Keeps the call screen alive while Jitsi restores a dropped conference. Without this the
+     * app would navigate back home on the transient [BroadcastEvent.Type.CONFERENCE_TERMINATED]
+     * that Jitsi emits before its own automatic reload kicks in.
+     */
+    private fun scheduleReconnectTimeout(roomName: String) {
+        cancelReconnectTimeout()
+        val runnable = Runnable {
+            if (_callState.value is CallState.Reconnecting && currentRoomName == roomName) {
+                Log.w(TAG, "Reconnect to room '$roomName' timed out")
+                _callState.value = CallState.Error(RECONNECT_TIMEOUT_MESSAGE)
+            }
+        }
+        reconnectTimeout = runnable
+        mainHandler.postDelayed(runnable, RECONNECT_TIMEOUT_MS)
+    }
+
+    private fun cancelReconnectTimeout() {
+        reconnectTimeout?.let { mainHandler.removeCallbacks(it) }
+        reconnectTimeout = null
+    }
+
     private fun handleBroadcastEvent(event: BroadcastEvent) {
         when (event.type) {
             BroadcastEvent.Type.CONFERENCE_WILL_JOIN -> {
+                // A new join attempt (including Jitsi's own automatic reload) supersedes any
+                // pending reconnect timeout.
+                cancelReconnectTimeout()
                 currentRoomName?.let { room ->
-                    _callState.value = CallState.Connecting(room, currentServerUrl)
+                    if (_callState.value !is CallState.Connected) {
+                        _callState.value = CallState.Connecting(room, currentServerUrl)
+                    }
                 }
             }
 
             BroadcastEvent.Type.CONFERENCE_JOINED -> {
                 cancelConnectTimeout()
+                cancelReconnectTimeout()
                 if (_participantCount.value == 0) {
                     _participantCount.value = 1
                 }
@@ -348,7 +480,17 @@ class JitsiCallManager {
                 cancelConnectTimeout()
                 participantIds.clear()
                 _participantCount.value = 0
-                _callState.value = CallState.Idle
+                val room = currentRoomName
+                if (!isLeaving && room != null) {
+                    // Jitsi reloads the conference on its own after a transient drop; stay on
+                    // the call screen and show the reconnecting state instead of navigating home.
+                    Log.i(TAG, "Conference for room '$room' ended unexpectedly, waiting for reload")
+                    _callState.value = CallState.Reconnecting(room, currentServerUrl)
+                    scheduleReconnectTimeout(room)
+                } else {
+                    cancelReconnectTimeout()
+                    _callState.value = CallState.Idle
+                }
             }
 
             BroadcastEvent.Type.AUDIO_MUTED_CHANGED -> {

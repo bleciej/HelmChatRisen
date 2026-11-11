@@ -1,0 +1,83 @@
+<resources>
+    <string name="app_name">HelmChatReborn</string>
+
+    <!-- Home / join screen -->
+    <string name="home_title">HelmChat - Reborn</string>
+    <string name="home_tagline">Φωνητικό intercom για μοτοσυκλετιστές</string>
+    <string name="home_mode_badge">Λειτουργία μόνο ήχου</string>
+    <string name="home_recent_section">Πρόσφατα δωμάτια</string>
+    <string name="home_recent_clear">Εκκαθάριση</string>
+    <string name="home_recent_delete">Διαγραφή δωματίου %1$s</string>
+    <string name="home_room_section">Δωμάτιο</string>
+    <string name="home_room_label">Όνομα δωματίου</string>
+    <string name="home_room_placeholder">π.χ. kyriakatiki-volta</string>
+    <string name="home_display_name_label">Το όνομά σας (προαιρετικό)</string>
+    <string name="home_server_section">Διακομιστής</string>
+    <string name="home_server_custom_label">Διεύθυνση διακομιστή Jitsi</string>
+    <string name="home_server_custom_support">π.χ. https://o-serveris-mou.gr</string>
+    <string name="home_server_invalid">Εισαγάγετε έγκυρη διεύθυνση διακομιστή</string>
+    <string name="home_jwt_label">Διακριτικό JWT (προαιρετικό)</string>
+    <string name="home_jwt_placeholder">π.χ. eyJhbGciOiJIUzI1NiIs…</string>
+    <string name="home_jwt_support">Απαιτείται μόνο από διακομιστές με έλεγχο ταυτότητας JWT</string>
+    <string name="home_meet_jitsi_title">Το meet.jit.si απαιτεί σύνδεση</string>
+    <string name="home_meet_jitsi_warning">Αυτός ο διακομιστής απαιτεί συνδεδεμένο συντονιστή (Google/GitHub/Facebook). Ανοίξτε το δωμάτιο στο πρόγραμμα περιήγησης, συνδεθείτε και ξεκινήστε τη συνάντηση, και μετά επιστρέψτε εδώ και συνδεθείτε ως συμμετέχων.</string>
+    <string name="home_meet_jitsi_password_note">Σημείωση: τα δωμάτια με κωδικό πρόσβασης ενδέχεται να μην ανοίγουν σε αυτήν την εφαρμογή — χρησιμοποιήστε δωμάτιο χωρίς κωδικό ή άλλον διακομιστή.</string>
+    <string name="home_meet_jitsi_open">Άνοιγμα δωματίου στο πρόγραμμα περιήγησης</string>
+    <string name="home_meet_jitsi_host">Είμαι ο οικοδεσπότης</string>
+    <string name="home_join">Σύνδεση στην κλήση</string>
+    <string name="home_join_hint">Σύνδεση μόνο φωνής — χωρίς βίντεο, λιγότερα δεδομένα και μεγαλύτερη διάρκεια μπαταρίας.</string>
+    <string name="home_invite">Πρόσκληση</string>
+    <string name="home_invite_message">Έλα στο intercom μου HelmChat!\nΔωμάτιο: %1$s\nΣύνδεσμος: %2$s</string>
+
+    <!-- Call screen -->
+    <string name="call_connecting">Σύνδεση…</string>
+    <string name="call_connected">Συνδεδεμένο</string>
+    <string name="call_mute">Σίγαση μικροφώνου</string>
+    <string name="call_unmute">Ενεργοποίηση μικροφώνου</string>
+    <string name="call_leave">Τερματισμός κλήσης</string>
+    <string name="call_speaker_on">Ηχείο τηλεφώνου</string>
+    <string name="call_speaker_off">Intercom / ακουστικά</string>
+    <string name="call_route_bluetooth">Intercom: %1$s</string>
+    <string name="call_route_connecting">Σύνδεση με το intercom…</string>
+    <string name="call_participants">Συμμετέχοντες: %1$d</string>
+    <string name="call_error">Σφάλμα σύνδεσης: %1$s</string>
+    <string name="call_reconnecting">Επανασύνδεση…</string>
+    <string name="call_reconnecting_hint">Η σύνδεση χάθηκε — αυτόματη επανασύνδεση…</string>
+    <string name="call_pip_enter">Ελαχιστοποίηση σε εικόνα εντός εικόνας</string>
+    <string name="call_host_setup_title">Σύνδεση οικοδεσπότη</string>
+    <string name="call_host_setup_body">Συνδεθείτε με Google, GitHub ή Facebook και ξεκινήστε τη συνάντηση. Στη συνέχεια πατήστε «Έτοιμο».</string>
+    <string name="call_host_setup_done">Έτοιμο</string>
+    <string name="call_placeholder_title">Καμία ενεργή κλήση</string>
+    <string name="call_placeholder_body">Εισαγάγετε όνομα δωματίου και συνδεθείτε για να ξεκινήσει το intercom.</string>
+
+    <!-- Runtime permissions -->
+    <string name="permission_title">Απαιτούνται άδειες</string>
+    <string name="permission_body">Για φωνητική κλήση, το HelmChat χρειάζεται πρόσβαση στο μικρόφωνο και, σε Android 12+, και σε συσκευές Bluetooth. Επιτρέψτε αυτές τις άδειες στις ρυθμίσεις της εφαρμογής.</string>
+    <string name="permission_open_settings">Άνοιγμα ρυθμίσεων</string>
+    <string name="permission_cancel">Ακύρωση</string>
+
+    <!-- Ongoing call notification -->
+    <string name="notification_channel_name">Κλήση HelmChat</string>
+    <string name="notification_channel_description">Ειδοποιήσεις για ενεργή κλήση intercom</string>
+    <string name="notification_title">HelmChat — %1$s</string>
+    <string name="notification_connected">Συνδεδεμένο</string>
+    <string name="notification_connecting">Σύνδεση…</string>
+    <string name="notification_reconnecting">Επανασύνδεση…</string>
+    <string name="notification_mute">Σίγαση</string>
+    <string name="notification_unmute">Ενεργοποίηση μικροφώνου</string>
+    <string name="notification_end">Τερματισμός</string>
+
+    <!-- Public server presets -->
+    <string name="home_server_custom_switch">Προσαρμοσμένος διακομιστής</string>
+    <string name="server_netcup_description">Καλύτερη ποιότητα σύνδεσης — κέντρο δεδομένων Netcup στη Γερμανία.</string>
+    <string name="server_ffmuc_description">Σταθερό κοινοτικό έργο του Freifunk München.</string>
+    <string name="server_ccc_description">Ασφάλεια και ιδιωτικότητα — Chaos Computer Club München.</string>
+    <string name="server_fairmeeting_description">Αυστριακός διακομιστής Fairkom — καθαρός ήχος.</string>
+    <string name="server_systemli_description">Ανωνυμία — το δίκτυο συλλογικότητας Systemli.</string>
+
+    <!-- Language selection -->
+    <string name="language_button">Αλλαγή γλώσσας</string>
+    <string name="language_dialog_title">Γλώσσα εφαρμογής</string>
+    <string name="language_system">Γλώσσα συστήματος</string>
+    <string name="language_close">Κλείσιμο</string>
+</resources>
