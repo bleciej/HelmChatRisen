@@ -233,11 +233,12 @@ class HomeViewModelTest {
 
         assertEquals(
             listOf(
-                "freejitsi01.netcup.net",
                 "meet.ffmuc.net",
+                "freejitsi01.netcup.net",
                 "webex.muc.ccc.de",
                 "fairmeeting.net",
                 "meet.systemli.org",
+                "meet.jit.si",
             ),
             hosts,
         )

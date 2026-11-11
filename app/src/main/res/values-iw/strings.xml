@@ -1,0 +1,84 @@
+<resources>
+    <string name="app_name">HelmChatReborn</string>
+
+    <!-- Home / join screen -->
+    <string name="home_title">HelmChat - Reborn</string>
+    <string name="home_tagline">אינטרקום קולי לאופנוענים</string>
+    <string name="home_mode_badge">מצב שמע בלבד</string>
+    <string name="home_recent_section">חדרים אחרונים</string>
+    <string name="home_recent_clear">נקה</string>
+    <string name="home_recent_delete">מחק חדר %1$s</string>
+    <string name="home_room_section">חדר</string>
+    <string name="home_room_label">שם החדר</string>
+    <string name="home_room_placeholder">למשל נסיעת-יום-ראשון</string>
+    <string name="home_display_name_label">השם שלך (אופציונלי)</string>
+    <string name="home_server_section">שרת</string>
+    <string name="home_server_custom_label">כתובת שרת Jitsi</string>
+    <string name="home_server_custom_support">למשל https://my-server.com</string>
+    <string name="home_server_invalid">הזן כתובת שרת תקינה</string>
+    <string name="home_jwt_label">אסימון JWT (אופציונלי)</string>
+    <string name="home_jwt_placeholder">למשל eyJhbGciOiJIUzI1NiIs…</string>
+    <string name="home_jwt_support">נדרש רק בשרתים עם אימות JWT</string>
+    <string name="home_meet_jitsi_title">meet.jit.si דורש התחברות</string>
+    <string name="home_meet_jitsi_warning">שרת זה דורש מנהל מחובר (Google/GitHub/Facebook). פתח את החדר בדפדפן, התחבר והתחל את הפגישה, ואז חזור לכאן והצטרף כמשתתף.</string>
+    <string name="home_meet_jitsi_password_note">הערה: חדרים מוגנים בסיסמה עשויים שלא להיפתח באפליקציה זו — השתמש בחדר ללא סיסמה או בשרת אחר.</string>
+    <string name="home_meet_jitsi_open">פתח את החדר בדפדפן</string>
+    <string name="home_meet_jitsi_host">אני המארח</string>
+    <string name="home_join">הצטרף לשיחה</string>
+    <string name="home_join_hint">חיבור קולי בלבד — ללא וידאו, פחות נתונים וסוללה לאורך זמן.</string>
+    <string name="home_invite">הזמן</string>
+    <string name="home_invite_message">הצטרף לאינטרקום HelmChat שלי!\nחדר: %1$s\nקישור: %2$s</string>
+
+    <!-- Call screen -->
+    <string name="call_connecting">מתחבר…</string>
+    <string name="call_connected">מחובר</string>
+    <string name="call_mute">השתק מיקרופון</string>
+    <string name="call_unmute">הפעל מיקרופון</string>
+    <string name="call_leave">סיים שיחה</string>
+    <string name="call_speaker_on">רמקול הטלפון</string>
+    <string name="call_speaker_off">אינטרקום / אוזניות</string>
+    <string name="call_route_bluetooth">אינטרקום: %1$s</string>
+    <string name="call_route_connecting">מתחבר לאינטרקום…</string>
+    <string name="call_participants">משתתפים: %1$d</string>
+    <string name="call_error">שגיאת חיבור: %1$s</string>
+    <string name="call_reconnecting">מתחבר מחדש…</string>
+    <string name="call_reconnecting_hint">החיבור נותק — מתחבר מחדש אוטומטית…</string>
+    <string name="call_pip_enter">מזער לתמונה בתוך תמונה</string>
+    <string name="call_host_setup_title">התחברות מארח</string>
+    <string name="call_host_setup_body">התחבר עם Google, GitHub או Facebook והתחל את הפגישה. לאחר מכן הקש על „סיום”.</string>
+    <string name="call_host_setup_done">סיום</string>
+    <string name="call_placeholder_title">אין שיחה פעילה</string>
+    <string name="call_placeholder_body">הזן שם חדר והצטרף כדי להתחיל את האינטרקום.</string>
+
+    <!-- Runtime permissions -->
+    <string name="permission_title">נדרשות הרשאות</string>
+    <string name="permission_body">כדי לנהל שיחת קול, HelmChat זקוקה לגישה למיקרופון, ובאנדרואיד 12 ומעלה גם להתקני Bluetooth. אפשר הרשאות אלה בהגדרות האפליקציה.</string>
+    <string name="permission_open_settings">פתח הגדרות</string>
+    <string name="permission_cancel">ביטול</string>
+
+    <!-- Ongoing call notification -->
+    <string name="notification_channel_name">שיחת HelmChat</string>
+    <string name="notification_channel_description">התראות על שיחת אינטרקום פעילה</string>
+    <string name="notification_title">HelmChat — %1$s</string>
+    <string name="notification_connected">מחובר</string>
+    <string name="notification_connecting">מתחבר…</string>
+    <string name="notification_reconnecting">מתחבר מחדש…</string>
+    <string name="notification_mute">השתק</string>
+    <string name="notification_unmute">הפעל מיקרופון</string>
+    <string name="notification_end">סיים</string>
+
+    <!-- Public server presets -->
+    <string name="home_server_custom_switch">שרת מותאם אישית</string>
+    <string name="server_netcup_description">איכות קישור הטובה ביותר — מרכז נתונים Netcup בגרמניה.</string>
+    <string name="server_ffmuc_description">פרויקט קהילתי יציב של Freifunk München.</string>
+    <string name="server_ccc_description">אבטחה ופרטיות — Chaos Computer Club München.</string>
+    <string name="server_fairmeeting_description">שרת Fairkom אוסטרי — צליל נקי.</string>
+    <string name="server_systemli_description">אנונימיות — קולקטיב הרשת Systemli.</string>
+    <string name="server_jitsi_description">פרויקט יציב ומאובטח של Jitsi.org.</string>
+
+    <!-- Language selection -->
+    <string name="language_button">שנה שפה</string>
+    <string name="language_dialog_title">שפת האפליקציה</string>
+    <string name="language_system">שפת המערכת</string>
+    <string name="language_close">סגור</string>
+</resources>

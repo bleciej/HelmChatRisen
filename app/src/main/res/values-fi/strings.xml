@@ -74,6 +74,7 @@
     <string name="server_ccc_description">Turvallisuus ja yksityisyys — Chaos Computer Club München.</string>
     <string name="server_fairmeeting_description">Itävaltalainen Fairkom-palvelin — puhdas ääni.</string>
     <string name="server_systemli_description">Anonyymius — Systemli-verkkokollektiivi.</string>
+    <string name="server_jitsi_description">Jitsi.orgin vakaa ja turvallinen projekti.</string>
 
     <!-- Language selection -->
     <string name="language_button">Vaihda kieli</string>

@@ -19,11 +19,13 @@ object AppLanguage {
 
     /**
      * Tags of every locale that ships translations, sorted alphabetically by the language name
-     * shown in the picker (diacritics ignored, Latin before Greek before Cyrillic).
+     * shown in the picker (diacritics ignored; Latin, Greek, Cyrillic, Hebrew, Devanagari, Han
+     * and Kana scripts follow the collator's order).
      */
     val supportedTags: List<String> = listOf(
-        "cs", "da", "de", "et", "en", "es", "fr", "it", "lv", "lt",
-        "hu", "no", "pl", "sk", "fi", "sv", "el", "bg", "uk",
+        "cs", "da", "de", "et", "en", "es", "fr", "hr", "it", "lv", "lt",
+        "hu", "nl", "no", "pl", "pt", "ro", "sk", "fi", "sv", "tr", "el",
+        "bg", "ru", "sr", "uk", "he", "hi", "zh", "ja",
     )
 
     /** Language names written in their own language. */
@@ -35,18 +37,29 @@ object AppLanguage {
         "en" to "English",
         "es" to "Español",
         "fr" to "Français",
+        "hr" to "Hrvatski",
         "it" to "Italiano",
         "lv" to "Latviešu",
         "lt" to "Lietuvių",
         "hu" to "Magyar",
+        "nl" to "Nederlands",
         "no" to "Norsk",
         "pl" to "Polski",
+        "pt" to "Português",
+        "ro" to "Română",
         "sk" to "Slovenčina",
         "fi" to "Suomi",
         "sv" to "Svenska",
+        "tr" to "Türkçe",
         "el" to "Ελληνικά",
         "bg" to "Български",
+        "ru" to "Русский",
+        "sr" to "Српски",
         "uk" to "Українська",
+        "he" to "עברית",
+        "hi" to "हिन्दी",
+        "zh" to "中文",
+        "ja" to "日本語",
     )
 
     /**
@@ -61,18 +74,29 @@ object AppLanguage {
         "en" to "🇬🇧",
         "es" to "🇪🇸",
         "fr" to "🇫🇷",
+        "hr" to "🇭🇷",
         "it" to "🇮🇹",
         "lv" to "🇱🇻",
         "lt" to "🇱🇹",
         "hu" to "🇭🇺",
+        "nl" to "🇳🇱",
         "no" to "🇳🇴",
         "pl" to "🇵🇱",
+        "pt" to "🇵🇹",
+        "ro" to "🇷🇴",
         "sk" to "🇸🇰",
         "fi" to "🇫🇮",
         "sv" to "🇸🇪",
+        "tr" to "🇹🇷",
         "el" to "🇬🇷",
         "bg" to "🇧🇬",
+        "ru" to "🇷🇺",
+        "sr" to "🇷🇸",
         "uk" to "🇺🇦",
+        "he" to "🇮🇱",
+        "hi" to "🇮🇳",
+        "zh" to "🇨🇳",
+        "ja" to "🇯🇵",
     )
 
     /** Flag used for the "follow the system language" option. */

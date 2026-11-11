@@ -1,0 +1,84 @@
+<resources>
+    <string name="app_name">HelmChatReborn</string>
+
+    <!-- Home / join screen -->
+    <string name="home_title">HelmChat - Reborn</string>
+    <string name="home_tagline">バイクライダー向け音声インターコム</string>
+    <string name="home_mode_badge">音声のみモード</string>
+    <string name="home_recent_section">最近のルーム</string>
+    <string name="home_recent_clear">クリア</string>
+    <string name="home_recent_delete">ルーム %1$s を削除</string>
+    <string name="home_room_section">ルーム</string>
+    <string name="home_room_label">ルーム名</string>
+    <string name="home_room_placeholder">例: sunday-ride</string>
+    <string name="home_display_name_label">あなたの名前（任意）</string>
+    <string name="home_server_section">サーバー</string>
+    <string name="home_server_custom_label">Jitsi サーバーアドレス</string>
+    <string name="home_server_custom_support">例: https://my-server.com</string>
+    <string name="home_server_invalid">有効なサーバーアドレスを入力してください</string>
+    <string name="home_jwt_label">JWT トークン（任意）</string>
+    <string name="home_jwt_placeholder">例: eyJhbGciOiJIUzI1NiIs…</string>
+    <string name="home_jwt_support">JWT 認証を使用するサーバーでのみ必要です</string>
+    <string name="home_meet_jitsi_title">meet.jit.si はサインインが必要です</string>
+    <string name="home_meet_jitsi_warning">このサーバーではサインイン済みのモデレーターが必要です（Google/GitHub/Facebook）。ブラウザでルームを開いてサインインし、ミーティングを開始してから、ここに戻って参加者として参加してください。</string>
+    <string name="home_meet_jitsi_password_note">注意: パスワード保護されたルームはこのアプリで開けない場合があります。パスワードなしのルームか別のサーバーを使用してください。</string>
+    <string name="home_meet_jitsi_open">ブラウザでルームを開く</string>
+    <string name="home_meet_jitsi_host">ホストです</string>
+    <string name="home_join">通話に参加</string>
+    <string name="home_join_hint">音声のみの接続 — 動画なし、データ使用量が少なく、バッテリーが長持ちします。</string>
+    <string name="home_invite">招待</string>
+    <string name="home_invite_message">HelmChat インターコムに参加しよう！\nルーム: %1$s\nリンク: %2$s</string>
+
+    <!-- Call screen -->
+    <string name="call_connecting">接続中…</string>
+    <string name="call_connected">接続済み</string>
+    <string name="call_mute">マイクをミュート</string>
+    <string name="call_unmute">マイクのミュートを解除</string>
+    <string name="call_leave">通話を終了</string>
+    <string name="call_speaker_on">スマートフォンのスピーカー</string>
+    <string name="call_speaker_off">インターコム / ヘッドセット</string>
+    <string name="call_route_bluetooth">インターコム: %1$s</string>
+    <string name="call_route_connecting">インターコムに接続中…</string>
+    <string name="call_participants">参加者: %1$d</string>
+    <string name="call_error">接続エラー: %1$s</string>
+    <string name="call_reconnecting">再接続中…</string>
+    <string name="call_reconnecting_hint">接続が切断されました — 自動的に再接続しています…</string>
+    <string name="call_pip_enter">ピクチャーインピクチャーに最小化</string>
+    <string name="call_host_setup_title">ホストのサインイン</string>
+    <string name="call_host_setup_body">Google、GitHub、または Facebook でサインインし、ミーティングを開始します。その後「完了」をタップしてください。</string>
+    <string name="call_host_setup_done">完了</string>
+    <string name="call_placeholder_title">通話中ではありません</string>
+    <string name="call_placeholder_body">ルーム名を入力して参加し、インターコムを開始します。</string>
+
+    <!-- Runtime permissions -->
+    <string name="permission_title">権限が必要です</string>
+    <string name="permission_body">音声通話を行うには、HelmChat がマイクにアクセスする必要があります。Android 12 以降では Bluetooth デバイスへのアクセスも必要です。アプリ設定でこれらの権限を許可してください。</string>
+    <string name="permission_open_settings">設定を開く</string>
+    <string name="permission_cancel">キャンセル</string>
+
+    <!-- Ongoing call notification -->
+    <string name="notification_channel_name">HelmChat 通話</string>
+    <string name="notification_channel_description">アクティブなインターコム通話に関する通知</string>
+    <string name="notification_title">HelmChat — %1$s</string>
+    <string name="notification_connected">接続済み</string>
+    <string name="notification_connecting">接続中…</string>
+    <string name="notification_reconnecting">再接続中…</string>
+    <string name="notification_mute">ミュート</string>
+    <string name="notification_unmute">マイクのミュートを解除</string>
+    <string name="notification_end">終了</string>
+
+    <!-- Public server presets -->
+    <string name="home_server_custom_switch">カスタムサーバー</string>
+    <string name="server_netcup_description">最高の回線品質 — ドイツの Netcup データセンター。</string>
+    <string name="server_ffmuc_description">Freifunk München による安定したコミュニティプロジェクト。</string>
+    <string name="server_ccc_description">セキュリティとプライバシー — Chaos Computer Club München。</string>
+    <string name="server_fairmeeting_description">オーストリアの Fairkom サーバー — クリアな音声。</string>
+    <string name="server_systemli_description">匿名性 — Systemli ネットワークコレクティブ。</string>
+    <string name="server_jitsi_description">Jitsi.org による安定かつ安全なプロジェクト。</string>
+
+    <!-- Language selection -->
+    <string name="language_button">言語を変更</string>
+    <string name="language_dialog_title">アプリの言語</string>
+    <string name="language_system">システムのデフォルト</string>
+    <string name="language_close">閉じる</string>
+</resources>

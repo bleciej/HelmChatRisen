@@ -74,6 +74,7 @@
     <string name="server_ccc_description">Biztonság és adatvédelem — Chaos Computer Club München.</string>
     <string name="server_fairmeeting_description">Osztrák Fairkom szerver — tiszta hang.</string>
     <string name="server_systemli_description">Névtelenség — a Systemli hálózati kollektíva.</string>
+    <string name="server_jitsi_description">A Jitsi.org stabil és biztonságos projektje.</string>
 
     <!-- Language selection -->
     <string name="language_button">Nyelv módosítása</string>

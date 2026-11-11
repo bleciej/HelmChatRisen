@@ -74,6 +74,7 @@
     <string name="server_ccc_description">Turvalisus ja privaatsus — Chaos Computer Club München.</string>
     <string name="server_fairmeeting_description">Austria Fairkomi server — puhas heli.</string>
     <string name="server_systemli_description">Anonüümsus — Systemli võrgustikukollektiiv.</string>
+    <string name="server_jitsi_description">Jitsi.orgi stabiilne ja turvaline projekt.</string>
 
     <!-- Language selection -->
     <string name="language_button">Muuda keelt</string>

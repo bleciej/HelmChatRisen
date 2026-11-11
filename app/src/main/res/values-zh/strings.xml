@@ -1,0 +1,84 @@
+<resources>
+    <string name="app_name">HelmChatReborn</string>
+
+    <!-- Home / join screen -->
+    <string name="home_title">HelmChat - Reborn</string>
+    <string name="home_tagline">摩托车骑手语音对讲</string>
+    <string name="home_mode_badge">仅音频模式</string>
+    <string name="home_recent_section">最近房间</string>
+    <string name="home_recent_clear">清除</string>
+    <string name="home_recent_delete">删除房间 %1$s</string>
+    <string name="home_room_section">房间</string>
+    <string name="home_room_label">房间名称</string>
+    <string name="home_room_placeholder">例如 sunday-ride</string>
+    <string name="home_display_name_label">你的名字（可选）</string>
+    <string name="home_server_section">服务器</string>
+    <string name="home_server_custom_label">Jitsi 服务器地址</string>
+    <string name="home_server_custom_support">例如 https://my-server.com</string>
+    <string name="home_server_invalid">请输入有效的服务器地址</string>
+    <string name="home_jwt_label">JWT 令牌（可选）</string>
+    <string name="home_jwt_placeholder">例如 eyJhbGciOiJIUzI1NiIs…</string>
+    <string name="home_jwt_support">仅使用 JWT 身份验证的服务器需要</string>
+    <string name="home_meet_jitsi_title">meet.jit.si 需要登录</string>
+    <string name="home_meet_jitsi_warning">此服务器需要已登录的主持人（Google/GitHub/Facebook）。请在浏览器中打开房间、登录并开始会议，然后返回此处以参与者身份加入。</string>
+    <string name="home_meet_jitsi_password_note">注意：受密码保护的房间可能无法在此应用中打开——请使用无密码房间或其他服务器。</string>
+    <string name="home_meet_jitsi_open">在浏览器中打开房间</string>
+    <string name="home_meet_jitsi_host">我是主持人</string>
+    <string name="home_join">加入通话</string>
+    <string name="home_join_hint">仅语音连接——无视频、流量更少、续航更长。</string>
+    <string name="home_invite">邀请</string>
+    <string name="home_invite_message">加入我的 HelmChat 对讲！\n房间：%1$s\n链接：%2$s</string>
+
+    <!-- Call screen -->
+    <string name="call_connecting">正在连接…</string>
+    <string name="call_connected">已连接</string>
+    <string name="call_mute">静音麦克风</string>
+    <string name="call_unmute">取消麦克风静音</string>
+    <string name="call_leave">结束通话</string>
+    <string name="call_speaker_on">手机扬声器</string>
+    <string name="call_speaker_off">对讲机 / 耳机</string>
+    <string name="call_route_bluetooth">对讲机：%1$s</string>
+    <string name="call_route_connecting">正在连接对讲机…</string>
+    <string name="call_participants">参与者：%1$d</string>
+    <string name="call_error">连接错误：%1$s</string>
+    <string name="call_reconnecting">正在重新连接…</string>
+    <string name="call_reconnecting_hint">连接中断——正在自动重新连接…</string>
+    <string name="call_pip_enter">最小化为画中画</string>
+    <string name="call_host_setup_title">主持人登录</string>
+    <string name="call_host_setup_body">使用 Google、GitHub 或 Facebook 登录并开始会议，然后点击“完成”。</string>
+    <string name="call_host_setup_done">完成</string>
+    <string name="call_placeholder_title">无活动通话</string>
+    <string name="call_placeholder_body">输入房间名称并加入以启动对讲。</string>
+
+    <!-- Runtime permissions -->
+    <string name="permission_title">需要权限</string>
+    <string name="permission_body">要进行语音通话，HelmChat 需要访问麦克风，在 Android 12+ 上还需要访问蓝牙设备。请在应用设置中允许这些权限。</string>
+    <string name="permission_open_settings">打开设置</string>
+    <string name="permission_cancel">取消</string>
+
+    <!-- Ongoing call notification -->
+    <string name="notification_channel_name">HelmChat 通话</string>
+    <string name="notification_channel_description">有关活动对讲通话的通知</string>
+    <string name="notification_title">HelmChat — %1$s</string>
+    <string name="notification_connected">已连接</string>
+    <string name="notification_connecting">正在连接…</string>
+    <string name="notification_reconnecting">正在重新连接…</string>
+    <string name="notification_mute">静音</string>
+    <string name="notification_unmute">取消麦克风静音</string>
+    <string name="notification_end">结束</string>
+
+    <!-- Public server presets -->
+    <string name="home_server_custom_switch">自定义服务器</string>
+    <string name="server_netcup_description">最佳连接质量——位于德国的 Netcup 数据中心。</string>
+    <string name="server_ffmuc_description">Freifunk München 的稳定社区项目。</string>
+    <string name="server_ccc_description">安全与隐私——Chaos Computer Club München。</string>
+    <string name="server_fairmeeting_description">奥地利 Fairkom 服务器——清晰音质。</string>
+    <string name="server_systemli_description">匿名——Systemli 网络集体。</string>
+    <string name="server_jitsi_description">Jitsi.org 稳定且安全的项目。</string>
+
+    <!-- Language selection -->
+    <string name="language_button">更改语言</string>
+    <string name="language_dialog_title">应用语言</string>
+    <string name="language_system">系统默认</string>
+    <string name="language_close">关闭</string>
+</resources>

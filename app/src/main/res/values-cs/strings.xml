@@ -74,6 +74,7 @@
     <string name="server_ccc_description">Bezpečnost a soukromí — Chaos Computer Club München.</string>
     <string name="server_fairmeeting_description">Rakouský server Fairkom — čistý zvuk.</string>
     <string name="server_systemli_description">Anonymita — síťové kolektiv Systemli.</string>
+    <string name="server_jitsi_description">Stabilní a bezpečný projekt od Jitsi.org.</string>
 
     <!-- Language selection -->
     <string name="language_button">Změnit jazyk</string>

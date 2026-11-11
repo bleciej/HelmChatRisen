@@ -1,0 +1,84 @@
+<resources>
+    <string name="app_name">HelmChatReborn</string>
+
+    <!-- Home / join screen -->
+    <string name="home_title">HelmChat - Reborn</string>
+    <string name="home_tagline">मोटरसाइकिल सवारों के लिए वॉइस इंटरकॉम</string>
+    <string name="home_mode_badge">केवल ऑडियो मोड</string>
+    <string name="home_recent_section">हाल के कमरे</string>
+    <string name="home_recent_clear">साफ़ करें</string>
+    <string name="home_recent_delete">कमरा %1$s हटाएँ</string>
+    <string name="home_room_section">कमरा</string>
+    <string name="home_room_label">कमरे का नाम</string>
+    <string name="home_room_placeholder">जैसे sunday-ride</string>
+    <string name="home_display_name_label">आपका नाम (वैकल्पिक)</string>
+    <string name="home_server_section">सर्वर</string>
+    <string name="home_server_custom_label">Jitsi सर्वर पता</string>
+    <string name="home_server_custom_support">जैसे https://my-server.com</string>
+    <string name="home_server_invalid">मान्य सर्वर पता दर्ज करें</string>
+    <string name="home_jwt_label">JWT टोकन (वैकल्पिक)</string>
+    <string name="home_jwt_placeholder">जैसे eyJhbGciOiJIUzI1NiIs…</string>
+    <string name="home_jwt_support">केवल JWT प्रमाणीकरण वाले सर्वर के लिए आवश्यक</string>
+    <string name="home_meet_jitsi_title">meet.jit.si में साइन-इन आवश्यक है</string>
+    <string name="home_meet_jitsi_warning">इस सर्वर के लिए साइन-इन किया हुआ मॉडरेटर आवश्यक है (Google/GitHub/Facebook)। ब्राउज़र में कमरा खोलें, साइन इन करें और मीटिंग शुरू करें, फिर यहाँ वापस आकर प्रतिभागी के रूप में शामिल हों।</string>
+    <string name="home_meet_jitsi_password_note">नोट: पासवर्ड से सुरक्षित कमरे इस ऐप में नहीं खुल सकते — बिना पासवर्ड वाला कमरा या दूसरा सर्वर उपयोग करें।</string>
+    <string name="home_meet_jitsi_open">ब्राउज़र में कमरा खोलें</string>
+    <string name="home_meet_jitsi_host">मैं होस्ट हूँ</string>
+    <string name="home_join">कॉल में शामिल हों</string>
+    <string name="home_join_hint">केवल आवाज़ कनेक्शन — कोई वीडियो नहीं, कम डेटा और लंबी बैटरी लाइफ।</string>
+    <string name="home_invite">आमंत्रित करें</string>
+    <string name="home_invite_message">मेरे HelmChat इंटरकॉम से जुड़ें!\nकमरा: %1$s\nलिंक: %2$s</string>
+
+    <!-- Call screen -->
+    <string name="call_connecting">कनेक्ट हो रहा है…</string>
+    <string name="call_connected">कनेक्टेड</string>
+    <string name="call_mute">माइक्रोफ़ोन म्यूट करें</string>
+    <string name="call_unmute">माइक्रोफ़ोन अनम्यूट करें</string>
+    <string name="call_leave">कॉल समाप्त करें</string>
+    <string name="call_speaker_on">फ़ोन स्पीकर</string>
+    <string name="call_speaker_off">इंटरकॉम / हेडसेट</string>
+    <string name="call_route_bluetooth">इंटरकॉम: %1$s</string>
+    <string name="call_route_connecting">इंटरकॉम से कनेक्ट हो रहा है…</string>
+    <string name="call_participants">प्रतिभागी: %1$d</string>
+    <string name="call_error">कनेक्शन त्रुटि: %1$s</string>
+    <string name="call_reconnecting">फिर से कनेक्ट हो रहा है…</string>
+    <string name="call_reconnecting_hint">कनेक्शन टूट गया — स्वचालित रूप से फिर से कनेक्ट हो रहा है…</string>
+    <string name="call_pip_enter">पिक्चर-इन-पिक्चर में छोटा करें</string>
+    <string name="call_host_setup_title">होस्ट साइन-इन</string>
+    <string name="call_host_setup_body">Google, GitHub या Facebook से साइन इन करें और मीटिंग शुरू करें। फिर “पूर्ण” पर टैप करें।</string>
+    <string name="call_host_setup_done">पूर्ण</string>
+    <string name="call_placeholder_title">कोई सक्रिय कॉल नहीं</string>
+    <string name="call_placeholder_body">कमरे का नाम दर्ज करें और इंटरकॉम शुरू करने के लिए शामिल हों।</string>
+
+    <!-- Runtime permissions -->
+    <string name="permission_title">अनुमतियाँ आवश्यक</string>
+    <string name="permission_body">वॉइस कॉल करने के लिए HelmChat को माइक्रोफ़ोन तक पहुँच चाहिए और Android 12+ पर ब्लूटूथ डिवाइस तक भी। ऐप सेटिंग्स में ये अनुमतियाँ दें।</string>
+    <string name="permission_open_settings">सेटिंग्स खोलें</string>
+    <string name="permission_cancel">रद्द करें</string>
+
+    <!-- Ongoing call notification -->
+    <string name="notification_channel_name">HelmChat कॉल</string>
+    <string name="notification_channel_description">सक्रिय इंटरकॉम कॉल के बारे में सूचनाएँ</string>
+    <string name="notification_title">HelmChat — %1$s</string>
+    <string name="notification_connected">कनेक्टेड</string>
+    <string name="notification_connecting">कनेक्ट हो रहा है…</string>
+    <string name="notification_reconnecting">फिर से कनेक्ट हो रहा है…</string>
+    <string name="notification_mute">म्यूट</string>
+    <string name="notification_unmute">माइक्रोफ़ोन अनम्यूट करें</string>
+    <string name="notification_end">समाप्त</string>
+
+    <!-- Public server presets -->
+    <string name="home_server_custom_switch">कस्टम सर्वर</string>
+    <string name="server_netcup_description">सर्वश्रेष्ठ लिंक गुणवत्ता — जर्मनी में Netcup डेटा सेंटर।</string>
+    <string name="server_ffmuc_description">Freifunk München का स्थिर सामुदायिक प्रोजेक्ट।</string>
+    <string name="server_ccc_description">सुरक्षा और गोपनीयता — Chaos Computer Club München।</string>
+    <string name="server_fairmeeting_description">ऑस्ट्रियाई Fairkom सर्वर — साफ़ ध्वनि।</string>
+    <string name="server_systemli_description">गुमनामी — Systemli नेटवर्क कलेक्टिव।</string>
+    <string name="server_jitsi_description">Jitsi.org का स्थिर और सुरक्षित प्रोजेक्ट।</string>
+
+    <!-- Language selection -->
+    <string name="language_button">भाषा बदलें</string>
+    <string name="language_dialog_title">ऐप भाषा</string>
+    <string name="language_system">सिस्टम डिफ़ॉल्ट</string>
+    <string name="language_close">बंद करें</string>
+</resources>

@@ -74,6 +74,7 @@
     <string name="server_ccc_description">Saugumas ir privatumas — Chaos Computer Club München.</string>
     <string name="server_fairmeeting_description">Austrijos Fairkom serveris — švarus garsas.</string>
     <string name="server_systemli_description">Anonimiškumas — Systemli tinklo kolektyvas.</string>
+    <string name="server_jitsi_description">Stabilus ir saugus Jitsi.org projektas.</string>
 
     <!-- Language selection -->
     <string name="language_button">Keisti kalbą</string>

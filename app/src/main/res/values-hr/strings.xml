@@ -1,0 +1,84 @@
+<resources>
+    <string name="app_name">HelmChatReborn</string>
+
+    <!-- Home / join screen -->
+    <string name="home_title">HelmChat - Reborn</string>
+    <string name="home_tagline">Glasovni interkom za motocikliste</string>
+    <string name="home_mode_badge">Samo zvuk</string>
+    <string name="home_recent_section">Nedavne sobe</string>
+    <string name="home_recent_clear">Očisti</string>
+    <string name="home_recent_delete">Izbriši sobu %1$s</string>
+    <string name="home_room_section">Soba</string>
+    <string name="home_room_label">Naziv sobe</string>
+    <string name="home_room_placeholder">npr. nedjeljna-vožnja</string>
+    <string name="home_display_name_label">Tvoje ime (neobavezno)</string>
+    <string name="home_server_section">Poslužitelj</string>
+    <string name="home_server_custom_label">Adresa Jitsi poslužitelja</string>
+    <string name="home_server_custom_support">npr. https://moj-posluzitelj.hr</string>
+    <string name="home_server_invalid">Unesi valjanu adresu poslužitelja</string>
+    <string name="home_jwt_label">JWT token (neobavezno)</string>
+    <string name="home_jwt_placeholder">npr. eyJhbGciOiJIUzI1NiIs…</string>
+    <string name="home_jwt_support">Potrebno samo za poslužitelje s JWT autentifikacijom</string>
+    <string name="home_meet_jitsi_title">meet.jit.si zahtijeva prijavu</string>
+    <string name="home_meet_jitsi_warning">Ovaj poslužitelj zahtijeva prijavljenog moderatora (Google/GitHub/Facebook). Otvori sobu u pregledniku, prijavi se i pokreni sastanak, zatim se vrati ovdje i pridruži se kao sudionik.</string>
+    <string name="home_meet_jitsi_password_note">Napomena: sobe zaštićene lozinkom možda se neće otvoriti u ovoj aplikaciji — koristi sobu bez lozinke ili drugi poslužitelj.</string>
+    <string name="home_meet_jitsi_open">Otvori sobu u pregledniku</string>
+    <string name="home_meet_jitsi_host">Ja sam domaćin</string>
+    <string name="home_join">Pridruži se razgovoru</string>
+    <string name="home_join_hint">Veza samo za zvuk — bez videa, manje podataka i dulje trajanje baterije.</string>
+    <string name="home_invite">Pozovi</string>
+    <string name="home_invite_message">Pridruži se mom HelmChat interkomu!\nSoba: %1$s\nVeza: %2$s</string>
+
+    <!-- Call screen -->
+    <string name="call_connecting">Povezivanje…</string>
+    <string name="call_connected">Povezano</string>
+    <string name="call_mute">Isključi mikrofon</string>
+    <string name="call_unmute">Uključi mikrofon</string>
+    <string name="call_leave">Završi razgovor</string>
+    <string name="call_speaker_on">Zvučnik telefona</string>
+    <string name="call_speaker_off">Interkom / slušalice</string>
+    <string name="call_route_bluetooth">Interkom: %1$s</string>
+    <string name="call_route_connecting">Povezivanje s interkomom…</string>
+    <string name="call_participants">Sudionici: %1$d</string>
+    <string name="call_error">Pogreška veze: %1$s</string>
+    <string name="call_reconnecting">Ponovno povezivanje…</string>
+    <string name="call_reconnecting_hint">Veza je prekinuta — automatsko ponovno povezivanje…</string>
+    <string name="call_pip_enter">Smanji u sliku u slici</string>
+    <string name="call_host_setup_title">Prijava domaćina</string>
+    <string name="call_host_setup_body">Prijavi se putem Googlea, GitHuba ili Facebooka i pokreni sastanak. Zatim dodirni „Gotovo”.</string>
+    <string name="call_host_setup_done">Gotovo</string>
+    <string name="call_placeholder_title">Nema aktivnog razgovora</string>
+    <string name="call_placeholder_body">Unesi naziv sobe i pridruži se da pokreneš interkom.</string>
+
+    <!-- Runtime permissions -->
+    <string name="permission_title">Potrebna dopuštenja</string>
+    <string name="permission_body">Za glasovni razgovor HelmChat treba pristup mikrofonu, a na Androidu 12+ i Bluetooth uređajima. Dopusti ta dopuštenja u postavkama aplikacije.</string>
+    <string name="permission_open_settings">Otvori postavke</string>
+    <string name="permission_cancel">Odustani</string>
+
+    <!-- Ongoing call notification -->
+    <string name="notification_channel_name">HelmChat razgovor</string>
+    <string name="notification_channel_description">Obavijesti o aktivnom interkom razgovoru</string>
+    <string name="notification_title">HelmChat — %1$s</string>
+    <string name="notification_connected">Povezano</string>
+    <string name="notification_connecting">Povezivanje…</string>
+    <string name="notification_reconnecting">Ponovno povezivanje…</string>
+    <string name="notification_mute">Isključi zvuk</string>
+    <string name="notification_unmute">Uključi mikrofon</string>
+    <string name="notification_end">Završi</string>
+
+    <!-- Public server presets -->
+    <string name="home_server_custom_switch">Vlastiti poslužitelj</string>
+    <string name="server_netcup_description">Najbolja kvaliteta veze — Netcup podatkovni centar u Njemačkoj.</string>
+    <string name="server_ffmuc_description">Stabilan projekt zajednice Freifunk München.</string>
+    <string name="server_ccc_description">Sigurnost i privatnost — Chaos Computer Club München.</string>
+    <string name="server_fairmeeting_description">Austrijski Fairkom poslužitelj — čist zvuk.</string>
+    <string name="server_systemli_description">Anonimnost — mrežni kolektiv Systemli.</string>
+    <string name="server_jitsi_description">Stabilan i siguran projekt organizacije Jitsi.org.</string>
+
+    <!-- Language selection -->
+    <string name="language_button">Promijeni jezik</string>
+    <string name="language_dialog_title">Jezik aplikacije</string>
+    <string name="language_system">Jezik sustava</string>
+    <string name="language_close">Zatvori</string>
+</resources>

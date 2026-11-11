@@ -1,0 +1,84 @@
+<resources>
+    <string name="app_name">HelmChatReborn</string>
+
+    <!-- Home / join screen -->
+    <string name="home_title">HelmChat - Reborn</string>
+    <string name="home_tagline">Interfon vocal pentru motocicliști</string>
+    <string name="home_mode_badge">Doar audio</string>
+    <string name="home_recent_section">Camere recente</string>
+    <string name="home_recent_clear">Golește</string>
+    <string name="home_recent_delete">Șterge camera %1$s</string>
+    <string name="home_room_section">Cameră</string>
+    <string name="home_room_label">Numele camerei</string>
+    <string name="home_room_placeholder">ex. plimbare-de-duminică</string>
+    <string name="home_display_name_label">Numele tău (opțional)</string>
+    <string name="home_server_section">Server</string>
+    <string name="home_server_custom_label">Adresa serverului Jitsi</string>
+    <string name="home_server_custom_support">ex. https://serverul-meu.ro</string>
+    <string name="home_server_invalid">Introdu o adresă de server validă</string>
+    <string name="home_jwt_label">Token JWT (opțional)</string>
+    <string name="home_jwt_placeholder">ex. eyJhbGciOiJIUzI1NiIs…</string>
+    <string name="home_jwt_support">Necesar doar pentru serverele cu autentificare JWT</string>
+    <string name="home_meet_jitsi_title">meet.jit.si necesită autentificare</string>
+    <string name="home_meet_jitsi_warning">Acest server necesită un moderator autentificat (Google/GitHub/Facebook). Deschide camera în browser, autentifică-te și începe întâlnirea, apoi întoarce-te aici și alătură-te ca participant.</string>
+    <string name="home_meet_jitsi_password_note">Notă: camerele protejate cu parolă pot să nu se deschidă în această aplicație — folosește o cameră fără parolă sau alt server.</string>
+    <string name="home_meet_jitsi_open">Deschide camera în browser</string>
+    <string name="home_meet_jitsi_host">Eu sunt gazda</string>
+    <string name="home_join">Alătură-te apelului</string>
+    <string name="home_join_hint">Conexiune doar vocală — fără video, mai puține date și baterie mai durabilă.</string>
+    <string name="home_invite">Invită</string>
+    <string name="home_invite_message">Alătură-te interfonului meu HelmChat!\nCameră: %1$s\nLink: %2$s</string>
+
+    <!-- Call screen -->
+    <string name="call_connecting">Se conectează…</string>
+    <string name="call_connected">Conectat</string>
+    <string name="call_mute">Dezactivează microfonul</string>
+    <string name="call_unmute">Activează microfonul</string>
+    <string name="call_leave">Încheie apelul</string>
+    <string name="call_speaker_on">Difuzorul telefonului</string>
+    <string name="call_speaker_off">Interfon / cască</string>
+    <string name="call_route_bluetooth">Interfon: %1$s</string>
+    <string name="call_route_connecting">Se conectează la interfon…</string>
+    <string name="call_participants">Participanți: %1$d</string>
+    <string name="call_error">Eroare de conexiune: %1$s</string>
+    <string name="call_reconnecting">Se reconectează…</string>
+    <string name="call_reconnecting_hint">Conexiune pierdută — reconectare automată…</string>
+    <string name="call_pip_enter">Minimizează în imagine-în-imagine</string>
+    <string name="call_host_setup_title">Autentificare gazdă</string>
+    <string name="call_host_setup_body">Autentifică-te cu Google, GitHub sau Facebook și începe întâlnirea. Apoi atinge „Gata”.</string>
+    <string name="call_host_setup_done">Gata</string>
+    <string name="call_placeholder_title">Niciun apel activ</string>
+    <string name="call_placeholder_body">Introdu numele camerei și alătură-te pentru a porni interfonul.</string>
+
+    <!-- Runtime permissions -->
+    <string name="permission_title">Permisiuni necesare</string>
+    <string name="permission_body">Pentru a purta o conversație vocală, HelmChat are nevoie de acces la microfon și, pe Android 12+, la dispozitivele Bluetooth. Permite aceste permisiuni în setările aplicației.</string>
+    <string name="permission_open_settings">Deschide setările</string>
+    <string name="permission_cancel">Anulează</string>
+
+    <!-- Ongoing call notification -->
+    <string name="notification_channel_name">Apel HelmChat</string>
+    <string name="notification_channel_description">Notificări despre un apel de interfon activ</string>
+    <string name="notification_title">HelmChat — %1$s</string>
+    <string name="notification_connected">Conectat</string>
+    <string name="notification_connecting">Se conectează…</string>
+    <string name="notification_reconnecting">Se reconectează…</string>
+    <string name="notification_mute">Dezactivează sunetul</string>
+    <string name="notification_unmute">Activează microfonul</string>
+    <string name="notification_end">Încheie</string>
+
+    <!-- Public server presets -->
+    <string name="home_server_custom_switch">Server personalizat</string>
+    <string name="server_netcup_description">Cea mai bună calitate a legăturii — centrul de date Netcup din Germania.</string>
+    <string name="server_ffmuc_description">Proiect comunitar stabil al Freifunk München.</string>
+    <string name="server_ccc_description">Securitate și confidențialitate — Chaos Computer Club München.</string>
+    <string name="server_fairmeeting_description">Server austriac Fairkom — sunet curat.</string>
+    <string name="server_systemli_description">Anonimat — colectivul de rețea Systemli.</string>
+    <string name="server_jitsi_description">Proiect stabil și sigur al Jitsi.org.</string>
+
+    <!-- Language selection -->
+    <string name="language_button">Schimbă limba</string>
+    <string name="language_dialog_title">Limba aplicației</string>
+    <string name="language_system">Limba sistemului</string>
+    <string name="language_close">Închide</string>
+</resources>

@@ -1,0 +1,84 @@
+<resources>
+    <string name="app_name">HelmChatReborn</string>
+
+    <!-- Home / join screen -->
+    <string name="home_title">HelmChat - Reborn</string>
+    <string name="home_tagline">Motosikletçiler için sesli interkom</string>
+    <string name="home_mode_badge">Yalnızca ses</string>
+    <string name="home_recent_section">Son odalar</string>
+    <string name="home_recent_clear">Temizle</string>
+    <string name="home_recent_delete">%1$s odasını sil</string>
+    <string name="home_room_section">Oda</string>
+    <string name="home_room_label">Oda adı</string>
+    <string name="home_room_placeholder">ör. pazar-sürüşü</string>
+    <string name="home_display_name_label">Adınız (isteğe bağlı)</string>
+    <string name="home_server_section">Sunucu</string>
+    <string name="home_server_custom_label">Jitsi sunucu adresi</string>
+    <string name="home_server_custom_support">ör. https://sunucum.com</string>
+    <string name="home_server_invalid">Geçerli bir sunucu adresi girin</string>
+    <string name="home_jwt_label">JWT belirteci (isteğe bağlı)</string>
+    <string name="home_jwt_placeholder">ör. eyJhbGciOiJIUzI1NiIs…</string>
+    <string name="home_jwt_support">Yalnızca JWT kimlik doğrulaması kullanan sunucular için gerekli</string>
+    <string name="home_meet_jitsi_title">meet.jit.si oturum açmayı gerektirir</string>
+    <string name="home_meet_jitsi_warning">Bu sunucu oturum açmış bir moderatör gerektirir (Google/GitHub/Facebook). Odayı tarayıcınızda açın, oturum açın ve toplantıyı başlatın, ardından buraya dönüp katılımcı olarak katılın.</string>
+    <string name="home_meet_jitsi_password_note">Not: parola korumalı odalar bu uygulamada açılmayabilir — parolasız bir oda veya başka bir sunucu kullanın.</string>
+    <string name="home_meet_jitsi_open">Odayı tarayıcıda aç</string>
+    <string name="home_meet_jitsi_host">Ben ev sahibiyim</string>
+    <string name="home_join">Görüşmeye katıl</string>
+    <string name="home_join_hint">Yalnızca sesli bağlantı — video yok, daha az veri ve daha uzun pil ömrü.</string>
+    <string name="home_invite">Davet et</string>
+    <string name="home_invite_message">HelmChat interkomuma katıl!\nOda: %1$s\nBağlantı: %2$s</string>
+
+    <!-- Call screen -->
+    <string name="call_connecting">Bağlanıyor…</string>
+    <string name="call_connected">Bağlandı</string>
+    <string name="call_mute">Mikrofonu kapat</string>
+    <string name="call_unmute">Mikrofonu aç</string>
+    <string name="call_leave">Görüşmeyi bitir</string>
+    <string name="call_speaker_on">Telefon hoparlörü</string>
+    <string name="call_speaker_off">Interkom / kulaklık</string>
+    <string name="call_route_bluetooth">Interkom: %1$s</string>
+    <string name="call_route_connecting">Interkoma bağlanıyor…</string>
+    <string name="call_participants">Katılımcılar: %1$d</string>
+    <string name="call_error">Bağlantı hatası: %1$s</string>
+    <string name="call_reconnecting">Yeniden bağlanıyor…</string>
+    <string name="call_reconnecting_hint">Bağlantı kesildi — otomatik olarak yeniden bağlanılıyor…</string>
+    <string name="call_pip_enter">Resim içinde resme küçült</string>
+    <string name="call_host_setup_title">Ev sahibi oturumu</string>
+    <string name="call_host_setup_body">Google, GitHub veya Facebook ile oturum açın ve toplantıyı başlatın. Ardından „Bitti”ye dokunun.</string>
+    <string name="call_host_setup_done">Bitti</string>
+    <string name="call_placeholder_title">Etkin görüşme yok</string>
+    <string name="call_placeholder_body">Bir oda adı girin ve interkomu başlatmak için katılın.</string>
+
+    <!-- Runtime permissions -->
+    <string name="permission_title">İzinler gerekli</string>
+    <string name="permission_body">Sesli görüşme yapmak için HelmChat uygulamasının mikrofona ve Android 12+ sürümlerinde Bluetooth cihazlarına erişmesi gerekir. Bu izinlere uygulama ayarlarından izin verin.</string>
+    <string name="permission_open_settings">Ayarları aç</string>
+    <string name="permission_cancel">İptal</string>
+
+    <!-- Ongoing call notification -->
+    <string name="notification_channel_name">HelmChat görüşmesi</string>
+    <string name="notification_channel_description">Etkin interkom görüşmesiyle ilgili bildirimler</string>
+    <string name="notification_title">HelmChat — %1$s</string>
+    <string name="notification_connected">Bağlandı</string>
+    <string name="notification_connecting">Bağlanıyor…</string>
+    <string name="notification_reconnecting">Yeniden bağlanıyor…</string>
+    <string name="notification_mute">Sessize al</string>
+    <string name="notification_unmute">Mikrofonu aç</string>
+    <string name="notification_end">Bitir</string>
+
+    <!-- Public server presets -->
+    <string name="home_server_custom_switch">Özel sunucu</string>
+    <string name="server_netcup_description">En iyi bağlantı kalitesi — Almanya merkezli Netcup veri merkezi.</string>
+    <string name="server_ffmuc_description">Freifunk München topluluğunun istikrarlı projesi.</string>
+    <string name="server_ccc_description">Güvenlik ve gizlilik — Chaos Computer Club München.</string>
+    <string name="server_fairmeeting_description">Avusturya Fairkom sunucusu — temiz ses.</string>
+    <string name="server_systemli_description">Anonimlik — Systemli ağ kolektifi.</string>
+    <string name="server_jitsi_description">Jitsi.org tarafından geliştirilen istikrarlı ve güvenli proje.</string>
+
+    <!-- Language selection -->
+    <string name="language_button">Dili değiştir</string>
+    <string name="language_dialog_title">Uygulama dili</string>
+    <string name="language_system">Sistem dili</string>
+    <string name="language_close">Kapat</string>
+</resources>

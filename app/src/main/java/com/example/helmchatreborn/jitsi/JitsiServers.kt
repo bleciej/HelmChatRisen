@@ -30,12 +30,12 @@ object JitsiServers {
 
     val presets: List<JitsiServer> = listOf(
         JitsiServer(
-            url = "https://freejitsi01.netcup.net",
-            descriptionRes = R.string.server_netcup_description,
-        ),
-        JitsiServer(
             url = "https://meet.ffmuc.net",
             descriptionRes = R.string.server_ffmuc_description,
+        ),
+        JitsiServer(
+            url = "https://freejitsi01.netcup.net",
+            descriptionRes = R.string.server_netcup_description,
         ),
         JitsiServer(
             url = "https://webex.muc.ccc.de",
@@ -48,6 +48,10 @@ object JitsiServers {
         JitsiServer(
             url = "https://meet.systemli.org",
             descriptionRes = R.string.server_systemli_description,
+        ),
+        JitsiServer(
+            url = "https://meet.jit.si",
+            descriptionRes = R.string.server_jitsi_description,
         ),
     )
 

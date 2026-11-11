@@ -1,0 +1,84 @@
+<resources>
+    <string name="app_name">HelmChatReborn</string>
+
+    <!-- Home / join screen -->
+    <string name="home_title">HelmChat - Reborn</string>
+    <string name="home_tagline">Spraakintercom voor motorrijders</string>
+    <string name="home_mode_badge">Alleen audio</string>
+    <string name="home_recent_section">Recente kamers</string>
+    <string name="home_recent_clear">Wissen</string>
+    <string name="home_recent_delete">Kamer %1$s verwijderen</string>
+    <string name="home_room_section">Kamer</string>
+    <string name="home_room_label">Kamernaam</string>
+    <string name="home_room_placeholder">bijv. zondagrit</string>
+    <string name="home_display_name_label">Je naam (optioneel)</string>
+    <string name="home_server_section">Server</string>
+    <string name="home_server_custom_label">Jitsi-serveradres</string>
+    <string name="home_server_custom_support">bijv. https://mijn-server.nl</string>
+    <string name="home_server_invalid">Voer een geldig serveradres in</string>
+    <string name="home_jwt_label">JWT-token (optioneel)</string>
+    <string name="home_jwt_placeholder">bijv. eyJhbGciOiJIUzI1NiIs…</string>
+    <string name="home_jwt_support">Alleen vereist voor servers met JWT-authenticatie</string>
+    <string name="home_meet_jitsi_title">meet.jit.si vereist aanmelding</string>
+    <string name="home_meet_jitsi_warning">Deze server vereist een aangemelde moderator (Google/GitHub/Facebook). Open de kamer in je browser, meld je aan en start de vergadering, kom dan hier terug en neem deel als deelnemer.</string>
+    <string name="home_meet_jitsi_password_note">Let op: kamers met een wachtwoord openen mogelijk niet in deze app — gebruik een kamer zonder wachtwoord of een andere server.</string>
+    <string name="home_meet_jitsi_open">Kamer in browser openen</string>
+    <string name="home_meet_jitsi_host">Ik ben de host</string>
+    <string name="home_join">Deelnemen aan gesprek</string>
+    <string name="home_join_hint">Alleen spraak — geen video, minder data en een langere batterijduur.</string>
+    <string name="home_invite">Uitnodigen</string>
+    <string name="home_invite_message">Doe mee met mijn HelmChat-intercom!\nKamer: %1$s\nLink: %2$s</string>
+
+    <!-- Call screen -->
+    <string name="call_connecting">Verbinden…</string>
+    <string name="call_connected">Verbonden</string>
+    <string name="call_mute">Microfoon dempen</string>
+    <string name="call_unmute">Microfoon inschakelen</string>
+    <string name="call_leave">Gesprek beëindigen</string>
+    <string name="call_speaker_on">Telefoonluidspreker</string>
+    <string name="call_speaker_off">Intercom / headset</string>
+    <string name="call_route_bluetooth">Intercom: %1$s</string>
+    <string name="call_route_connecting">Verbinden met intercom…</string>
+    <string name="call_participants">Deelnemers: %1$d</string>
+    <string name="call_error">Verbindingsfout: %1$s</string>
+    <string name="call_reconnecting">Opnieuw verbinden…</string>
+    <string name="call_reconnecting_hint">Verbinding verbroken — automatisch opnieuw verbinden…</string>
+    <string name="call_pip_enter">Minimaliseren naar picture-in-picture</string>
+    <string name="call_host_setup_title">Aanmelden als host</string>
+    <string name="call_host_setup_body">Meld je aan met Google, GitHub of Facebook en start de vergadering. Tik daarna op ‘Gereed’.</string>
+    <string name="call_host_setup_done">Gereed</string>
+    <string name="call_placeholder_title">Geen actief gesprek</string>
+    <string name="call_placeholder_body">Voer een kamernaam in en neem deel om de intercom te starten.</string>
+
+    <!-- Runtime permissions -->
+    <string name="permission_title">Machtigingen vereist</string>
+    <string name="permission_body">Om een spraakgesprek te voeren heeft HelmChat toegang nodig tot de microfoon en, op Android 12+, tot Bluetooth-apparaten. Sta deze machtigingen toe in de app-instellingen.</string>
+    <string name="permission_open_settings">Instellingen openen</string>
+    <string name="permission_cancel">Annuleren</string>
+
+    <!-- Ongoing call notification -->
+    <string name="notification_channel_name">HelmChat-gesprek</string>
+    <string name="notification_channel_description">Meldingen over een actief intercomgesprek</string>
+    <string name="notification_title">HelmChat — %1$s</string>
+    <string name="notification_connected">Verbonden</string>
+    <string name="notification_connecting">Verbinden…</string>
+    <string name="notification_reconnecting">Opnieuw verbinden…</string>
+    <string name="notification_mute">Dempen</string>
+    <string name="notification_unmute">Microfoon inschakelen</string>
+    <string name="notification_end">Beëindigen</string>
+
+    <!-- Public server presets -->
+    <string name="home_server_custom_switch">Eigen server</string>
+    <string name="server_netcup_description">Beste linkkwaliteit — Netcup-datacenter in Duitsland.</string>
+    <string name="server_ffmuc_description">Stabiel communityproject van Freifunk München.</string>
+    <string name="server_ccc_description">Veiligheid en privacy — Chaos Computer Club München.</string>
+    <string name="server_fairmeeting_description">Oostenrijkse Fairkom-server — helder geluid.</string>
+    <string name="server_systemli_description">Anonimiteit — het netwerkcollectief Systemli.</string>
+    <string name="server_jitsi_description">Stabiel en veilig project van Jitsi.org.</string>
+
+    <!-- Language selection -->
+    <string name="language_button">Taal wijzigen</string>
+    <string name="language_dialog_title">App-taal</string>
+    <string name="language_system">Systeemtaal</string>
+    <string name="language_close">Sluiten</string>
+</resources>

@@ -74,6 +74,7 @@
     <string name="server_ccc_description">Sicurezza e privacy — Chaos Computer Club München.</string>
     <string name="server_fairmeeting_description">Server austriaco Fairkom — audio pulito.</string>
     <string name="server_systemli_description">Anonimato — collettivo di rete Systemli.</string>
+    <string name="server_jitsi_description">Progetto stabile e sicuro di Jitsi.org.</string>
 
     <!-- Language selection -->
     <string name="language_button">Cambia lingua</string>

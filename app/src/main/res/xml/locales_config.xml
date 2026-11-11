@@ -11,16 +11,27 @@
     <locale android:name="en" />
     <locale android:name="es" />
     <locale android:name="fr" />
+    <locale android:name="hr" />
     <locale android:name="it" />
     <locale android:name="lv" />
     <locale android:name="lt" />
     <locale android:name="hu" />
+    <locale android:name="nl" />
     <locale android:name="no" />
     <locale android:name="pl" />
+    <locale android:name="pt" />
+    <locale android:name="ro" />
     <locale android:name="sk" />
     <locale android:name="fi" />
     <locale android:name="sv" />
+    <locale android:name="tr" />
     <locale android:name="el" />
     <locale android:name="bg" />
+    <locale android:name="ru" />
+    <locale android:name="sr" />
     <locale android:name="uk" />
+    <locale android:name="he" />
+    <locale android:name="hi" />
+    <locale android:name="zh" />
+    <locale android:name="ja" />
 </locale-config>

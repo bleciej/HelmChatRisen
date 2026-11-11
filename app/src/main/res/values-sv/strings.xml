@@ -74,6 +74,7 @@
     <string name="server_ccc_description">Säkerhet och integritet — Chaos Computer Club München.</string>
     <string name="server_fairmeeting_description">Österrikisk Fairkom-server — rent ljud.</string>
     <string name="server_systemli_description">Anonymitet — nätverkskollektivet Systemli.</string>
+    <string name="server_jitsi_description">Stabilt och säkert projekt av Jitsi.org.</string>
 
     <!-- Language selection -->
     <string name="language_button">Byt språk</string>
