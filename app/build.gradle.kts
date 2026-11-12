@@ -5,6 +5,8 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.plugin.serialization)
 }
 
+val appVersionName = "1.2"
+
 android {
     namespace = "com.example.helmchatreborn"
     compileSdk {
@@ -16,17 +18,25 @@ android {
         minSdk = 24
         targetSdk = 37
         versionCode = 1
-        versionName = "1.0"
+        versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
-
     buildTypes {
         release {
             optimization {
                 enable = true
                 packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
             }
+        }
+    }
+    // Always produce per-ABI release APKs for the two supported ABIs, plus a universal APK.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a")
+            isUniversalApk = true
         }
     }
     compileOptions {
@@ -43,6 +53,10 @@ android {
     }
 }
 
+base {
+    archivesName.set("HelmChatReborn-$appVersionName")
+}
+
 /**
  * Jitsi's bundled JS hard-codes a 10–30 s conference reload delay and a 30 s websocket retry.
  * Both make a transient motorcycle-network drop feel like a dropped call. Patch the merged
@@ -53,6 +67,19 @@ android {
  */
 androidComponents {
     onVariants { variant ->
+        // Give release APKs the requested names, including the ABI for split outputs.
+        if (variant.name == "release") {
+            variant.outputs.forEach { output ->
+                val abi = output.filters.firstOrNull {
+                    it.filterType == com.android.build.api.variant.FilterConfiguration.FilterType.ABI
+                }?.identifier
+                val abiSuffix = if (abi != null) "-$abi" else ""
+                @Suppress("UnstableApiUsage")
+                output.outputFileName.set(
+                    "HelmChatReborn-$appVersionName-release$abiSuffix.apk",
+                )
+            }
+        }
         val variantName = variant.name.replaceFirstChar { it.uppercase() }
         val mergedBundle = layout.buildDirectory
             .file("intermediates/assets/${variant.name}/merge${variantName}Assets/index.android.bundle")
@@ -78,7 +105,7 @@ androidComponents {
                     } else if (!patched.contains(to)) {
                         throw GradleException(
                             "Jitsi reconnect patch target not found in ${bundleFile.name}: $from. " +
-                                "Update app/build.gradle.kts for the installed Jitsi SDK version."
+                                "Update app/build.gradle.kts for the installed Jitsi SDK version.",
                         )
                     }
                 }
