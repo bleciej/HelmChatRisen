@@ -5,16 +5,16 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.plugin.serialization)
 }
 
-val appVersionName = "1.2"
+val appVersionName = "1.3"
 
 android {
-    namespace = "com.example.helmchatreborn"
+    namespace = "com.example.helmChatRisen"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.example.helmchatreborn"
+        applicationId = "com.example.helmChatRisen"
         minSdk = 24
         targetSdk = 37
         versionCode = 1
@@ -54,7 +54,7 @@ android {
 }
 
 base {
-    archivesName.set("HelmChatReborn-$appVersionName")
+    archivesName.set("HelmChatRisen-$appVersionName")
 }
 
 /**
@@ -76,7 +76,7 @@ androidComponents {
                 val abiSuffix = if (abi != null) "-$abi" else ""
                 @Suppress("UnstableApiUsage")
                 output.outputFileName.set(
-                    "HelmChatReborn-$appVersionName-release$abiSuffix.apk",
+                    "HelmChatRisen-$appVersionName-release$abiSuffix.apk",
                 )
             }
         }

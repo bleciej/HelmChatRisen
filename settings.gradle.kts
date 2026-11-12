@@ -25,5 +25,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "HelmChatReborn"
+rootProject.name = "HelmChatRisen"
 include(":app")

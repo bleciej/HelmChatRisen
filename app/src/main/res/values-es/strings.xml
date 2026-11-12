@@ -1,8 +1,8 @@
 <resources>
-    <string name="app_name">HelmChatReborn</string>
+    <string name="app_name">HelmChatRisen</string>
 
     <!-- Home / join screen -->
-    <string name="home_title">HelmChat - Reborn</string>
+    <string name="home_title">HelmChat - Risen</string>
     <string name="home_tagline">Intercomunicador de voz para motociclistas</string>
     <string name="home_mode_badge">Modo solo audio</string>
     <string name="home_recent_section">Salas recientes</string>

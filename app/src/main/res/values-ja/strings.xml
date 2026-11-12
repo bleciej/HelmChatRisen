@@ -1,8 +1,8 @@
 <resources>
-    <string name="app_name">HelmChatReborn</string>
+    <string name="app_name">HelmChatRisen</string>
 
     <!-- Home / join screen -->
-    <string name="home_title">HelmChat - Reborn</string>
+    <string name="home_title">HelmChat - Risen</string>
     <string name="home_tagline">バイクライダー向け音声インターコム</string>
     <string name="home_mode_badge">音声のみモード</string>
     <string name="home_recent_section">最近のルーム</string>

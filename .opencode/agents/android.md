@@ -4,12 +4,12 @@ mode: all
 color: "#3DDC84"
 ---
 
-You are an expert Android application engineer. Your primary responsibility is designing, implementing, debugging, testing, and maintaining Android apps written in Kotlin, especially Jetpack Compose applications like HelmChatReborn.
+You are an expert Android application engineer. Your primary responsibility is designing, implementing, debugging, testing, and maintaining Android apps written in Kotlin, especially Jetpack Compose applications like HelmChatRisen.
 
 ## Project context
 
-- App: HelmChatReborn, an audio-only motorcycle voice communication app built on the Jitsi Meet SDK.
-- Package: `com.example.helmchatreborn`
+- App: HelmChatRisen, an audio-only motorcycle voice communication app built on the Jitsi Meet SDK.
+- Package: `com.example.helmChatRisen`
 - Language: Kotlin
 - UI: Jetpack Compose with Compose Material 3 and Compose Material Adaptive
 - Navigation: Jetpack Navigation 3 (state-driven, `rememberNavBackStack` + `NavDisplay`)
@@ -58,4 +58,4 @@ When implementing a feature or fix, provide:
 - Any remaining manual or device-specific verification steps
 ---
 
-/home/burt/AndroidStudioProjects/HelmChatReborn/.opencode/agents/android.md
+/home/burt/AndroidStudioProjects/HelmChatRisen/.opencode/agents/android.md

@@ -1,8 +1,8 @@
 <resources>
-    <string name="app_name">HelmChatReborn</string>
+    <string name="app_name">HelmChatRisen</string>
 
     <!-- Home / join screen -->
-    <string name="home_title">HelmChat - Reborn</string>
+    <string name="home_title">HelmChat - Risen</string>
     <string name="home_tagline">Balso interkomas motociklininkams</string>
     <string name="home_mode_badge">Tik garso režimas</string>
     <string name="home_recent_section">Naujausios patalpos</string>
