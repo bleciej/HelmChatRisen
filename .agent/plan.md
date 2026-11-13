@@ -180,3 +180,19 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - Flags are decorative for accessibility
   - Flags stay in sync with supported tags (guarded by tests)
   - Build, tests and lint pass
+
+### Task_18_BatteryOptimizationAndJitsiFilters: Keep the connection alive in the background and force Jitsi audio filters.
+- **Status:** COMPLETED
+- **Updates:** Added `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` permission to the manifest and a one-time automatic request on the home screen (LaunchedEffect + SharedPreferences flag) so Android does not kill the app in the pocket; no extra UI option was added. Forced Jitsi's built-in WebRTC filters by adding `noiseSuppression`, `echoCancellation` and `autoGainControl` config overrides (in `buildConferenceOptions` and `configureDefaultOptions`); the already-present audio-only/car-mode/prejoin/notifications flags remain. Verified `assembleDebug` and `testDebugUnitTest` pass.
+- **Acceptance Criteria:**
+  - App requests battery-optimization exemption once on first launch
+  - Jitsi conference options enable noise suppression, echo cancellation and auto gain control
+  - Build and tests pass
+
+### Task_19_HomeHeaderIconBackground: Darken the home-screen logo badge background.
+- **Status:** COMPLETED
+- **Updates:** Changed the `HomeHeader` logo badge background from white to the app background color (#090B0E) so it blends with the dark theme; kept the circular shape for consistency with the splash screen. Verified `assembleDebug` passes.
+- **Acceptance Criteria:**
+  - Home-screen logo badge no longer has a white background
+  - Badge shape stays circular and consistent with the splash icon
+  - Build passes

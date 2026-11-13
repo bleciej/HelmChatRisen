@@ -56,13 +56,21 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import android.content.Context
+import android.content.Intent
+import android.content.SharedPreferences
+import android.net.Uri
+import android.os.PowerManager
+import android.provider.Settings
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -114,6 +122,26 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
 ) {
     var showLanguageDialog by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+        if (powerManager != null && !powerManager.isIgnoringBatteryOptimizations(context.packageName)) {
+            val prefs = context.getSharedPreferences("helmchat_prefs", Context.MODE_PRIVATE)
+            if (!prefs.getBoolean("battery_optimization_requested", false)) {
+                try {
+                    context.startActivity(
+                        Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                            data = Uri.parse("package:${context.packageName}")
+                        }
+                    )
+                } catch (_: Exception) {
+                    // Ignore if the system cannot handle the request.
+                }
+                prefs.edit().putBoolean("battery_optimization_requested", true).apply()
+            }
+        }
+    }
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val horizontalPadding = if (maxWidth >= 600.dp) 48.dp else 20.dp
@@ -291,7 +319,7 @@ private fun HomeHeader() {
         Surface(
             modifier = Modifier.size(96.dp),
             shape = CircleShape,
-            color = Color.White,
+            color = Color(0xFF090B0E),
             border = BorderStroke(2.dp, MotorcyclePrimary.copy(alpha = 0.5f)),
         ) {
             Image(
