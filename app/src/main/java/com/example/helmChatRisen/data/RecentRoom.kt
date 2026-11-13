@@ -18,6 +18,13 @@ data class RecentRoom(
 internal const val MAX_RECENT_ROOMS = 8
 
 /**
+ * Stable server identity that ignores the scheme, host casing and trailing slashes. The optional
+ * path is preserved so distinct deployments on the same host stay separate.
+ */
+internal fun canonicalServerKey(serverUrl: String): String =
+    serverUrl.trim().trimEnd('/').substringAfter("://").lowercase()
+
+/**
  * Adds [newRoom] to [existing], removes duplicates and keeps the list sorted by most
  * recently used first. Pure function so it can be covered by JVM unit tests.
  */
@@ -35,9 +42,10 @@ internal fun mergeRecentRoom(
         return existing
     }
 
+    val normalizedServerKey = canonicalServerKey(normalized.serverUrl)
     val withoutDuplicate = existing.filterNot { room ->
         room.roomName == normalized.roomName &&
-            room.serverUrl.trimEnd('/') == normalized.serverUrl
+            canonicalServerKey(room.serverUrl) == normalizedServerKey
     }
 
     return (listOf(normalized) + withoutDuplicate)

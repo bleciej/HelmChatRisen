@@ -217,6 +217,19 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun applyRecentRoom_mapsHttpPresetEntryOntoPreset() {
+        viewModel.applyRecentRoom(
+            RecentRoom(roomName = "ride", serverUrl = "http://meet.ffmuc.net"),
+        )
+
+        val state = viewModel.uiState.value
+        assertFalse(state.useCustomServer)
+        assertEquals("https://meet.ffmuc.net", state.selectedServerUrl)
+        assertEquals("https://meet.ffmuc.net", state.effectiveServerUrl)
+        assertEquals("", state.customServerUrl)
+    }
+
+    @Test
     fun createCallRequest_usesSelectedPreset() {
         viewModel.onRoomNameChange("ride")
         viewModel.onPresetServerSelected(JitsiServers.byUrl("https://webex.muc.ccc.de")!!)

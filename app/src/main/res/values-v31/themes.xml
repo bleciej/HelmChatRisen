@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Always-dark app: only the API 31 splash attribute needs an overlay. -->
+    <style name="Theme.HelmChatRisen" parent="Base.Theme.HelmChatRisen">
+        <item name="android:windowSplashScreenBackground">?android:attr/colorBackground</item>
+    </style>
+</resources>

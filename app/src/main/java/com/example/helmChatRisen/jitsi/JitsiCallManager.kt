@@ -158,7 +158,7 @@ class JitsiCallManager {
     ) {
         require(roomName.isNotBlank()) { "Room name cannot be empty" }
 
-        val activeServerUrl = sanitizeServerUrl(if (serverUrl.isBlank()) DEFAULT_SERVER_URL else serverUrl)
+        val activeServerUrl = sanitizeServerUrl(serverUrl)
         currentServerUrl = activeServerUrl
         currentRoomName = roomName
         isLeaving = false
@@ -338,16 +338,19 @@ class JitsiCallManager {
 
     /**
      * Utility method to sanitize server URL string.
+     *
+     * Blank input falls back to [DEFAULT_SERVER_URL]. A known preset host is always resolved to
+     * its canonical `https` URL, so a recent room saved as `http://meet.ffmuc.net` is never
+     * joined over an insecure connection. Unknown servers keep the scheme the rider typed.
      */
     fun sanitizeServerUrl(url: String): String {
-        var trimmed = url.trim()
-        if (trimmed.isEmpty()) {
-            return DEFAULT_SERVER_URL
+        val normalized = normalizeServerUrl(url) ?: return DEFAULT_SERVER_URL
+        val secureCandidate = if (normalized.startsWith(HTTP_SCHEME, ignoreCase = true)) {
+            HTTPS_SCHEME + normalized.substringAfter("://")
+        } else {
+            normalized
         }
-        if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
-            trimmed = "https://$trimmed"
-        }
-        return trimmed.removeSuffix("/")
+        return JitsiServers.byUrl(secureCandidate)?.url ?: normalized
     }
 
     private fun registerBroadcastReceiver(context: Context) {

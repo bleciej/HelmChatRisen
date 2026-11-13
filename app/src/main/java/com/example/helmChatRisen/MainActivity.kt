@@ -7,10 +7,12 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.graphics.Color
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Bundle
 import android.util.Rational
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
@@ -68,7 +70,11 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         callManager.configureDefaultOptions()
-        enableEdgeToEdge()
+        // Always-dark UI: keep light system bar icons even when the system is in light mode.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+        )
         setContent {
             val isInPictureInPicture by pipState.collectAsStateWithLifecycle()
             HelmChatRisenTheme {
@@ -115,6 +121,7 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
         }
     }
 
+    @Suppress("DEPRECATION") // The no-argument overload is the only one available on API 24–25.
     private fun enterPipIfPossible() {
         if (!canEnterPip()) return
         try {
@@ -125,7 +132,7 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
             } else {
                 enterPictureInPictureMode()
             }
-        } catch (e: IllegalStateException) {
+        } catch (_: IllegalStateException) {
             // The system refused PiP (e.g. another PiP window is active). The call keeps
             // running in the background through the foreground service.
         }
@@ -135,7 +142,7 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         try {
             setPictureInPictureParams(buildPipParams(autoEnter = canEnterPip()))
-        } catch (e: IllegalStateException) {
+        } catch (_: IllegalStateException) {
             // Params can only be set while the activity is attached.
         }
     }
@@ -254,18 +261,5 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
         listener: PermissionListener?,
     ) {
         JitsiMeetActivityDelegate.requestPermissions(this, permissions, requestCode, listener)
-    }
-
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-        sendBroadcast(
-            Intent(ACTION_CONFIGURATION_CHANGED).putExtra(EXTRA_NEW_CONFIG, newConfig)
-        )
-    }
-
-    private companion object {
-        /** Mirrors the broadcast sent by [org.jitsi.meet.sdk.JitsiMeetActivity]. */
-        const val ACTION_CONFIGURATION_CHANGED = "onConfigurationChanged"
-        const val EXTRA_NEW_CONFIG = "newConfig"
     }
 }

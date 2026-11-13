@@ -2,6 +2,7 @@ package com.example.helmChatRisen.jitsi
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 
@@ -35,6 +36,53 @@ class JitsiCallManagerTest {
     fun sanitizeServerUrl_returnsDefault_whenBlank() {
         val sanitized = callManager.sanitizeServerUrl("   ")
         assertEquals("https://meet.ffmuc.net", sanitized)
+    }
+
+    @Test
+    fun sanitizeServerUrl_returnsDefault_whenOnlySchemeProvided() {
+        assertEquals(JitsiCallManager.DEFAULT_SERVER_URL, callManager.sanitizeServerUrl("https://"))
+        assertEquals(JitsiCallManager.DEFAULT_SERVER_URL, callManager.sanitizeServerUrl("http://"))
+        assertEquals(JitsiCallManager.DEFAULT_SERVER_URL, callManager.sanitizeServerUrl("https:///"))
+    }
+
+    @Test
+    fun sanitizeServerUrl_normalizesUppercaseHttpsScheme() {
+        val sanitized = callManager.sanitizeServerUrl("HTTPS://MEET.FFMUC.NET/")
+        assertEquals("https://meet.ffmuc.net", sanitized)
+    }
+
+    @Test
+    fun sanitizeServerUrl_upgradesHttpPresetUrlToHttps() {
+        assertEquals(
+            "https://meet.ffmuc.net",
+            callManager.sanitizeServerUrl("http://meet.ffmuc.net"),
+        )
+        assertEquals(
+            "https://meet.ffmuc.net",
+            callManager.sanitizeServerUrl("HTTP://MEET.FFMUC.NET/"),
+        )
+    }
+
+    @Test
+    fun sanitizeServerUrl_keepsSchemeOfUnknownServer() {
+        assertEquals(
+            "http://jitsi.example.com",
+            callManager.sanitizeServerUrl("http://jitsi.example.com/"),
+        )
+        assertEquals(
+            "https://moj-serwer.pl",
+            callManager.sanitizeServerUrl("https://moj-serwer.pl"),
+        )
+    }
+
+    /**
+     * Pins the intentional difference between the two helpers: a blank server URL falls back to
+     * the default preset on the join path, while preset lookup reports "no match".
+     */
+    @Test
+    fun sanitizeServerUrl_defaultsBlankInput_whileByUrlRejectsIt() {
+        assertEquals(JitsiCallManager.DEFAULT_SERVER_URL, callManager.sanitizeServerUrl(""))
+        assertNull(JitsiServers.byUrl(""))
     }
 
     @Test

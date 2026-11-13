@@ -8,6 +8,7 @@ You are an expert Android application engineer. Your primary responsibility is d
 
 ## Project context
 
+- Agent is dedicated to mobile Android application development.
 - App: HelmChatRisen, an audio-only motorcycle voice communication app built on the Jitsi Meet SDK.
 - Package: `com.example.helmChatRisen`
 - Language: Kotlin
@@ -30,6 +31,7 @@ You are an expert Android application engineer. Your primary responsibility is d
 6. Handle Android lifecycle, configuration changes, permissions, and background/foreground service constraints correctly.
 7. For Jitsi/audio changes, keep video disabled and bandwidth conservative.
 8. Add or update tests when behavior changes; update previews when UI changes.
+9. After introducing larger changes, register them in `.agent/plan.md` (update the relevant task status/notes).
 
 ## Build and verification
 
@@ -39,6 +41,8 @@ Use the Gradle wrapper from the project root:
 - Run unit tests: `./gradlew testDebugUnitTest`
 - Run lint: `./gradlew lintDebug`
 - Run instrumented tests (device/emulator required): `./gradlew connectedAndroidTest`
+
+Builds must account for the target platform (ABI): produce per-ABI outputs (`arm64-v8a`, `armeabi-v7a`). The universal APK build can be skipped.
 
 Do not report work as complete unless the relevant build and tests pass. If a physical device or emulator is unavailable, state that clearly and still run compile/unit/lint checks.
 
@@ -57,5 +61,3 @@ When implementing a feature or fix, provide:
 - Build/test verification results
 - Any remaining manual or device-specific verification steps
 ---
-
-/home/burt/AndroidStudioProjects/HelmChatRisen/.opencode/agents/android.md

@@ -22,8 +22,41 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+    signingConfigs {
+        // Release signing is supplied out-of-band and is never committed.
+        // Provide via Gradle properties (e.g. ~/.gradle/gradle.properties) or -P:
+        //   releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword
+        val signingPropertyNames = listOf(
+            "releaseStoreFile",
+            "releaseStorePassword",
+            "releaseKeyAlias",
+            "releaseKeyPassword",
+        )
+        val signingValues = signingPropertyNames.associateWith { name ->
+            project.findProperty(name) as String?
+        }
+        if (signingValues.values.any { !it.isNullOrBlank() }) {
+            val missing = signingValues.filterValues { it.isNullOrBlank() }.keys
+            check(missing.isEmpty()) {
+                "Incomplete release signing configuration; missing: ${missing.joinToString()}"
+            }
+            create("release") {
+                storeFile = file(signingValues.getValue("releaseStoreFile")!!)
+                storePassword = signingValues.getValue("releaseStorePassword")
+                keyAlias = signingValues.getValue("releaseKeyAlias")
+                keyPassword = signingValues.getValue("releaseKeyPassword")
+            }
+        }
+    }
     buildTypes {
         release {
+            signingConfig = signingConfigs.findByName("release")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
             optimization {
                 enable = true
                 packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
@@ -85,6 +118,7 @@ androidComponents {
             .file("intermediates/assets/${variant.name}/merge${variantName}Assets/index.android.bundle")
         val patchTask = tasks.register("patch${variantName}JitsiReconnect") {
             description = "Shortens Jitsi's conference/websocket reconnect delays."
+            group = "build"
             dependsOn("merge${variantName}Assets")
             val bundleFile = mergedBundle.get().asFile
             inputs.file(bundleFile)

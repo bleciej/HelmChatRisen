@@ -59,12 +59,17 @@ object JitsiServers {
         it.url.equals(JitsiCallManager.DEFAULT_SERVER_URL, ignoreCase = true)
     }
 
-    /** Finds the preset matching [url], ignoring case, a missing scheme and trailing slashes. */
+    /**
+     * Finds the preset matching [url], ignoring case, a missing scheme and trailing slashes.
+     *
+     * `http://` URLs never match: presets are advertised over `https` only. The join path
+     * upgrades a known host to its canonical `https` URL instead, see
+     * [JitsiCallManager.sanitizeServerUrl].
+     */
     fun byUrl(url: String): JitsiServer? {
-        val candidate = url.trim().trimEnd('/')
+        val candidate = normalizeServerUrl(url) ?: return null
         return presets.firstOrNull { preset ->
-            preset.url.equals(candidate, ignoreCase = true) ||
-                "https://${preset.host}".equals(candidate, ignoreCase = true)
+            preset.url.equals(candidate, ignoreCase = true)
         }
     }
 }

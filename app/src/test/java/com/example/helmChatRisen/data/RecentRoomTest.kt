@@ -33,6 +33,20 @@ class RecentRoomTest {
     }
 
     @Test
+    fun mergeRecentRoom_deduplicatesAcrossSchemesAndHostCase() {
+        val merged = mergeRecentRoom(
+            existing = listOf(
+                RecentRoom("ride", "http://meet.ffmuc.net", lastUsedAt = 10L),
+                RecentRoom("ride", "https://MEET.FFMUC.NET", lastUsedAt = 5L),
+            ),
+            newRoom = RecentRoom("ride", "https://meet.ffmuc.net", lastUsedAt = 20L),
+        )
+
+        assertEquals(1, merged.size)
+        assertEquals(20L, merged.single().lastUsedAt)
+    }
+
+    @Test
     fun mergeRecentRoom_trimsValuesAndDropsBlankNames() {
         val merged = mergeRecentRoom(
             existing = emptyList(),

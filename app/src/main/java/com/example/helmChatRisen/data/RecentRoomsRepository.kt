@@ -49,7 +49,10 @@ class RecentRoomsRepository(context: Context) {
         dataStore.edit { preferences ->
             val current = decode(preferences[RECENT_ROOMS_KEY])
             preferences[RECENT_ROOMS_KEY] = encode(
-                current.filterNot { it.roomName == room.roomName && it.serverUrl == room.serverUrl },
+                current.filterNot {
+                    it.roomName == room.roomName &&
+                        canonicalServerKey(it.serverUrl) == canonicalServerKey(room.serverUrl)
+                },
             )
 
         }
