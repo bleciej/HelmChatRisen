@@ -1,6 +1,4 @@
 <resources>
-    <string name="app_name">HelmChatRisen</string>
-
     <!-- Home / join screen -->
     <string name="home_title">HelmChat - Risen</string>
     <string name="home_tagline">Motosikletçiler için sesli interkom</string>

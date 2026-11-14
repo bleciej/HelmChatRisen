@@ -196,3 +196,36 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - Home-screen logo badge no longer has a white background
   - Badge shape stays circular and consistent with the splash icon
   - Build passes
+
+### Task_20_FixParticipantCountAndAppLabel: Fix the in-call participant count and the launcher label.
+- **Status:** COMPLETED
+- **Updates:** Fixed the participant count that was stuck at 1. `JitsiCallManager` read the participant id from the `id` extra, but Jitsi 10.2.0 flattens `participantToParticipantInfo` into the broadcast extras keyed `participantId` (the bundle transport also stringifies values), so every `PARTICIPANT_JOINED`/`PARTICIPANT_LEFT` was ignored and only the local fallback remained. Extracted `participantIdFrom()` (supports `participantId`, legacy `id`, rejects blank/`"null"`/`"undefined"`) and added a `ParticipantsService` snapshot request on `CONFERENCE_JOINED` that resyncs the authoritative participant list (guarded by a per-call session id and a strong callback reference, optional when the SDK service is not initialized). Changed `app_name` from `HelmChatRisen` to `HelmChat Risen` in the default and all 29 locale catalogs so the launcher label under the icon is correct. Added `participantIdFrom` cases to `JitsiCallManagerTest`. Verified `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass.
+- **Acceptance Criteria:**
+  - Participant count reflects every rider in the audio-only room
+  - Launcher label reads "HelmChat Risen"
+  - Build and tests pass
+
+### Task_21_ReviewFollowUp: Address the V1.4 review findings.
+- **Status:** COMPLETED
+- **Updates:** Made the participant snapshot merge order-safe: join/leave events received while a snapshot is in flight are buffered and replayed on top of it, guarded by both a per-call session id and a snapshot request id; the pure `applyParticipantSnapshot`, `isParticipantSnapshotCurrent` and `sanitizeParticipantIds` helpers are covered by JVM tests. Extracted the duplicated participant/session reset into `resetParticipantSession()`. Changed `participantIdFrom()` to validate each candidate so an invalid `participantId` falls through to the legacy `id`, and removed the unreachable nested-`participant` branch, its KDoc claim and its test. Bumped `versionCode` to 4 for the 1.4 release line (was 1). Removed the duplicated `app_name` from the 29 locale catalogs and marked the default entry `translatable="false"` so lint does not require translations. Ignored `/app/release/` in the root `.gitignore`. Verified `testDebugUnitTest` (71 tests), `assembleDebug`, `lintDebug` and `assembleRelease` pass.
+- **Acceptance Criteria:**
+  - Participant events received during a snapshot request are neither lost nor applied twice
+  - Parser, snapshot merge and session-invalidation logic covered by JVM tests
+  - `versionCode` 4 / `versionName` 1.4 and lint/debug/release builds pass
+
+### Task_22_ReleaseNotesConsolidation: Publish a single 1.4 release-notes document.
+- **Status:** COMPLETED
+- **Updates:** Consolidated the V1.3 and 1.4 notes into one `RELEASE_NOTES.md` that presents 1.4 as the first public release. Merged the feature, permission, build, testing and limitation sections; dropped as history the 1.3-only framing ("maintenance release on top of 1.3", "changed in 1.4", the V1.3 `versionCode=1` caveat, the 1.3 upgrade path and the deprecated `versionCode` warning). Rewrote the upgrade section as installation notes for a first public release, keeping the package-ID / pre-release-build caveat. The V1.3 archive was moved out of the repository to `/tmp/opencode/RELEASE_NOTES_1.3.md.archived`.
+- **Acceptance Criteria:**
+  - A single `RELEASE_NOTES.md` describes 1.4 with no dangling 1.3-only references
+  - All unique content from both files is preserved
+  - Version, package, build and limitation facts still match the tree
+
+### Task_23_ParticipantSnapshotHardening: Bound the participant snapshot and make the counter testable.
+- **Status:** COMPLETED
+- **Updates:** Moved the participant bookkeeping out of `JitsiCallManager` into `ParticipantTracker` (remote ids, pending-snapshot window, buffered events, local-rider presence, single publish step) with an injectable `SnapshotTimeoutScheduler`, so the state machine is covered by JVM tests instead of only the pure helpers. A snapshot request is now bounded by `PARTICIPANT_SNAPSHOT_TIMEOUT_MS` (5 s): an unanswered request is abandoned, its buffered joins/leaves are replayed and the strong callback reference is released. Request failures and duplicate `CONFERENCE_JOINED` events no longer discard buffered events (a second request is refused while one is in flight), the local rider is counted by presence instead of a seeded 1 that disagreed with the id set, `CONFERENCE_JOINED` after `hangUp()`/`onViewReleased()` is ignored and `hangUp()` unregisters the broadcast receiver, and snapshot ids share the broadcast validation (`"null"`/`"undefined"`, string-like extras only). Corrected Task_20's stale parser and test-count claims. Verified `testDebugUnitTest` (97 tests), `assembleDebug` and `lintDebug` pass.
+- **Acceptance Criteria:**
+  - An unanswered snapshot degrades to the broadcast stream within the deadline and never wedges the count
+  - Buffered joins/leaves survive request failures and duplicate join events
+  - The participant state machine is covered by JVM tests with a fake scheduler
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass

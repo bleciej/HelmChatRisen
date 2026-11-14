@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">HelmChatRisen</string>
+    <string name="app_name" translatable="false">HelmChat Risen</string>
 
     <!-- Home / join screen -->
     <string name="home_title">HelmChat - Risen</string>

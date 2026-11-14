@@ -5,7 +5,7 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.plugin.serialization)
 }
 
-val appVersionName = "1.3"
+val appVersionName = "1.4"
 
 android {
     namespace = "com.example.helmChatRisen"
@@ -17,7 +17,7 @@ android {
         applicationId = "com.example.helmChatRisen"
         minSdk = 24
         targetSdk = 37
-        versionCode = 1
+        versionCode = 4
         versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

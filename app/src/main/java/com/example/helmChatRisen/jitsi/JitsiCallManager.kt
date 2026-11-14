@@ -19,6 +19,7 @@ import org.jitsi.meet.sdk.JitsiMeet
 import org.jitsi.meet.sdk.JitsiMeetConferenceOptions
 import org.jitsi.meet.sdk.JitsiMeetUserInfo
 import org.jitsi.meet.sdk.JitsiMeetView
+import org.jitsi.meet.sdk.ParticipantsService
 import java.net.MalformedURLException
 import java.net.URL
 
@@ -89,8 +90,32 @@ class JitsiCallManager {
     private val _isMuted = MutableStateFlow(false)
     val isMuted: StateFlow<Boolean> = _isMuted.asStateFlow()
 
-    private val _participantCount = MutableStateFlow(0)
-    val participantCount: StateFlow<Int> = _participantCount.asStateFlow()
+    /**
+     * `ParticipantsService` holds its callbacks through [java.lang.ref.WeakReference], so the
+     * manager keeps a strong reference until the snapshot is applied, fails or times out.
+     */
+    private var participantsInfoCallback: ParticipantsService.ParticipantsInfoCallback? = null
+
+    /**
+     * Owns the participant ids, the pending-snapshot window, the buffered join/leave events and
+     * the local-rider accounting, so the count can be covered by JVM tests.
+     */
+    private val participantTracker = ParticipantTracker(
+        scheduler = SnapshotTimeoutScheduler { delayMs, action ->
+            val runnable = Runnable { action() }
+            mainHandler.postDelayed(runnable, delayMs)
+            ScheduledTimeout { mainHandler.removeCallbacks(runnable) }
+        },
+        onSnapshotSettled = { timedOut ->
+            participantsInfoCallback = null
+            if (timedOut) {
+                Log.w(TAG, "Participant snapshot timed out, using broadcast events instead")
+            }
+        },
+    )
+
+    /** Number of riders in the current call, including the local rider. */
+    val participantCount: StateFlow<Int> = participantTracker.count
 
     /**
      * `false` while the device has no default network. Jitsi pauses the conference audio during
@@ -105,7 +130,6 @@ class JitsiCallManager {
 
     private var localBroadcastManager: LocalBroadcastManager? = null
     private var broadcastReceiver: BroadcastReceiver? = null
-    private val participantIds = mutableSetOf<String>()
 
     private var connectTimeout: Runnable? = null
     private var reconnectTimeout: Runnable? = null
@@ -163,8 +187,7 @@ class JitsiCallManager {
         currentRoomName = roomName
         isLeaving = false
         _isMuted.value = isMuted
-        _participantCount.value = 0
-        participantIds.clear()
+        resetParticipantSession()
 
         unregisterBroadcastReceiver()
         registerBroadcastReceiver(view.context.applicationContext)
@@ -203,8 +226,7 @@ class JitsiCallManager {
         unregisterBroadcastReceiver()
         unregisterNetworkCallback()
         currentRoomName = null
-        participantIds.clear()
-        _participantCount.value = 0
+        resetParticipantSession()
         if (_callState.value !is CallState.Idle) {
             _callState.value = CallState.Idle
         }
@@ -233,9 +255,11 @@ class JitsiCallManager {
         reconnectPaused = false
         unregisterNetworkCallback()
         sendBroadcast(BroadcastIntentHelper.buildHangUpIntent())
+        // Stop reacting to queued Jitsi events: a CONFERENCE_JOINED posted just before the
+        // hang-up would otherwise re-arm participant tracking for a finished call.
+        unregisterBroadcastReceiver()
         currentRoomName = null
-        participantIds.clear()
-        _participantCount.value = 0
+        resetParticipantSession()
         _callState.value = CallState.Idle
     }
 
@@ -460,6 +484,48 @@ class JitsiCallManager {
         reconnectTimeout = null
     }
 
+    /**
+     * Requests an authoritative participant snapshot from the SDK once the conference is joined.
+     *
+     * The [BroadcastEvent.Type.PARTICIPANT_JOINED] / [BroadcastEvent.Type.PARTICIPANT_LEFT]
+     * stream stays the primary source, but the snapshot also includes riders who were already in
+     * the room and repairs any event the app might have missed. The request is fire-and-forget,
+     * so [ParticipantTracker] bounds it with a deadline and falls back to the event stream when
+     * the SDK never answers. The service only exists once the Jitsi React context has been
+     * created, so it is treated as optional.
+     */
+    private fun refreshParticipantCount() {
+        val service = ParticipantsService.getInstance() ?: return
+        val request = participantTracker.onSnapshotRequested() ?: return
+
+        val callback = ParticipantsService.ParticipantsInfoCallback { participants ->
+            participantTracker.onSnapshotReceived(
+                request = request,
+                snapshotIds = sanitizeParticipantIds(participants.map { it.id }),
+                localParticipantId = participants.firstOrNull { it.isLocal }?.id,
+            )
+        }
+
+        participantsInfoCallback = callback
+        try {
+            service.retrieveParticipantsInfo(callback)
+        } catch (e: Exception) {
+            participantTracker.onSnapshotFailed(request)
+            Log.w(TAG, "Failed to retrieve participants info", e)
+        }
+    }
+
+    /**
+     * Invalidates all participant state for the current join attempt.
+     *
+     * Every teardown path must call this so a late snapshot or broadcast cannot repopulate the
+     * count of a finished call, and so events buffered for an aborted snapshot are discarded.
+     */
+    private fun resetParticipantSession() {
+        participantTracker.reset()
+        participantsInfoCallback = null
+    }
+
     private fun handleBroadcastEvent(event: BroadcastEvent) {
         when (event.type) {
             BroadcastEvent.Type.CONFERENCE_WILL_JOIN -> {
@@ -476,19 +542,20 @@ class JitsiCallManager {
             BroadcastEvent.Type.CONFERENCE_JOINED -> {
                 cancelConnectTimeout()
                 cancelReconnectTimeout()
-                if (_participantCount.value == 0) {
-                    _participantCount.value = 1
+                if (!isParticipantSessionLive(currentRoomName, isLeaving, _callState.value)) {
+                    Log.i(TAG, "Ignoring CONFERENCE_JOINED for a session that is no longer live")
+                    return
                 }
-                currentRoomName?.let { room ->
-                    _callState.value = CallState.Connected(room, currentServerUrl)
-                }
+                val room = currentRoomName ?: return
+                _callState.value = CallState.Connected(room, currentServerUrl)
+                participantTracker.onConferenceJoined()
+                refreshParticipantCount()
             }
 
             BroadcastEvent.Type.CONFERENCE_TERMINATED,
             BroadcastEvent.Type.READY_TO_CLOSE -> {
                 cancelConnectTimeout()
-                participantIds.clear()
-                _participantCount.value = 0
+                resetParticipantSession()
                 val room = currentRoomName
                 if (!isLeaving && room != null) {
                     // Jitsi reloads the conference on its own after a transient drop; stay on
@@ -508,15 +575,13 @@ class JitsiCallManager {
 
             BroadcastEvent.Type.PARTICIPANT_JOINED -> {
                 event.participantId()?.let { id ->
-                    participantIds.add(id)
-                    _participantCount.value = participantIds.size
+                    participantTracker.onJoined(id, isLocal = event.booleanValue("isLocal") == true)
                 }
             }
 
             BroadcastEvent.Type.PARTICIPANT_LEFT -> {
                 event.participantId()?.let { id ->
-                    participantIds.remove(id)
-                    _participantCount.value = participantIds.size
+                    participantTracker.onLeft(id, isLocal = event.booleanValue("isLocal") == true)
                 }
             }
 
@@ -532,8 +597,76 @@ class JitsiCallManager {
         }
     }
 
-    private fun BroadcastEvent.participantId(): String? {
-        val value = data?.get("id") ?: return null
-        return value.toString().takeIf { it.isNotBlank() }
+    private fun BroadcastEvent.participantId(): String? = participantIdFrom(data)
+}
+
+/**
+ * Extracts a participant id from a Jitsi broadcast payload.
+ *
+ * The SDK flattens the participant info into the event extras and names the id
+ * `participantId` (see the bundled `participantToParticipantInfo` helper). The bundle transport
+ * stringifies every value, so `"null"` / `"undefined"` must be rejected as well. Earlier SDK
+ * payloads used `id`, so that stays supported as a fallback. Only string-like extras can become
+ * an id: anything else would stringify into a key such as `"Bundle[{...}]"`.
+ */
+internal fun participantIdFrom(data: Map<String, Any?>?): String? {
+    if (data == null) return null
+
+    return sequenceOf(data["participantId"], data["id"])
+        .firstNotNullOfOrNull { candidate -> (candidate as? CharSequence)?.toString().asValidParticipantId() }
+}
+
+/**
+ * Merges an authoritative snapshot with the participant events that arrived while it was in
+ * flight.
+ *
+ * The snapshot describes the room at request time, so buffered events are replayed on top of it.
+ * An empty snapshot means the SDK returned no usable ids; the current baseline is kept instead
+ * of clearing the count.
+ */
+internal fun applyParticipantSnapshot(
+    current: Set<String>,
+    snapshot: Set<String>,
+    pendingEvents: List<Pair<String, Boolean>>,
+): Set<String> {
+    val merged = (if (snapshot.isEmpty()) current else snapshot).toMutableSet()
+    pendingEvents.forEach { (id, joined) ->
+        if (joined) merged.add(id) else merged.remove(id)
     }
+    return merged
+}
+
+/**
+ * Returns `true` when a snapshot response still belongs to the active call and to the newest
+ * request, so an older response cannot overwrite a newer baseline.
+ */
+internal fun isParticipantSnapshotCurrent(
+    session: Long,
+    currentSession: Long,
+    requestId: Long,
+    latestRequestId: Long,
+): Boolean = session == currentSession && requestId == latestRequestId
+
+/**
+ * Drops null, blank and stringified-`null` ids from a snapshot before it is merged.
+ *
+ * Shares the validation used for broadcast payloads, so the snapshot path cannot count an id
+ * that the event path would reject.
+ */
+internal fun sanitizeParticipantIds(ids: Iterable<String?>): Set<String> =
+    ids.mapNotNullTo(mutableSetOf()) { it.asValidParticipantId() }
+
+/**
+ * Returns `true` while the current room is still an active join attempt, so a `CONFERENCE_JOINED`
+ * queued before `hangUp()` / `onViewReleased()` cannot re-arm participant tracking.
+ */
+internal fun isParticipantSessionLive(
+    roomName: String?,
+    isLeaving: Boolean,
+    callState: CallState,
+): Boolean = roomName != null && !isLeaving && callState !is CallState.Idle
+
+private fun String?.asValidParticipantId(): String? = this?.takeIf { id ->
+    id.isNotBlank() && !id.equals("null", ignoreCase = true) &&
+        !id.equals("undefined", ignoreCase = true)
 }
