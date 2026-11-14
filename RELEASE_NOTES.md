@@ -1,14 +1,14 @@
 # HelmChat Risen 1.4 — Release Notes
 
-| | |
-|---|---|
-| Version | 1.4 |
-| Version code | 4 |
-| Tag | `V1.4` (pending) |
-| Release date | 2026-11-14 |
-| Minimum Android | 7.0 (API 24) |
-| Target / compile SDK | 37 |
-| Package | `com.example.helmChatRisen` |
+|                      |                             |
+|----------------------|-----------------------------|
+| Version              | 1.4                         |
+| Version code         | 4                           |
+| Tag                  | `V1.4` (pending)            |
+| Release date         | 2026-11-14                  |
+| Minimum Android      | 7.0 (API 24)                |
+| Target / compile SDK | 37                          |
+| Package              | `com.example.helmChatRisen` |
 
 HelmChat Risen 1.4 is the first public release of the motorcycle voice intercom
 app. It delivers the full audio-only Jitsi call flow with a correct multi-rider
@@ -130,14 +130,14 @@ participant count, helmet audio routing, the glove-friendly Compose UI,
 
 ## Permissions
 
-| Permission | Purpose |
-|---|---|
-| `RECORD_AUDIO` | Voice transmission |
-| `BLUETOOTH`, `BLUETOOTH_ADMIN`, `BLUETOOTH_CONNECT` | Helmet/headset audio routing |
-| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MICROPHONE` | Keep the call alive in the background |
-| `POST_NOTIFICATIONS` | Ongoing call notification |
-| `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Prevent Android from killing the connection |
-| `INTERNET`, `ACCESS_NETWORK_STATE`, `WAKE_LOCK`, `MODIFY_AUDIO_SETTINGS` | Core connectivity and audio |
+| Permission                                                               | Purpose                                     |
+|--------------------------------------------------------------------------|---------------------------------------------|
+| `RECORD_AUDIO`                                                           | Voice transmission                          |
+| `BLUETOOTH`, `BLUETOOTH_ADMIN`, `BLUETOOTH_CONNECT`                      | Helmet/headset audio routing                |
+| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MICROPHONE`                    | Keep the call alive in the background       |
+| `POST_NOTIFICATIONS`                                                     | Ongoing call notification                   |
+| `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`                                   | Prevent Android from killing the connection |
+| `INTERNET`, `ACCESS_NETWORK_STATE`, `WAKE_LOCK`, `MODIFY_AUDIO_SETTINGS` | Core connectivity and audio                 |
 
 ## Build & packaging
 

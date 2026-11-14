@@ -16,7 +16,7 @@ Riders need reliable voice communication, not video. HelmChat strips everything 
 ## Features
 
 - Join or create an audio room on any Jitsi server.
-- Curated drop-down of public Jitsi servers (netcup, meet.ffmuc.net, webex.muc.ccc.de, fairmeeting.net, meet.systemli.org), plus support for custom self-hosted instances.
+- Curated drop-down of public Jitsi servers (meet.ffmuc.net, webex.muc.ccc.de, fairmeeting.net, meet.systemli.org), plus support for custom self-hosted instances.
 - Optional **JWT token** field for token-authenticated Jitsi deployments.
 - **Recent rooms** — the last 8 rooms persist across restarts and can be re-joined with one tap, edited or deleted.
 - **Invite friends** — share a room invitation (room name + plain browser link) from the join screen or from an active call; recipients without the app can join in a browser.
@@ -26,17 +26,17 @@ Riders need reliable voice communication, not video. HelmChat strips everything 
 
 ## Tech stack
 
-| Component | Choice |
-|---|---|
-| Language | Kotlin, Java 11 compatibility |
-| UI | Jetpack Compose, Material 3, Compose Material Adaptive |
-| Navigation | Jetpack Navigation 3 (`rememberNavBackStack` + `NavDisplay`) |
-| Async / state | Kotlin Coroutines, `StateFlow` |
-| VoIP | Jitsi Meet SDK 10.2.0 (audio-only) |
-| Audio routing | Android `AudioManager`, Bluetooth SCO/HFP |
-| Persistence | DataStore Preferences (recent rooms), SharedPreferences (language < Android 13) |
-| Build | Gradle (Kotlin DSL), AGP 9, KSP, version catalog |
-| SDK levels | compileSdk 37 / targetSdk 37 / minSdk 24 |
+| Component     | Choice                                                                          |
+|---------------|---------------------------------------------------------------------------------|
+| Language      | Kotlin, Java 11 compatibility                                                   |
+| UI            | Jetpack Compose, Material 3, Compose Material Adaptive                          |
+| Navigation    | Jetpack Navigation 3 (`rememberNavBackStack` + `NavDisplay`)                    |
+| Async / state | Kotlin Coroutines, `StateFlow`                                                  |
+| VoIP          | Jitsi Meet SDK 10.2.0 (audio-only)                                              |
+| Audio routing | Android `AudioManager`, Bluetooth SCO/HFP                                       |
+| Persistence   | DataStore Preferences (recent rooms), SharedPreferences (language < Android 13) |
+| Build         | Gradle (Kotlin DSL), AGP 9, KSP, version catalog                                |
+| SDK levels    | compileSdk 37 / targetSdk 37 / minSdk 24                                        |
 
 ## Project layout
 
@@ -78,14 +78,14 @@ The build automatically patches the merged Jitsi JS bundle (see the `androidComp
 
 ## Permissions
 
-| Permission | Purpose |
-|---|---|
-| `RECORD_AUDIO` | Voice transmission |
-| `BLUETOOTH_CONNECT` | Helmet/headset audio routing (Android 12+) |
-| `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_MICROPHONE` | Keep the call alive in the background |
-| `POST_NOTIFICATIONS` | Ongoing call notification |
-| `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Prevent Android from killing the connection |
-| `INTERNET`, `ACCESS_NETWORK_STATE`, `WAKE_LOCK`, `MODIFY_AUDIO_SETTINGS` | Core connectivity and audio |
+| Permission                                                               | Purpose                                     |
+|--------------------------------------------------------------------------|---------------------------------------------|
+| `RECORD_AUDIO`                                                           | Voice transmission                          |
+| `BLUETOOTH_CONNECT`                                                      | Helmet/headset audio routing (Android 12+)  |
+| `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_MICROPHONE`                   | Keep the call alive in the background       |
+| `POST_NOTIFICATIONS`                                                     | Ongoing call notification                   |
+| `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`                                   | Prevent Android from killing the connection |
+| `INTERNET`, `ACCESS_NETWORK_STATE`, `WAKE_LOCK`, `MODIFY_AUDIO_SETTINGS` | Core connectivity and audio                 |
 
 ## Testing
 
