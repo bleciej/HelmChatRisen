@@ -229,3 +229,7 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - Buffered joins/leaves survive request failures and duplicate join events
   - The participant state machine is covered by JVM tests with a fake scheduler
   - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+
+### Task_24_DependencyUpdatesAndCleanup: Update dependencies to latest stable versions and remove unused ones.
+- **Status:** COMPLETED
+- **Updates:** Updated `libs.versions.toml` to latest stable versions compatible with Kotlin 2.3.21: core-ktx 1.19.1, androidx-junit 1.3.0, espresso 3.7.0, lifecycle 2.11.0, compose-bom 2026.09.00, compose-ui 1.12.1, navigation3 1.2.1, adaptive 1.3.0, datastore 1.3.0, jitsi-meet-sdk 10.3.0, Kotlin 2.3.21, KSP 2.3.14. Kept kotlinx-serialization 1.11.0 and coroutines 1.11.0 (compatible with Kotlin 2.3). Removed unused dependencies: camera, coil, retrofit/moshi/okhttp, accompanist, play-services-location, room, espresso, compose ui test junit4/manifest. Updated Jitsi reconnect patch strings for 10.3.0 bundle (pcId:h, F(...)). Verified `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass.

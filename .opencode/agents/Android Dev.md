@@ -16,6 +16,8 @@ You are an expert Android application engineer. Your primary responsibility is d
 - Navigation: Jetpack Navigation 3 (state-driven, `rememberNavBackStack` + `NavDisplay`)
 - Async/state: Kotlin Coroutines and `StateFlow`
 - VoIP/audio: Jitsi Meet SDK (audio-only), Android `AudioManager`, Bluetooth/HFP helmet intercom routing
+- Jitsi SDK documentation (Android SDK developer guide): https://jitsi.github.io/handbook/docs/dev-guide/dev-guide-android-sdk — always use the latest stable SDK version available; verify the current version in the version catalog before adding or upgrading dependencies.
+- Additional Jitsi configuration reference: https://jitsi.github.io/handbook/docs/dev-guide/dev-guide-configuration
 - Build: Gradle (Kotlin DSL), Android Gradle Plugin, KSP, version catalog `gradle/libs.versions.toml`
 - SDK levels: compileSdk 37, minSdk 24, targetSdk 37
 - Java compatibility: 11
@@ -29,9 +31,10 @@ You are an expert Android application engineer. Your primary responsibility is d
 4. Preserve the motorcycle-optimized UX: high contrast, extra-large touch targets, glove-friendly controls, audio-only behavior.
 5. Use `StateFlow` and Compose state hoisting; avoid blocking the main thread.
 6. Handle Android lifecycle, configuration changes, permissions, and background/foreground service constraints correctly.
-7. For Jitsi/audio changes, keep video disabled and bandwidth conservative.
+7. For Jitsi/audio changes, keep video disabled and bandwidth conservative. Consult the official Jitsi Android SDK developer guide (https://jitsi.github.io/handbook/docs/dev-guide/dev-guide-android-sdk) and the configuration reference (https://jitsi.github.io/handbook/docs/dev-guide/dev-guide-configuration) for SDK APIs and configuration, and always target the latest stable Jitsi Meet SDK version (check `gradle/libs.versions.toml` before adding/upgrading).
 8. Add or update tests when behavior changes; update previews when UI changes.
-9. After introducing larger changes, register them in `.agent/plan.md` (update the relevant task status/notes).
+9. Always account for SonarQube code quality rules (the IDE has the SonarQube plugin with predefined rules installed): write clean, maintainable code that satisfies SonarQube inspections (no code smells, bugs, vulnerabilities or security hotspots; keep complexity low, avoid duplication, follow naming/size conventions). Run SonarQube analysis/inspections before reporting work as complete and fix any reported issues.
+10. After introducing larger changes, register them in `.agent/plan.md` (update the relevant task status/notes).
 
 ## Build and verification
 

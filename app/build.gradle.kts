@@ -130,7 +130,7 @@ androidComponents {
                 val text = bundleFile.readText(Charsets.ISO_8859_1)
                 val replacements = mapOf(
                     "_timeoutSeconds=10+(0,_r(d[10]).randomInt)(0,20)" to "_timeoutSeconds=5",
-                    "e({reconnecting:!0,pcId:p})}),3e4)" to "e({reconnecting:!0,pcId:p})}),5e3)",
+                    "F({reconnecting:!0,pcId:h})}),3e4)" to "F({reconnecting:!0,pcId:h})}),5e3)",
                 )
                 var patched = text
                 replacements.forEach { (from, to) ->
@@ -175,18 +175,12 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.navigation3.ui)
-    implementation(libs.androidx.room.ktx)
-    implementation(libs.androidx.room.runtime)
     implementation(libs.jitsi.meet.sdk)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.core)
     implementation(libs.kotlinx.serialization.json)
     testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-    androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.runner)
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
-    "ksp"(libs.androidx.room.compiler)
 }
