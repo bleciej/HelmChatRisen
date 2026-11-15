@@ -8,7 +8,8 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
+import timber.log.Timber
+import com.example.helmChatRisen.R
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,7 +38,7 @@ sealed class CallState {
      * in progress.
      */
     data class Reconnecting(val roomName: String, val serverUrl: String) : CallState()
-    data class Error(val message: String) : CallState()
+    data class Error(val message: String? = null, val messageResId: Int? = null) : CallState()
 }
 
 /**
@@ -52,11 +53,8 @@ class JitsiCallManager {
 
     companion object {
         const val DEFAULT_SERVER_URL = "https://meet.ffmuc.net"
-        private const val TAG = "JitsiCallManager"
         private const val OPUS_MAX_AVERAGE_BITRATE = 24_000
         private const val CONNECT_TIMEOUT_MS = 30_000L
-        private const val CONNECT_TIMEOUT_MESSAGE =
-            "Nie udało się połączyć. Sprawdź adres serwera i połączenie z internetem."
 
         /**
          * How long Jitsi may spend trying to restore a dropped conference before the app gives
@@ -64,8 +62,6 @@ class JitsiCallManager {
          * so this is only a safety net for unrecoverable failures.
          */
         private const val RECONNECT_TIMEOUT_MS = 45_000L
-        private const val RECONNECT_TIMEOUT_MESSAGE =
-            "Nie udało się wznowić połączenia. Sprawdź sieć i dołącz ponownie."
 
         /**
          * Used when the rider leaves the optional name field empty. Supplying a name avoids
@@ -101,7 +97,7 @@ class JitsiCallManager {
      * the local-rider accounting, so the count can be covered by JVM tests.
      */
     private val participantTracker = ParticipantTracker(
-        scheduler = SnapshotTimeoutScheduler { delayMs, action ->
+        scheduler = { delayMs, action ->
             val runnable = Runnable { action() }
             mainHandler.postDelayed(runnable, delayMs)
             ScheduledTimeout { mainHandler.removeCallbacks(runnable) }
@@ -109,7 +105,7 @@ class JitsiCallManager {
         onSnapshotSettled = { timedOut ->
             participantsInfoCallback = null
             if (timedOut) {
-                Log.w(TAG, "Participant snapshot timed out, using broadcast events instead")
+                Timber.w("Participant snapshot timed out, using broadcast events instead")
             }
         },
     )
@@ -145,7 +141,7 @@ class JitsiCallManager {
                 reconnectPaused = false
                 currentRoomName?.let { room ->
                     if (_callState.value is CallState.Reconnecting) {
-                        Log.i(TAG, "Network restored, restarting reconnect timeout for '$room'")
+                        Timber.i("Network restored, restarting reconnect timeout for '$room'")
                         scheduleReconnectTimeout(room)
                     }
                 }
@@ -160,7 +156,7 @@ class JitsiCallManager {
                 cancelReconnectTimeout()
                 reconnectPaused = true
             }
-            Log.w(TAG, "Default network lost")
+            Timber.w("Default network lost")
         }
 
         override fun onUnavailable() {
@@ -206,11 +202,11 @@ class JitsiCallManager {
                 token = token,
             )
 
-            Log.i(TAG, "Joining embedded audio-only room '$roomName' on '$activeServerUrl'")
+            Timber.i("Joining embedded audio-only room '$roomName' on '$activeServerUrl'")
             view.join(options)
             scheduleConnectTimeout(roomName)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to join room '$roomName'", e)
+            Timber.e(e, "Failed to join room '$roomName'")
             cancelConnectTimeout()
             _callState.value = CallState.Error(e.message ?: "Failed to join room")
         }
@@ -248,7 +244,7 @@ class JitsiCallManager {
      * navigate away without waiting for the SDK round-trip.
      */
     fun hangUp() {
-        Log.i(TAG, "Leaving Jitsi call for room '$currentRoomName'")
+        Timber.i("Leaving Jitsi call for room '$currentRoomName'")
         isLeaving = true
         cancelConnectTimeout()
         cancelReconnectTimeout()
@@ -278,7 +274,7 @@ class JitsiCallManager {
         val url = try {
             URL(sanitizedServerUrl)
         } catch (e: MalformedURLException) {
-            Log.e(TAG, "Invalid server URL: $sanitizedServerUrl, falling back to default $DEFAULT_SERVER_URL", e)
+            Timber.e(e, "Invalid server URL: $sanitizedServerUrl, falling back to default $DEFAULT_SERVER_URL")
             URL(DEFAULT_SERVER_URL)
         }
 
@@ -340,6 +336,7 @@ class JitsiCallManager {
         val url = try {
             URL(sanitized)
         } catch (e: MalformedURLException) {
+            Timber.i("Error: '$e'; Invalid server URL: $sanitized, falling back to default $DEFAULT_SERVER_URL")
             URL(DEFAULT_SERVER_URL)
         }
 
@@ -380,7 +377,7 @@ class JitsiCallManager {
     private fun registerBroadcastReceiver(context: Context) {
         val manager = LocalBroadcastManager.getInstance(context)
         val filter = IntentFilter().apply {
-            BroadcastEvent.Type.values().forEach { addAction(it.action) }
+            BroadcastEvent.Type.entries.forEach { addAction(it.action) }
         }
 
         val receiver = object : BroadcastReceiver() {
@@ -389,7 +386,7 @@ class JitsiCallManager {
                 try {
                     handleBroadcastEvent(BroadcastEvent(intent))
                 } catch (e: Exception) {
-                    Log.w(TAG, "Ignoring malformed Jitsi broadcast event", e)
+                    Timber.w(e, "Ignoring malformed Jitsi broadcast event")
                 }
             }
         }
@@ -406,7 +403,7 @@ class JitsiCallManager {
             try {
                 manager.unregisterReceiver(receiver)
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to unregister Jitsi broadcast receiver", e)
+                Timber.w(e, "Failed to unregister Jitsi broadcast receiver")
             }
         }
         broadcastReceiver = null
@@ -421,7 +418,7 @@ class JitsiCallManager {
         try {
             manager.registerDefaultNetworkCallback(networkCallback)
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to register network callback", e)
+            Timber.w(e, "Failed to register network callback")
             connectivityManager = null
         }
     }
@@ -432,7 +429,7 @@ class JitsiCallManager {
         try {
             manager.unregisterNetworkCallback(networkCallback)
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to unregister network callback", e)
+            Timber.w(e, "Failed to unregister network callback")
         }
     }
 
@@ -449,8 +446,8 @@ class JitsiCallManager {
         cancelConnectTimeout()
         val runnable = Runnable {
             if (_callState.value is CallState.Connecting && currentRoomName == roomName) {
-                Log.w(TAG, "Connection to room '$roomName' timed out")
-                _callState.value = CallState.Error(CONNECT_TIMEOUT_MESSAGE)
+                Timber.w("Connection to room '$roomName' timed out")
+                _callState.value = CallState.Error(messageResId = R.string.call_error_connect_timeout)
             }
         }
         connectTimeout = runnable
@@ -471,8 +468,8 @@ class JitsiCallManager {
         cancelReconnectTimeout()
         val runnable = Runnable {
             if (_callState.value is CallState.Reconnecting && currentRoomName == roomName) {
-                Log.w(TAG, "Reconnect to room '$roomName' timed out")
-                _callState.value = CallState.Error(RECONNECT_TIMEOUT_MESSAGE)
+                Timber.w("Reconnect to room '$roomName' timed out")
+                _callState.value = CallState.Error(messageResId = R.string.call_error_reconnect_timeout)
             }
         }
         reconnectTimeout = runnable
@@ -511,7 +508,7 @@ class JitsiCallManager {
             service.retrieveParticipantsInfo(callback)
         } catch (e: Exception) {
             participantTracker.onSnapshotFailed(request)
-            Log.w(TAG, "Failed to retrieve participants info", e)
+            Timber.w(e, "Failed to retrieve participants info")
         }
     }
 
@@ -543,7 +540,7 @@ class JitsiCallManager {
                 cancelConnectTimeout()
                 cancelReconnectTimeout()
                 if (!isParticipantSessionLive(currentRoomName, isLeaving, _callState.value)) {
-                    Log.i(TAG, "Ignoring CONFERENCE_JOINED for a session that is no longer live")
+                    Timber.i("Ignoring CONFERENCE_JOINED for a session that is no longer live")
                     return
                 }
                 val room = currentRoomName ?: return
@@ -560,7 +557,7 @@ class JitsiCallManager {
                 if (!isLeaving && room != null) {
                     // Jitsi reloads the conference on its own after a transient drop; stay on
                     // the call screen and show the reconnecting state instead of navigating home.
-                    Log.i(TAG, "Conference for room '$room' ended unexpectedly, waiting for reload")
+                    Timber.i("Conference for room '$room' ended unexpectedly, waiting for reload")
                     _callState.value = CallState.Reconnecting(room, currentServerUrl)
                     scheduleReconnectTimeout(room)
                 } else {
@@ -629,7 +626,7 @@ internal fun applyParticipantSnapshot(
     snapshot: Set<String>,
     pendingEvents: List<Pair<String, Boolean>>,
 ): Set<String> {
-    val merged = (if (snapshot.isEmpty()) current else snapshot).toMutableSet()
+    val merged = (snapshot.ifEmpty { current }).toMutableSet()
     pendingEvents.forEach { (id, joined) ->
         if (joined) merged.add(id) else merged.remove(id)
     }

@@ -10,7 +10,7 @@ import android.media.AudioDeviceInfo
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Build
-import android.util.Log
+import timber.log.Timber
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,7 +38,6 @@ sealed class AudioRoutingState {
 class BluetoothAudioRouter private constructor(private val context: Context) {
 
     companion object {
-        private const val TAG = "BluetoothAudioRouter"
 
         @Volatile
         private var instance: BluetoothAudioRouter? = null
@@ -63,7 +62,7 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
     private val audioFocusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
         when (focusChange) {
             AudioManager.AUDIOFOCUS_GAIN -> {
-                Log.d(TAG, "Audio focus GAINED")
+                Timber.d("Audio focus GAINED")
                 if (isRoutingActive) {
                     audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
                 }
@@ -72,10 +71,10 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
                 // Keep the communication mode and microphone alive. Navigation prompts and
                 // other short announcements may take focus, but must not stop the intercom.
-                Log.w(TAG, "Audio focus LOST or LOST_TRANSIENT, keeping call audio alive")
+                Timber.w("Audio focus LOST or LOST_TRANSIENT, keeping call audio alive")
             }
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
-                Log.d(TAG, "Audio focus LOST_TRANSIENT_CAN_DUCK")
+                Timber.d("Audio focus LOST_TRANSIENT_CAN_DUCK")
             }
         }
     }
@@ -88,18 +87,18 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
                         AudioManager.EXTRA_SCO_AUDIO_STATE,
                         AudioManager.SCO_AUDIO_STATE_DISCONNECTED
                     )
-                    Log.d(TAG, "SCO audio state updated: $state")
+                    Timber.d("SCO audio state updated: $state")
                     when (state) {
                         AudioManager.SCO_AUDIO_STATE_CONNECTED -> {
-                            Log.i(TAG, "Bluetooth SCO connected to helmet intercom")
+                            Timber.i("Bluetooth SCO connected to helmet intercom")
                             _routingState.value = AudioRoutingState.BluetoothConnected("Helmet Headset")
                         }
                         AudioManager.SCO_AUDIO_STATE_CONNECTING -> {
-                            Log.d(TAG, "Bluetooth SCO connecting...")
+                            Timber.d("Bluetooth SCO connecting...")
                             _routingState.value = AudioRoutingState.ConnectingBluetooth
                         }
                         AudioManager.SCO_AUDIO_STATE_DISCONNECTED -> {
-                            Log.d(TAG, "Bluetooth SCO disconnected")
+                            Timber.d("Bluetooth SCO disconnected")
                             if (isSpeakerphoneForced) {
                                 _routingState.value = AudioRoutingState.SpeakerConnected
                             } else {
@@ -107,13 +106,13 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
                             }
                         }
                         AudioManager.SCO_AUDIO_STATE_ERROR -> {
-                            Log.e(TAG, "Bluetooth SCO state error")
+                            Timber.e("Bluetooth SCO state error")
                             _routingState.value = AudioRoutingState.Error("Bluetooth SCO connection failed")
                         }
                     }
                 }
                 AudioManager.ACTION_AUDIO_BECOMING_NOISY -> {
-                    Log.w(TAG, "Audio becoming noisy (headset disconnected)")
+                    Timber.w("Audio becoming noisy (headset disconnected)")
                     updateAudioRouting()
                 }
             }
@@ -125,7 +124,7 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
      */
     fun startAudioRouting() {
         if (isRoutingActive) {
-            Log.d(TAG, "Audio routing is already active")
+            Timber.d("Audio routing is already active")
             return
         }
 
@@ -144,7 +143,7 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
     fun stopAudioRouting() {
         if (!isRoutingActive) return
 
-        Log.i(TAG, "Stopping audio routing and resetting audio mode")
+        Timber.i("Stopping audio routing and resetting audio mode")
         stopBluetoothSco()
         clearPreferredDevice()
 
@@ -266,7 +265,7 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
             if (bluetoothDevice != null) {
                 val success = audioManager.setCommunicationDevice(bluetoothDevice)
                 if (success) {
-                    Log.i(TAG, "Set preferred communication device: ${bluetoothDevice.productName}")
+                    Timber.i("Set preferred communication device: ${bluetoothDevice.productName}")
                     _routingState.value = AudioRoutingState.BluetoothConnected(bluetoothDevice.productName.toString())
                     return
                 }
@@ -279,12 +278,12 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
 
     private fun routeAudioLegacy() {
         if (audioManager.isBluetoothScoAvailableOffCall) {
-            Log.i(TAG, "Starting Bluetooth SCO for helmet headset audio")
+            Timber.i("Starting Bluetooth SCO for helmet headset audio")
             _routingState.value = AudioRoutingState.ConnectingBluetooth
             audioManager.startBluetoothSco()
             audioManager.isBluetoothScoOn = true
         } else {
-            Log.d(TAG, "Bluetooth SCO not available off call, using default audio output")
+            Timber.d("Bluetooth SCO not available off call, using default audio output")
             _routingState.value = AudioRoutingState.EarpieceConnected
         }
     }
@@ -296,7 +295,7 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
                 audioManager.stopBluetoothSco()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error stopping Bluetooth SCO", e)
+            Timber.e(e, "Error stopping Bluetooth SCO")
         }
     }
 
@@ -331,7 +330,7 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
         }
 
         val granted = focusResult == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
-        Log.d(TAG, "Audio focus request result granted=$granted")
+        Timber.d("Audio focus request result granted=$granted")
         return granted
     }
 
@@ -362,7 +361,7 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
         try {
             context.unregisterReceiver(bluetoothReceiver)
         } catch (e: Exception) {
-            Log.e(TAG, "Error unregistering receiver", e)
+            Timber.e(e, "Error unregistering receiver")
         }
         isReceiverRegistered = false
     }

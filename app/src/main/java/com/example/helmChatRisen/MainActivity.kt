@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.jitsi.meet.sdk.JitsiMeetActivityDelegate
 import org.jitsi.meet.sdk.JitsiMeetActivityInterface
+import timber.log.Timber
 
 /**
  * Single-activity host for the Compose UI and the embedded Jitsi view.
@@ -69,6 +70,9 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (BuildConfig.DEBUG) {
+            Timber.plant(Timber.DebugTree())
+        }
         callManager.configureDefaultOptions()
         // Always-dark UI: keep light system bar icons even when the system is in light mode.
         enableEdgeToEdge(

@@ -237,3 +237,11 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
 ### Task_25_UpgradeKotlinAndSerialization: Upgrade Kotlin to 2.4.21 and kotlinx-serialization to 1.13.0.
 - **Status:** COMPLETED
 - **Updates:** Bumped Kotlin 2.3.21 → 2.4.21, jetbrainsKotlinPluginSerialization 2.3.21 → 2.4.21, kotlinxSerializationCore 1.11.0 → 1.13.0. Removed unused KSP plugin (googleDevtoolsKsp) and its entries from root/app build.gradle.kts and toml. minSdk remains 24 (no change required). Verified `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass.
+
+### Task_26_ReplaceLogWithTimber: Migrate android.util.Log calls to Timber.
+- **Status:** COMPLETED
+- **Updates:** Added Timber 5.0.1 as explicit dependency, enabled buildConfig. Replaced ~40 Log.d/i/w/e calls in JitsiCallManager, BluetoothAudioRouter and AudioCallService with Timber equivalents and removed TAG constants. Planted Timber.DebugTree in MainActivity.onCreate (debug builds). Verified `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass.
+
+### Task_27_TranslateTimeoutMessages: Move CONNECT/RECONNECT timeout messages to string resources.
+- **Status:** COMPLETED
+- **Updates:** Added `call_error_connect_timeout` and `call_error_reconnect_timeout` to default + all locale catalogs. Changed `CallState.Error` to support `messageResId`; replaced hardcoded Polish constants with `R.string` references. Resolved message in HelmChatApp via `stringResource` and logged id in AudioCallService. Verified `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass.

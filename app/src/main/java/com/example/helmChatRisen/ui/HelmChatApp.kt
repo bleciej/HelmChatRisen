@@ -284,7 +284,7 @@ fun HelmChatApp(
                 ) { route ->
                     val isConnected = callState is CallState.Connected
                     val isReconnecting = callState is CallState.Reconnecting
-                    val errorMessage = (callState as? CallState.Error)?.message
+                    val errorMessage = (callState as? CallState.Error)?.let { it.message ?: it.messageResId?.let { id -> stringResource(id) } }
                     var hostSetupActive by remember(route) {
                         mutableStateOf(route.hostSetup)
                     }

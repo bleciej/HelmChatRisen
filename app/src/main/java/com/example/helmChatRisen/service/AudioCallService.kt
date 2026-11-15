@@ -10,7 +10,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
-import android.util.Log
+import timber.log.Timber
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.example.helmChatRisen.MainActivity
@@ -45,7 +45,6 @@ class AudioCallService : Service() {
     }
 
     companion object {
-        private const val TAG = "AudioCallService"
         private const val NOTIFICATION_ID = 1001
         private const val CHANNEL_ID = "helmchat_audio_call_channel"
 
@@ -88,7 +87,7 @@ class AudioCallService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        Log.d(TAG, "AudioCallService created")
+        Timber.d("AudioCallService created")
         bluetoothAudioRouter = BluetoothAudioRouter.getInstance(applicationContext)
         jitsiCallManager = JitsiCallManager.getInstance()
         createNotificationChannel()
@@ -115,7 +114,7 @@ class AudioCallService : Service() {
                     updateNotification()
                 }
                 is CallState.Error -> {
-                    Log.e(TAG, "Call error: ${state.message}")
+                    Timber.e("Call error: ${state.message ?: state.messageResId}")
                     updateNotification()
                 }
                 is CallState.Idle -> {
@@ -162,7 +161,7 @@ class AudioCallService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d(TAG, "AudioCallService destroyed")
+        Timber.d("AudioCallService destroyed")
         bluetoothAudioRouter.stopAudioRouting()
         bluetoothAudioRouter.resetForNewCall()
         serviceScope.cancel()
@@ -170,7 +169,7 @@ class AudioCallService : Service() {
 
     private fun startCallInternal(roomName: String, serverUrl: String) {
         if (roomName.isBlank()) {
-            Log.e(TAG, "Cannot start call with empty room name")
+            Timber.e("Cannot start call with empty room name")
             stopSelf()
             return
         }
@@ -196,7 +195,7 @@ class AudioCallService : Service() {
     }
 
     private fun endCallInternal() {
-        Log.i(TAG, "Ending call")
+        Timber.i("Ending call")
         if (callActive) {
             callActive = false
             jitsiCallManager.hangUp()

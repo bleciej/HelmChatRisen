@@ -58,7 +58,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.net.Uri
 import android.os.PowerManager
 import android.provider.Settings
