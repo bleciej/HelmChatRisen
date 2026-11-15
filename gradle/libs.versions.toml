@@ -7,11 +7,10 @@ lifecycleRuntimeKtx = "2.11.0"
 lifecycleViewmodelCompose = "2.11.0"
 lifecycleRuntimeCompose = "2.11.0"
 activityCompose = "1.13.0"
-kotlin = "2.3.21"
+kotlin = "2.4.21"
 composeBom = "2026.09.00"
-googleDevtoolsKsp = "2.3.14"
-jetbrainsKotlinPluginSerialization = "2.3.21"
-kotlinxSerializationCore = "1.11.0"
+jetbrainsKotlinPluginSerialization = "2.4.21"
+kotlinxSerializationCore = "1.13.0"
 kotlinxCoroutines = "1.11.0"
 navigation3Ui = "1.2.1"
 navigation3Runtime = "1.2.1"
@@ -52,5 +51,4 @@ jitsi-meet-sdk = { group = "org.jitsi.react", name = "jitsi-meet-sdk", version.r
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-google-devtools-ksp = { id = "com.google.devtools.ksp", version.ref = "googleDevtoolsKsp" }
 jetbrains-kotlin-plugin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "jetbrainsKotlinPluginSerialization" }
