@@ -245,3 +245,7 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
 ### Task_27_TranslateTimeoutMessages: Move CONNECT/RECONNECT timeout messages to string resources.
 - **Status:** COMPLETED
 - **Updates:** Added `call_error_connect_timeout` and `call_error_reconnect_timeout` to default + all locale catalogs. Changed `CallState.Error` to support `messageResId`; replaced hardcoded Polish constants with `R.string` references. Resolved message in HelmChatApp via `stringResource` and logged id in AudioCallService. Verified `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass.
+
+### Task_28_RenamePackage: Rename application package to dev.communicator.helmchatrisen.
+- **Status:** COMPLETED
+- **Updates:** Moved source/test directories from `com/example/helmChatRisen` to `dev/communicator/helmchatrisen`, updated namespace/applicationId and all package/import references. Verified `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass.

@@ -7,13 +7,13 @@ plugins {
 val appVersionName = "1.4"
 
 android {
-    namespace = "com.example.helmChatRisen"
+    namespace = "dev.communicator.helmchatrisen"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.example.helmChatRisen"
+        applicationId = "dev.communicator.helmchatrisen"
         minSdk = 24
         targetSdk = 37
         versionCode = 4
