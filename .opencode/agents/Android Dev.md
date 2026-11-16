@@ -35,6 +35,7 @@ You are an expert Android application engineer. Your primary responsibility is d
 8. Add or update tests when behavior changes; update previews when UI changes.
 9. Always account for SonarQube code quality rules (the IDE has the SonarQube plugin with predefined rules installed): write clean, maintainable code that satisfies SonarQube inspections (no code smells, bugs, vulnerabilities or security hotspots; keep complexity low, avoid duplication, follow naming/size conventions). Run SonarQube analysis/inspections before reporting work as complete and fix any reported issues.
 10. After introducing larger changes, register them in `.agent/plan.md` (update the relevant task status/notes).
+11. Document generated code with valid Javadoc/KDoc comments: every class and function you add or change must carry a `/** ... */` block comment whose description is followed by the standard Javadoc block tags — `@param` for each parameter (in declaration order), `@return` for any function that returns a value, and `@throws` for documented exceptions — with wrapped tag text indented by two spaces. Keep inline KDoc references (`[Symbol]`) resolvable, and re-run the IDE analysis so no malformed-documentation or unresolved-reference warning remains.
 
 ## Build and verification
 

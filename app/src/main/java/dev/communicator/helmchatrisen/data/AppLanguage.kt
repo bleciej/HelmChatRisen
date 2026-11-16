@@ -6,6 +6,7 @@ import android.content.res.Configuration
 import android.os.Build
 import android.os.LocaleList
 import java.util.Locale
+import androidx.core.content.edit
 
 /**
  * App-wide UI language override.
@@ -118,7 +119,7 @@ object AppLanguage {
     /** Persists and applies [tag]; `null` or blank restores the system language. */
     fun setTag(context: Context, tag: String?) {
         val normalized = tag?.trim()?.takeIf { it.isNotEmpty() }
-        prefs(context).edit().putString(KEY_TAG, normalized.orEmpty()).apply()
+        prefs(context).edit { putString(KEY_TAG, normalized.orEmpty()) }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val localeManager = context.getSystemService(LocaleManager::class.java) ?: return
             localeManager.applicationLocales = if (normalized == null) {

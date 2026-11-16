@@ -23,11 +23,14 @@ private val Context.recentRoomsDataStore: DataStore<Preferences> by preferencesD
  *
  * The list is stored as JSON in a single preference so it survives app restarts and can
  * evolve without a database migration.
+ *
+ * @param context any context; only its application context is retained.
  */
 class RecentRoomsRepository(context: Context) {
 
     private val dataStore = context.applicationContext.recentRoomsDataStore
 
+    /** The stored rooms, most recently used first, or an empty list when nothing was saved yet. */
     val recentRooms: Flow<List<RecentRoom>> = dataStore.data
         .catch { error ->
             if (error is IOException) {
@@ -38,6 +41,12 @@ class RecentRoomsRepository(context: Context) {
         }
         .map { preferences -> decode(preferences[RECENT_ROOMS_KEY]) }
 
+    /**
+     * Adds or refreshes [room] at the top of the stored list, deduplicating it against the rooms
+     * already saved.
+     *
+     * @param room the room to persist.
+     */
     suspend fun record(room: RecentRoom) {
         dataStore.edit { preferences ->
             val current = decode(preferences[RECENT_ROOMS_KEY])
@@ -45,6 +54,11 @@ class RecentRoomsRepository(context: Context) {
         }
     }
 
+    /**
+     * Removes the stored room that matches [room] by room name and canonical server.
+     *
+     * @param room the room to remove.
+     */
     suspend fun remove(room: RecentRoom) {
         dataStore.edit { preferences ->
             val current = decode(preferences[RECENT_ROOMS_KEY])
@@ -58,16 +72,31 @@ class RecentRoomsRepository(context: Context) {
         }
     }
 
+    /**
+     * Deletes every stored room.
+     */
     suspend fun clear() {
         dataStore.edit { preferences -> preferences.remove(RECENT_ROOMS_KEY) }
     }
 
+    /**
+     * Parses the persisted JSON, falling back to an empty list when it is missing or corrupt.
+     *
+     * @param raw the stored JSON, or `null` when nothing was saved yet.
+     * @return the decoded rooms, or an empty list when [raw] is blank or cannot be parsed.
+     */
     private fun decode(raw: String?): List<RecentRoom> {
         if (raw.isNullOrBlank()) return emptyList()
         return runCatching { json.decodeFromString(serializer, raw) }
             .getOrDefault(emptyList())
     }
 
+    /**
+     * Serializes the rooms to the JSON form persisted in the preference.
+     *
+     * @param rooms the rooms to serialize.
+     * @return the JSON representation of [rooms].
+     */
     private fun encode(rooms: List<RecentRoom>): String = json.encodeToString(serializer, rooms)
 
     private companion object {

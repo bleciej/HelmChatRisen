@@ -6,8 +6,8 @@ import dev.communicator.helmchatrisen.R
 /**
  * A public Jitsi Meet server offered in the server picker on the home screen.
  *
- * @property url Base URL passed to the Jitsi SDK.
- * @property descriptionRes Short, translated hint about the server's strengths.
+ * @param url base URL passed to the Jitsi SDK.
+ * @param descriptionRes short, translated hint about the server's strengths.
  */
 data class JitsiServer(
     val url: String,
@@ -28,6 +28,7 @@ data class JitsiServer(
  */
 object JitsiServers {
 
+    /** The selectable servers, in the order shown in the picker. */
     val presets: List<JitsiServer> = listOf(
         JitsiServer(
             url = "https://meet.ffmuc.net",
@@ -55,6 +56,7 @@ object JitsiServers {
         ),
     )
 
+    /** The preset matching [JitsiCallManager.DEFAULT_SERVER_URL], used when the rider picks none. */
     val default: JitsiServer = presets.first {
         it.url.equals(JitsiCallManager.DEFAULT_SERVER_URL, ignoreCase = true)
     }
@@ -65,6 +67,9 @@ object JitsiServers {
      * `http://` URLs never match: presets are advertised over `https` only. The join path
      * upgrades a known host to its canonical `https` URL instead, see
      * [JitsiCallManager.sanitizeServerUrl].
+     *
+     * @param url the server URL to match, as typed by the rider or loaded from a recent room.
+     * @return the matching preset, or `null` when the URL is not a known preset.
      */
     fun byUrl(url: String): JitsiServer? {
         val candidate = normalizeServerUrl(url) ?: return null

@@ -39,6 +39,9 @@ class AudioCallService : Service() {
     /**
      * Keeps the foreground notification (channel name, description, actions) in the language
      * chosen by the rider on Android 12L and lower.
+     *
+     * @param newBase the base context provided by the framework.
+     * @return the base context wrapped with the rider's language choice.
      */
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(AppLanguage.wrapContext(newBase))
@@ -55,6 +58,16 @@ class AudioCallService : Service() {
         const val EXTRA_ROOM_NAME = "extra_room_name"
         const val EXTRA_SERVER_URL = "extra_server_url"
 
+        /**
+         * Starts (or restarts) the foreground service that owns the microphone for [roomName]
+         * on [serverUrl]. Call this while the app is in the foreground so the Android 12+
+         * background-start restrictions do not apply.
+         *
+         * @param context the context used to start the foreground service.
+         * @param roomName the Jitsi room to keep the microphone alive for.
+         * @param serverUrl the Jitsi server hosting the room; defaults to
+         *   [JitsiCallManager.DEFAULT_SERVER_URL].
+         */
         fun startCall(
             context: Context,
             roomName: String,
@@ -68,6 +81,12 @@ class AudioCallService : Service() {
             ContextCompat.startForegroundService(context, intent)
         }
 
+        /**
+         * Asks the running service to hang up and stop itself. Safe to call when no call is
+         * active.
+         *
+         * @param context the context used to deliver the end-call intent.
+         */
         fun stopCall(context: Context) {
             val intent = Intent(context, AudioCallService::class.java).apply {
                 action = ACTION_END_CALL
@@ -85,6 +104,11 @@ class AudioCallService : Service() {
     private var activeRoomName: String = ""
     private var activeServerUrl: String = JitsiCallManager.DEFAULT_SERVER_URL
 
+    /**
+     * Resolves the audio router and Jitsi manager, creates the notification channel, and
+     * subscribes to call, mute and connectivity changes so the foreground notification stays
+     * current.
+     */
     override fun onCreate() {
         super.onCreate()
         Timber.d("AudioCallService created")
@@ -94,25 +118,11 @@ class AudioCallService : Service() {
 
         jitsiCallManager.callState.onEach { state ->
             when (state) {
-                is CallState.Connecting -> {
-                    updateNotification()
-                }
-                is CallState.Connected -> {
-                    if (activeRoomName.isBlank()) {
-                        activeRoomName = state.roomName
-                    }
-                    activeServerUrl = state.serverUrl
-                    updateNotification()
-                }
-                is CallState.Reconnecting -> {
-                    // Jitsi is reloading the conference; keep the service, mic and audio route
-                    // alive so the call resumes without the rider doing anything.
-                    if (activeRoomName.isBlank()) {
-                        activeRoomName = state.roomName
-                    }
-                    activeServerUrl = state.serverUrl
-                    updateNotification()
-                }
+                is CallState.Connecting -> updateNotification()
+                // Jitsi may reload the conference while reconnecting; keep the service, mic
+                // and audio route alive and refresh the notification for both states.
+                is CallState.Connected -> applySessionState(state.roomName, state.serverUrl)
+                is CallState.Reconnecting -> applySessionState(state.roomName, state.serverUrl)
                 is CallState.Error -> {
                     Timber.e("Call error: ${state.message ?: state.messageResId}")
                     updateNotification()
@@ -139,6 +149,16 @@ class AudioCallService : Service() {
         }.launchIn(serviceScope)
     }
 
+    /**
+     * Handles the start/end/mute actions delivered through the service intents and returns
+     * START_NOT_STICKY so Android does not recreate a finished call.
+     *
+     * @param intent the intent carrying one of the service actions, or `null` when the system
+     *   restarts the service without one.
+     * @param flags additional flags supplied with this start request.
+     * @param startId the unique id of this start request.
+     * @return START_NOT_STICKY so a killed service is not recreated automatically.
+     */
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START_CALL -> {
@@ -157,8 +177,17 @@ class AudioCallService : Service() {
         return START_NOT_STICKY
     }
 
+    /**
+     * The service is not bound; it is driven entirely through onStartCommand intents.
+     *
+     * @param intent the bind intent, which is ignored.
+     * @return `null`, because the service exposes no binder.
+     */
     override fun onBind(intent: Intent?): IBinder? = null
 
+    /**
+     * Releases the helmet audio route and stops the service coroutine scope.
+     */
     override fun onDestroy() {
         super.onDestroy()
         Timber.d("AudioCallService destroyed")
@@ -167,6 +196,13 @@ class AudioCallService : Service() {
         serviceScope.cancel()
     }
 
+    /**
+     * Marks the call active, routes audio to the helmet headset, and promotes the service to
+     * the microphone foreground type. Stops itself when [roomName] is blank.
+     *
+     * @param roomName the Jitsi room to keep the microphone alive for.
+     * @param serverUrl the Jitsi server hosting the room.
+     */
     private fun startCallInternal(roomName: String, serverUrl: String) {
         if (roomName.isBlank()) {
             Timber.e("Cannot start call with empty room name")
@@ -183,7 +219,7 @@ class AudioCallService : Service() {
         bluetoothAudioRouter.startAudioRouting()
 
         val notification = buildNotification()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             startForeground(
                 NOTIFICATION_ID,
                 notification,
@@ -194,6 +230,9 @@ class AudioCallService : Service() {
         }
     }
 
+    /**
+     * Hangs up the Jitsi conference (when a call is active) and stops the foreground service.
+     */
     private fun endCallInternal() {
         Timber.i("Ending call")
         if (callActive) {
@@ -203,16 +242,18 @@ class AudioCallService : Service() {
         stopForegroundAndSelf()
     }
 
+    /**
+     * Removes the ongoing notification and stops the service.
+     */
     private fun stopForegroundAndSelf() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-        } else {
-            @Suppress("DEPRECATION")
-            stopForeground(true)
-        }
+        stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
+    /**
+     * Registers the low-importance call channel on Android 8.0+; a no-op on older releases,
+     * which have no notification channels.
+     */
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -224,11 +265,17 @@ class AudioCallService : Service() {
                 setShowBadge(false)
             }
             val notificationManager =
-                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
         }
     }
 
+    /**
+     * Builds the ongoing call notification with its status text, "open app" tap target and the
+     * mute/unmute and end-call actions.
+     *
+     * @return the notification posted while the call is active.
+     */
     private fun buildNotification(): Notification {
         val openAppIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -293,9 +340,28 @@ class AudioCallService : Service() {
             .build()
     }
 
+    /**
+     * Records the room and server reported by Jitsi while the call is connected or reconnecting
+     * and refreshes the notification. The room name is captured only once so a reconnect cannot
+     * overwrite it.
+     *
+     * @param roomName the room reported by Jitsi for the current session.
+     * @param serverUrl the server reported by Jitsi for the current session.
+     */
+    private fun applySessionState(roomName: String, serverUrl: String) {
+        if (activeRoomName.isBlank()) {
+            activeRoomName = roomName
+        }
+        activeServerUrl = serverUrl
+        updateNotification()
+    }
+
+    /**
+     * Re-posts the ongoing notification, or does nothing when no call is active.
+     */
     private fun updateNotification() {
         if (!callActive) return
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(NOTIFICATION_ID, buildNotification())
     }
 }

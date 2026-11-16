@@ -1,5 +1,7 @@
 package dev.communicator.helmchatrisen.audio
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -10,20 +12,38 @@ import android.media.AudioDeviceInfo
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Build
-import timber.log.Timber
+import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import timber.log.Timber
 
 /**
  * State of audio routing to helmet headsets or device speakers.
  */
 sealed class AudioRoutingState {
+    /** Audio is routed to the device speaker. */
     object SpeakerConnected : AudioRoutingState()
+
+    /** Audio is routed to the phone earpiece, the fallback when no helmet headset is connected. */
     object EarpieceConnected : AudioRoutingState()
+
+    /** Bluetooth SCO is being negotiated with the helmet headset. */
     object ConnectingBluetooth : AudioRoutingState()
+
+    /**
+     * Audio is routed to the connected Bluetooth headset or helmet intercom.
+     *
+     * @param deviceName the product name of the connected device, or `null` when it is unknown.
+     */
     data class BluetoothConnected(val deviceName: String? = null) : AudioRoutingState()
+
+    /**
+     * Audio routing failed.
+     *
+     * @param message a human-readable description of the failure.
+     */
     data class Error(val message: String) : AudioRoutingState()
 }
 
@@ -39,9 +59,17 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
 
     companion object {
 
+        // Only the application context is retained, so the singleton cannot leak an Activity.
+        @SuppressLint("StaticFieldLeak")
         @Volatile
         private var instance: BluetoothAudioRouter? = null
 
+        /**
+         * Returns the process-wide router, creating it on first use.
+         *
+         * @param context any context; only its application context is retained.
+         * @return the shared [BluetoothAudioRouter] instance.
+         */
         fun getInstance(context: Context): BluetoothAudioRouter {
             return instance ?: synchronized(this) {
                 instance ?: BluetoothAudioRouter(context.applicationContext).also { instance = it }
@@ -68,7 +96,8 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
                 }
             }
             AudioManager.AUDIOFOCUS_LOSS,
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
+            -> {
                 // Keep the communication mode and microphone alive. Navigation prompts and
                 // other short announcements may take focus, but must not stop the intercom.
                 Timber.w("Audio focus LOST or LOST_TRANSIENT, keeping call audio alive")
@@ -80,6 +109,14 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
     }
 
     private val bluetoothReceiver = object : BroadcastReceiver() {
+        // The SCO broadcast API is deprecated but is the only option below API 31.
+        /**
+         * Keeps the routing state in sync with SCO state changes and headset disconnects.
+         *
+         * @param receiverContext the context the receiver was registered with.
+         * @param intent the broadcast being delivered, or `null` when it carries no data.
+         */
+        @Suppress("DEPRECATION")
         override fun onReceive(receiverContext: Context?, intent: Intent?) {
             when (intent?.action) {
                 AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED -> {
@@ -99,10 +136,10 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
                         }
                         AudioManager.SCO_AUDIO_STATE_DISCONNECTED -> {
                             Timber.d("Bluetooth SCO disconnected")
-                            if (isSpeakerphoneForced) {
-                                _routingState.value = AudioRoutingState.SpeakerConnected
+                            _routingState.value = if (isSpeakerphoneForced) {
+                                AudioRoutingState.SpeakerConnected
                             } else {
-                                _routingState.value = AudioRoutingState.EarpieceConnected
+                                AudioRoutingState.EarpieceConnected
                             }
                         }
                         AudioManager.SCO_AUDIO_STATE_ERROR -> {
@@ -146,8 +183,8 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
         Timber.i("Stopping audio routing and resetting audio mode")
         stopBluetoothSco()
         clearPreferredDevice()
+        setSpeakerphoneFlag(on = false)
 
-        audioManager.isSpeakerphoneOn = false
         audioManager.mode = AudioManager.MODE_NORMAL
 
         abandonAudioFocus()
@@ -163,7 +200,7 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
      */
     fun resetForNewCall() {
         isSpeakerphoneForced = false
-        audioManager.isSpeakerphoneOn = false
+        setSpeakerphoneFlag(on = false)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             audioManager.clearCommunicationDevice()
         }
@@ -173,46 +210,88 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
     /**
      * Toggles forced speakerphone output. On Android 12+ the explicit communication device is
      * used; on older releases the legacy speakerphone flag is the best available option.
+     *
+     * @param enable `true` to force the built-in speaker, `false` to fall back to Bluetooth or
+     *   the earpiece.
      */
     fun setSpeakerphone(enable: Boolean) {
         isSpeakerphoneForced = enable
+        applySpeakerphoneRouting(enable)
+    }
 
+    /**
+     * Applies the forced-speakerphone choice through the API-level-specific routing path.
+     *
+     * @param enable `true` to force the built-in speaker, `false` to restore the default route.
+     */
+    private fun applySpeakerphoneRouting(enable: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (enable) {
-                val speaker = audioManager.availableCommunicationDevices.firstOrNull {
-                    it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
-                }
-                if (speaker != null) {
-                    audioManager.setCommunicationDevice(speaker)
-                }
-                audioManager.isSpeakerphoneOn = true
-                _routingState.value = AudioRoutingState.SpeakerConnected
-            } else {
-                audioManager.isSpeakerphoneOn = false
-                val bluetooth = if (hasBluetoothPermission()) {
-                    audioManager.availableCommunicationDevices.firstOrNull {
-                        it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO
-                    }
-                } else {
-                    null
-                }
-                if (bluetooth != null) {
-                    audioManager.setCommunicationDevice(bluetooth)
-                    _routingState.value = AudioRoutingState.BluetoothConnected(bluetooth.productName?.toString())
-                } else {
-                    audioManager.clearCommunicationDevice()
-                    _routingState.value = AudioRoutingState.EarpieceConnected
-                }
-            }
-            return
+            applySpeakerphoneApi31Plus(enable)
+        } else {
+            applySpeakerphoneLegacy(enable)
         }
+    }
 
+    /**
+     * Applies the forced-speakerphone choice using the API 31+ communication-device API.
+     *
+     * @param enable `true` to force the built-in speaker, `false` to restore the default route.
+     */
+    @RequiresApi(Build.VERSION_CODES.S)
+    private fun applySpeakerphoneApi31Plus(enable: Boolean) {
+        if (enable) {
+            routeToBuiltInSpeaker()
+        } else {
+            routeToBluetoothOrEarpiece()
+        }
+    }
+
+    /**
+     * Routes communication audio to the built-in speaker and publishes the new routing state.
+     */
+    @RequiresApi(Build.VERSION_CODES.S)
+    private fun routeToBuiltInSpeaker() {
+        audioManager.availableCommunicationDevices
+            .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+            ?.let(audioManager::setCommunicationDevice)
+        _routingState.value = AudioRoutingState.SpeakerConnected
+    }
+
+    /**
+     * Routes communication audio to the Bluetooth helmet headset when one is available and
+     * permitted, otherwise clears the explicit device so the earpiece is used.
+     */
+    @RequiresApi(Build.VERSION_CODES.S)
+    private fun routeToBluetoothOrEarpiece() {
+        val bluetooth = if (hasBluetoothPermission()) {
+            audioManager.availableCommunicationDevices.firstOrNull {
+                it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO
+            }
+        } else {
+            null
+        }
+        if (bluetooth != null && audioManager.setCommunicationDevice(bluetooth)) {
+            _routingState.value = AudioRoutingState.BluetoothConnected(bluetooth.productName?.toString())
+        } else {
+            audioManager.clearCommunicationDevice()
+            _routingState.value = AudioRoutingState.EarpieceConnected
+        }
+    }
+
+    // Legacy SCO routing is only reachable below API 31.
+    /**
+     * Applies the forced-speakerphone choice through the legacy SCO and speakerphone flags.
+     *
+     * @param enable `true` to force the built-in speaker, `false` to start SCO when available.
+     */
+    @Suppress("DEPRECATION")
+    private fun applySpeakerphoneLegacy(enable: Boolean) {
         if (enable) {
             stopBluetoothSco()
-            audioManager.isSpeakerphoneOn = true
+            setSpeakerphoneFlag(on = true)
             _routingState.value = AudioRoutingState.SpeakerConnected
         } else {
-            audioManager.isSpeakerphoneOn = false
+            setSpeakerphoneFlag(on = false)
             if (audioManager.isBluetoothScoAvailableOffCall) {
                 audioManager.startBluetoothSco()
                 audioManager.isBluetoothScoOn = true
@@ -223,25 +302,13 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
         }
     }
 
-    fun isSpeakerphoneForced(): Boolean = isSpeakerphoneForced
-
-    fun toggleSpeakerphone(): Boolean {
-        val newSpeaker = !isSpeakerphoneForced
-        setSpeakerphone(newSpeaker)
-        return newSpeaker
-    }
-
     /**
-     * Check whether Bluetooth SCO audio is connected.
+     * Re-evaluates the active route: a forced speaker wins, otherwise the API-level-specific path
+     * picks Bluetooth or the fallback output.
      */
-    fun isBluetoothScoConnected(): Boolean {
-        return audioManager.isBluetoothScoOn
-    }
-
     private fun updateAudioRouting() {
         if (isSpeakerphoneForced) {
-            audioManager.isSpeakerphoneOn = true
-            _routingState.value = AudioRoutingState.SpeakerConnected
+            applySpeakerphoneRouting(true)
             return
         }
 
@@ -252,23 +319,23 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
         }
     }
 
+    /**
+     * Routes communication audio with the API 31+ communication-device API, preferring a
+     * connected Bluetooth SCO/A2DP device and falling back to the legacy SCO path.
+     */
+    @RequiresApi(Build.VERSION_CODES.S)
     private fun routeAudioApi31Plus() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
-
         if (hasBluetoothPermission()) {
-            val availableDevices = audioManager.availableCommunicationDevices
+            val availableDevices: List<AudioDeviceInfo> = audioManager.availableCommunicationDevices
             val bluetoothDevice = availableDevices.firstOrNull { device ->
-                device.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
-                        device.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP
+                (device.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                        device.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP)
             }
 
-            if (bluetoothDevice != null) {
-                val success = audioManager.setCommunicationDevice(bluetoothDevice)
-                if (success) {
-                    Timber.i("Set preferred communication device: ${bluetoothDevice.productName}")
-                    _routingState.value = AudioRoutingState.BluetoothConnected(bluetoothDevice.productName.toString())
-                    return
-                }
+            if (bluetoothDevice != null && audioManager.setCommunicationDevice(bluetoothDevice)) {
+                Timber.i("Set preferred communication device: ${bluetoothDevice.productName}")
+                _routingState.value = AudioRoutingState.BluetoothConnected(bluetoothDevice.productName.toString())
+                return
             }
         }
 
@@ -276,6 +343,11 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
         routeAudioLegacy()
     }
 
+    // Legacy SCO routing is only reachable below API 31.
+    /**
+     * Starts SCO routing through the legacy API and publishes the resulting routing state.
+     */
+    @Suppress("DEPRECATION")
     private fun routeAudioLegacy() {
         if (audioManager.isBluetoothScoAvailableOffCall) {
             Timber.i("Starting Bluetooth SCO for helmet headset audio")
@@ -288,6 +360,11 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
         }
     }
 
+    // Legacy SCO routing is only reachable below API 31.
+    /**
+     * Stops the legacy Bluetooth SCO connection, ignoring failures reported by the audio stack.
+     */
+    @Suppress("DEPRECATION")
     private fun stopBluetoothSco() {
         try {
             if (audioManager.isBluetoothScoOn) {
@@ -299,12 +376,36 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
         }
     }
 
+    /**
+     * Clears the explicitly selected communication device on API 31+ so the system can pick the
+     * default output again.
+     */
     private fun clearPreferredDevice() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             audioManager.clearCommunicationDevice()
         }
     }
 
+    // The speakerphone flag is a legacy alias for setCommunicationDevice on API 31+.
+    /**
+     * Sets the legacy speakerphone flag, which is a no-op on API 31+ where
+     * [AudioManager.setCommunicationDevice] owns routing instead.
+     *
+     * @param on `true` to enable the speakerphone flag, `false` to disable it.
+     */
+    @Suppress("DEPRECATION")
+    private fun setSpeakerphoneFlag(on: Boolean) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            audioManager.isSpeakerphoneOn = on
+        }
+    }
+
+    /**
+     * Requests transient-may-duck voice-communication audio focus so background music keeps
+     * playing quietly instead of pausing.
+     *
+     * @return `true` when the focus request was granted.
+     */
     private fun requestAudioFocus(): Boolean {
         val focusResult = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val playbackAttributes = AudioAttributes.Builder()
@@ -334,6 +435,9 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
         return granted
     }
 
+    /**
+     * Releases the audio focus previously taken by [requestAudioFocus].
+     */
     private fun abandonAudioFocus() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             audioFocusRequest?.let { request ->
@@ -346,16 +450,30 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
         }
     }
 
+    // The SCO action is deprecated but is the only option below API 31.
+    /**
+     * Registers the receiver that tracks SCO state changes and headset disconnects. Does nothing
+     * when the receiver is already registered.
+     */
+    @Suppress("DEPRECATION")
     private fun registerReceivers() {
         if (isReceiverRegistered) return
         val filter = IntentFilter().apply {
             addAction(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED)
             addAction(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
         }
-        context.registerReceiver(bluetoothReceiver, filter)
+        ContextCompat.registerReceiver(
+            context,
+            bluetoothReceiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
         isReceiverRegistered = true
     }
 
+    /**
+     * Unregisters the SCO/headset receiver, ignoring failures when it was never registered.
+     */
     private fun unregisterReceivers() {
         if (!isReceiverRegistered) return
         try {
@@ -366,14 +484,17 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
         isReceiverRegistered = false
     }
 
+    /**
+     * Reports whether Bluetooth routing may be used on this API level.
+     *
+     * @return `true` on releases below Android 12 (no runtime permission) or when
+     *   [Manifest.permission.BLUETOOTH_CONNECT] has been granted.
+     */
     private fun hasBluetoothPermission(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
             ContextCompat.checkSelfPermission(
                 context,
-                android.Manifest.permission.BLUETOOTH_CONNECT
+                Manifest.permission.BLUETOOTH_CONNECT
             ) == PackageManager.PERMISSION_GRANTED
-        } else {
-            true
-        }
     }
 }

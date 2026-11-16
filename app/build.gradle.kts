@@ -4,7 +4,19 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.plugin.serialization)
 }
 
-val appVersionName = "1.4"
+val appVersionName = "1.5"
+
+/**
+ * Packing an Android App Bundle needs a single shrunk-resources output, so the per-ABI APK splits
+ * must be switched off whenever a `bundle*` task is requested; otherwise the bundle packaging
+ * fails with "Multiple shrunk-resources files found". APK-only builds keep the splits, so they
+ * still produce one APK per ABI plus a universal APK.
+ *
+ * See https://issuetracker.google.com/402800800.
+ */
+val isBundleBuild = gradle.startParameter.taskNames.any { requestedTask ->
+    requestedTask.substringAfterLast(':').startsWith("bundle", ignoreCase = true)
+}
 
 android {
     namespace = "dev.communicator.helmchatrisen"
@@ -62,10 +74,11 @@ android {
             }
         }
     }
-    // Always produce per-ABI release APKs for the two supported ABIs, plus a universal APK.
+    // Per-ABI release APKs for the two supported ABIs, plus a universal APK. Disabled for app
+    // bundle builds (see isBundleBuild above), which need a single, universal output.
     splits {
         abi {
-            isEnable = true
+            isEnable = !isBundleBuild
             reset()
             include("arm64-v8a", "armeabi-v7a")
             isUniversalApk = true

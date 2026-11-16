@@ -9,6 +9,7 @@ internal const val PARTICIPANT_SNAPSHOT_TIMEOUT_MS = 5_000L
 
 /** Handle returned by [SnapshotTimeoutScheduler.schedule] so a pending deadline can be cancelled. */
 internal fun interface ScheduledTimeout {
+    /** Cancels the pending deadline so it no longer fires. */
     fun cancel()
 }
 
@@ -18,6 +19,13 @@ internal fun interface ScheduledTimeout {
  * Production backs this with the main looper; tests inject a fake so no real delay is needed.
  */
 internal fun interface SnapshotTimeoutScheduler {
+    /**
+     * Arms a one-shot deadline that runs [action] after [delayMs].
+     *
+     * @param delayMs the delay in milliseconds before [action] runs.
+     * @param action the action to run when the deadline elapses.
+     * @return a handle that cancels the pending deadline.
+     */
     fun schedule(delayMs: Long, action: () -> Unit): ScheduledTimeout
 }
 
@@ -34,6 +42,10 @@ internal fun interface SnapshotTimeoutScheduler {
  * an unanswered request must fall back to the broadcast stream instead of buffering events
  * forever. Only one request may be in flight; a duplicate request is refused and leaves the
  * buffered events untouched.
+ *
+ * @param scheduler arms and cancels the snapshot deadlines.
+ * @param snapshotTimeoutMs how long an unanswered snapshot request may stay in flight.
+ * @param onSnapshotSettled invoked once per settled request with `true` when it timed out.
  */
 internal class ParticipantTracker(
     private val scheduler: SnapshotTimeoutScheduler,
@@ -41,7 +53,12 @@ internal class ParticipantTracker(
     private val onSnapshotSettled: (timedOut: Boolean) -> Unit = {},
 ) {
 
-    /** Identifies one snapshot request. A response is only applied while it is the pending one. */
+    /**
+     * Identifies one snapshot request. A response is only applied while it is the pending one.
+     *
+     * @param session the session the request belongs to; changes on every [reset].
+     * @param requestId the monotonically increasing id of the request within that session.
+     */
     data class SnapshotRequest(val session: Long, val requestId: Long)
 
     private val remoteParticipantIds = mutableSetOf<String>()
@@ -74,6 +91,9 @@ internal class ParticipantTracker(
      *
      * [isLocal] must be `true` for the local rider so presence is tracked as a flag instead of an
      * id; participants are otherwise buffered while a snapshot is in flight.
+     *
+     * @param id the participant id from the event.
+     * @param isLocal `true` when the event refers to the local rider.
      */
     fun onJoined(id: String, isLocal: Boolean = false) {
         if (isLocal || id == localParticipantId) {
@@ -89,7 +109,12 @@ internal class ParticipantTracker(
         publishCount()
     }
 
-    /** Records a `PARTICIPANT_LEFT` event. Mirrors [onJoined]. */
+    /**
+     * Records a `PARTICIPANT_LEFT` event. Mirrors [onJoined].
+     *
+     * @param id the participant id from the event.
+     * @param isLocal `true` when the event refers to the local rider.
+     */
     fun onLeft(id: String, isLocal: Boolean = false) {
         if (isLocal || id == localParticipantId) {
             localRiderPresent = false
@@ -109,6 +134,8 @@ internal class ParticipantTracker(
      *
      * Returns `null` when a request is already in flight: the pending snapshot already covers
      * that window, and starting a second one would discard the events buffered for the first.
+     *
+     * @return the started request, or `null` when one is already in flight.
      */
     fun onSnapshotRequested(): SnapshotRequest? {
         if (pendingRequest != null) return null
@@ -123,6 +150,10 @@ internal class ParticipantTracker(
      * Applies an authoritative snapshot and replays the events that arrived while it was in
      * flight. [localParticipantId] is the id of the local rider when the payload exposes it; the
      * SDK snapshot always contains that participant, so the local rider is never double counted.
+     *
+     * @param request the request the snapshot answers; ignored when it is no longer current.
+     * @param snapshotIds every participant id the SDK reported.
+     * @param localParticipantId the local rider's id from the payload, or `null` when unknown.
      */
     fun onSnapshotReceived(
         request: SnapshotRequest,
@@ -151,6 +182,8 @@ internal class ParticipantTracker(
     /**
      * Ends a request that failed before it could produce a response. The buffered events are
      * replayed instead of discarded, so an observed join or leave is never lost.
+     *
+     * @param request the request that failed; ignored when it is no longer current.
      */
     fun onSnapshotFailed(request: SnapshotRequest) {
         if (!isCurrent(request)) return
@@ -172,12 +205,22 @@ internal class ParticipantTracker(
         publishCount()
     }
 
+    /**
+     * Settles a snapshot request whose deadline elapsed, falling back to the buffered events.
+     *
+     * @param request the request that timed out; ignored when it is no longer current.
+     */
     private fun onSnapshotTimeout(request: SnapshotRequest) {
         if (!isCurrent(request)) return
         settleRequest(timedOut = true)
         applySnapshot(remoteSnapshot = emptySet(), authoritative = false)
     }
 
+    /**
+     * Clears the pending request and its deadline, then reports whether it timed out.
+     *
+     * @param timedOut `true` when the request expired instead of receiving a response.
+     */
     private fun settleRequest(timedOut: Boolean) {
         pendingTimeout?.cancel()
         pendingTimeout = null
@@ -188,6 +231,9 @@ internal class ParticipantTracker(
     /**
      * Replaces the baseline with [remoteSnapshot] when the snapshot was authoritative, and keeps
      * the current baseline otherwise, then replays the buffered events on top.
+     *
+     * @param remoteSnapshot the remote ids reported by the snapshot.
+     * @param authoritative `true` when [remoteSnapshot] replaces the current baseline.
      */
     private fun applySnapshot(remoteSnapshot: Set<String>, authoritative: Boolean) {
         val baseline = if (authoritative) remoteSnapshot else remoteParticipantIds
@@ -198,9 +244,14 @@ internal class ParticipantTracker(
         publishCount()
     }
 
+    /**
+     * Reports whether [request] still belongs to the active call and the newest request.
+     *
+     * @param request the request to check.
+     * @return `true` when the request's response may still be applied.
+     */
     private fun isCurrent(request: SnapshotRequest): Boolean {
-        if (pendingRequest != request) return false
-        return isParticipantSnapshotCurrent(
+        return pendingRequest == request && isParticipantSnapshotCurrent(
             session = request.session,
             currentSession = session,
             requestId = request.requestId,
@@ -208,6 +259,7 @@ internal class ParticipantTracker(
         )
     }
 
+    /** Recomputes [count] from the tracked remote ids and the local-rider flag. */
     private fun publishCount() {
         _count.value = remoteParticipantIds.size + if (localRiderPresent) 1 else 0
     }

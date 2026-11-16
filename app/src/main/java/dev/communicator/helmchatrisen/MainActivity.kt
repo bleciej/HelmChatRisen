@@ -63,11 +63,19 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
     /**
      * Applies the user-selected UI language on Android 12L and lower. Android 13+ handles the
      * per-app locale through the system and leaves the base context untouched.
+     *
+     * @param newBase the base context to wrap with the selected locale.
      */
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(AppLanguage.wrapContext(newBase))
     }
 
+    /**
+     * Initializes logging, the default Jitsi options and the Compose content, then starts
+     * observing the call for Picture-in-Picture updates.
+     *
+     * @param savedInstanceState the saved instance state, or `null` on a fresh launch.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (BuildConfig.DEBUG) {
@@ -95,6 +103,7 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
         observeCallForPip()
     }
 
+    /** Closes the PiP window when the call ends and refreshes the PiP params while it is open. */
     private fun observeCallForPip() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -117,6 +126,12 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
         }
     }
 
+    /**
+     * Reports whether the activity may currently enter Picture-in-Picture.
+     *
+     * @return `true` when the device supports PiP, the call screen is visible and a call is
+     *   connected or reconnecting.
+     */
     private fun canEnterPip(): Boolean {
         if (!packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) return false
         if (!isCallScreenVisible) return false
@@ -125,6 +140,7 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
         }
     }
 
+    /** Enters Picture-in-Picture when [canEnterPip] allows it, ignoring a refusal by the system. */
     @Suppress("DEPRECATION") // The no-argument overload is the only one available on API 24–25.
     private fun enterPipIfPossible() {
         if (!canEnterPip()) return
@@ -142,6 +158,7 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
         }
     }
 
+    /** Refreshes the PiP params so the window actions reflect the current mute and call state. */
     private fun updatePipParams() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         try {
@@ -151,6 +168,12 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
         }
     }
 
+    /**
+     * Builds the PiP params with the compact call actions.
+     *
+     * @param autoEnter whether the system may enter PiP automatically on swipe-home.
+     * @return the params applied through `setPictureInPictureParams`.
+     */
     @RequiresApi(Build.VERSION_CODES.O)
     private fun buildPipParams(autoEnter: Boolean): PictureInPictureParams {
         val builder = PictureInPictureParams.Builder()
@@ -196,6 +219,7 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
         return builder.build()
     }
 
+    /** Falls back to manual PiP entry on Android versions without automatic entry. */
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
         // Fallback for Android 7–11, where automatic PiP entry is not available.
@@ -204,6 +228,12 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
         }
     }
 
+    /**
+     * Tracks PiP mode changes so Compose can render the compact layout.
+     *
+     * @param isInPictureInPictureMode whether the activity is now in PiP.
+     * @param newConfig the configuration of the PiP window.
+     */
     override fun onPictureInPictureModeChanged(
         isInPictureInPictureMode: Boolean,
         newConfig: Configuration,
@@ -213,6 +243,11 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
         updatePipParams()
     }
 
+    /**
+     * Tracks PiP mode changes on API 24-25, where only the single-argument callback exists.
+     *
+     * @param isInPictureInPictureMode whether the activity is now in PiP.
+     */
     @Deprecated("Deprecated in Android 8.0, kept for API 24–25")
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode)
@@ -220,17 +255,20 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
         updatePipParams()
     }
 
+    /** Forwards the resume to the Jitsi delegate and refreshes the PiP params. */
     override fun onResume() {
         super.onResume()
         JitsiMeetActivityDelegate.onHostResume(this)
         updatePipParams()
     }
 
+    /** Forwards the pause to the Jitsi delegate. */
     override fun onStop() {
         JitsiMeetActivityDelegate.onHostPause(this)
         super.onStop()
     }
 
+    /** Hangs up and stops the call service on a real finish, then destroys the Jitsi host. */
     override fun onDestroy() {
         if (isFinishing) {
             JitsiCallManager.getInstance().hangUp()
@@ -240,16 +278,35 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
         super.onDestroy()
     }
 
+    /**
+     * Forwards a new intent to the Jitsi delegate.
+     *
+     * @param intent the new intent delivered to the activity.
+     */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         JitsiMeetActivityDelegate.onNewIntent(intent)
     }
 
+    /**
+     * Forwards an activity result to the Jitsi delegate.
+     *
+     * @param requestCode the request code the result belongs to.
+     * @param resultCode the result code returned by the child activity.
+     * @param data the result data, or `null` when the child returned none.
+     */
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         JitsiMeetActivityDelegate.onActivityResult(this, requestCode, resultCode, data)
         super.onActivityResult(requestCode, resultCode, data)
     }
 
+    /**
+     * Forwards a permission result to the Jitsi delegate.
+     *
+     * @param requestCode the request code the result belongs to.
+     * @param permissions the requested permissions.
+     * @param grantResults the grant result for each requested permission.
+     */
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
@@ -259,6 +316,13 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 
+    /**
+     * Forwards a permission request from the Jitsi UI bundle to the delegate.
+     *
+     * @param permissions the permissions to request.
+     * @param requestCode the request code to report the result with.
+     * @param listener the React Native listener notified of the result, or `null` when none is used.
+     */
     override fun requestPermissions(
         permissions: Array<String>,
         requestCode: Int,
