@@ -32,11 +32,11 @@ Riders need reliable voice communication, not video. HelmChat strips everything 
 | UI            | Jetpack Compose, Material 3, Compose Material Adaptive                          |
 | Navigation    | Jetpack Navigation 3 (`rememberNavBackStack` + `NavDisplay`)                    |
 | Async / state | Kotlin Coroutines, `StateFlow`                                                  |
-| VoIP          | Jitsi Meet SDK 10.3.0 (audio-only)                                              |
+| VoIP          | Jitsi Meet SDK 11.6.3 (audio-only)                                              |
 | Audio routing | Android `AudioManager`, Bluetooth SCO/HFP                                       |
 | Persistence   | DataStore Preferences (recent rooms), SharedPreferences (language < Android 13) |
 | Build         | Gradle (Kotlin DSL), AGP 9, KSP, version catalog                                |
-| SDK levels    | compileSdk 37 / targetSdk 37 / minSdk 24                                        |
+| SDK levels    | compileSdk 37 / targetSdk 37 / minSdk 26                                        |
 
 ## Project layout
 

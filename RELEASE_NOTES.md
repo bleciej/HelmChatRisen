@@ -3,10 +3,10 @@
 |                      |                                  |
 |----------------------|----------------------------------|
 | Version              | 1.5                              |
-| Version code         | 4                                |
-| Tag                  | `V1.5` (pending)                 |
+| Version code         | 5                                |
+| Tag                  | `V1.5`                           |
 | Release date         | 2026-11-17                       |
-| Minimum Android      | 7.0 (API 24)                     |
+| Minimum Android      | 8.0 (API 26)                     |
 | Target / compile SDK | 37                               |
 | Application ID       | `dev.communicator.helmchatrisen` |
 
@@ -50,6 +50,8 @@ motorcycle-optimized UI introduced in earlier releases.
 - Migrated logging to Timber and localized call errors (`01ad837`).
 - Removed KSP, bumped Kotlin, and refreshed Compose/Jitsi SDK and other
   dependencies while pruning unused libraries (`3d9ff9f`, `54b60c8`, `7820020`).
+- Upgraded Jitsi Meet SDK to 11.6.3 and raised `minSdk` to 26 to match its
+  manifest requirement; dropped the now-unreachable API 24/25 PiP fallbacks.
 
 ### Audio routing and call lifecycle
 
@@ -74,7 +76,7 @@ motorcycle-optimized UI introduced in earlier releases.
 - Added manifest/tooling annotations for the foreground-service policy and target
   API context, and removed the redundant launcher activity label in favor of the
   application label.
-- Bumped `versionName` to `1.5` (with `versionCode` kept at `4`).
+- Bumped `versionName` to `1.5` (with `versionCode` at `5`).
 - Disabled ABI splits when a `bundle*` Gradle task is requested so AAB builds do
   not fail with "Multiple shrunk-resources files found" (see Google issue
   402800800); APK builds continue to produce per-ABI and universal outputs.
@@ -117,7 +119,8 @@ motorcycle-optimized UI introduced in earlier releases.
 
 - Gradle (Kotlin DSL), AGP 9, version catalog; Java 11 bytecode target (JDK 17+
   required to build).
-- SDK levels: `compileSdk 37` / `targetSdk 37` / `minSdk 24`.
+- SDK levels: `compileSdk 37` / `targetSdk 37` / `minSdk 26` (required by Jitsi
+  Meet SDK 11.6.3).
 - Release APK builds: **per-ABI** (`arm64-v8a`, `armeabi-v7a`) plus a universal
   APK, R8-minified and resource-shrunk.
 - **App Bundle builds (`bundle*`)**: ABI splits are disabled automatically to
@@ -127,9 +130,10 @@ motorcycle-optimized UI introduced in earlier releases.
   `releaseKeyPassword`; signing material is never committed.
 - Deterministic output names: `HelmChatRisen-1.5-release-<abi>.apk` and
   `HelmChatRisen-1.5-release.apk`.
-- The build patches the merged Jitsi JS bundle to shorten reconnect delays and
-  fails loudly if the Jitsi SDK is upgraded and the patch targets change.
-- Version metadata: `versionName` `1.5`, `versionCode` `4`.
+- The build patches the merged Jitsi JS bundle to shorten reconnect delays; its
+  patterns ignore minified identifier names and fail loudly if the JS logic
+  changes in a future SDK upgrade.
+- Version metadata: `versionName` `1.5`, `versionCode` `5`.
 
 ## Testing
 
@@ -164,7 +168,6 @@ motorcycle-optimized UI introduced in earlier releases.
   `com.example.helmChatRisen` or older pre-release IDs) install as a **separate
   app**. Data such as recent rooms, JWT tokens, and the language preference is
   **not migrated**; uninstall the old build to avoid duplicate launcher icons.
-- `versionCode` remains `4` in this release; plan/store behavior for in-place
   upgrades depends on the previously installed build's application ID and version
   code.
 - App label: `HelmChat Risen`; in-app title: `HelmChat - Risen`.

@@ -15,7 +15,6 @@ import android.util.Rational
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.getValue
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
@@ -141,17 +140,12 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
     }
 
     /** Enters Picture-in-Picture when [canEnterPip] allows it, ignoring a refusal by the system. */
-    @Suppress("DEPRECATION") // The no-argument overload is the only one available on API 24–25.
     private fun enterPipIfPossible() {
         if (!canEnterPip()) return
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val params = buildPipParams(autoEnter = true)
-                setPictureInPictureParams(params)
-                enterPictureInPictureMode(params)
-            } else {
-                enterPictureInPictureMode()
-            }
+            val params = buildPipParams(autoEnter = true)
+            setPictureInPictureParams(params)
+            enterPictureInPictureMode(params)
         } catch (_: IllegalStateException) {
             // The system refused PiP (e.g. another PiP window is active). The call keeps
             // running in the background through the foreground service.
@@ -160,7 +154,6 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
 
     /** Refreshes the PiP params so the window actions reflect the current mute and call state. */
     private fun updatePipParams() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         try {
             setPictureInPictureParams(buildPipParams(autoEnter = canEnterPip()))
         } catch (_: IllegalStateException) {
@@ -174,7 +167,6 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
      * @param autoEnter whether the system may enter PiP automatically on swipe-home.
      * @return the params applied through `setPictureInPictureParams`.
      */
-    @RequiresApi(Build.VERSION_CODES.O)
     private fun buildPipParams(autoEnter: Boolean): PictureInPictureParams {
         val builder = PictureInPictureParams.Builder()
             .setAspectRatio(Rational(1, 1))
@@ -222,7 +214,7 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
     /** Falls back to manual PiP entry on Android versions without automatic entry. */
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        // Fallback for Android 7–11, where automatic PiP entry is not available.
+        // Fallback for Android 8–11 (API 26–30), where automatic PiP entry is not available.
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             enterPipIfPossible()
         }
@@ -239,18 +231,6 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
         newConfig: Configuration,
     ) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
-        pipState.value = isInPictureInPictureMode
-        updatePipParams()
-    }
-
-    /**
-     * Tracks PiP mode changes on API 24-25, where only the single-argument callback exists.
-     *
-     * @param isInPictureInPictureMode whether the activity is now in PiP.
-     */
-    @Deprecated("Deprecated in Android 8.0, kept for API 24–25")
-    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
-        super.onPictureInPictureModeChanged(isInPictureInPictureMode)
         pipState.value = isInPictureInPictureMode
         updatePipParams()
     }

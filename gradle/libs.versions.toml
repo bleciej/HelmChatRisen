@@ -19,7 +19,7 @@ adaptiveLayout = "1.3.0"
 adaptiveNavigation3 = "1.3.0"
 runner = "1.7.0"
 datastorePreferences = "1.3.0"
-jitsiMeetSdk = "10.3.0"
+jitsiMeetSdk = "11.6.3"
 timber = "5.0.1"
 
 [libraries]

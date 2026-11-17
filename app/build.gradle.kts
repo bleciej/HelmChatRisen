@@ -26,9 +26,9 @@ android {
 
     defaultConfig {
         applicationId = "dev.communicator.helmchatrisen"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 37
-        versionCode = 4
+        versionCode = 5
         versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -109,7 +109,8 @@ base {
  * asset in place so the SDK reloads the conference after ~5 s instead.
  *
  * The bundle is treated as ISO-8859-1 so every byte round-trips unchanged while the ASCII
- * patterns are replaced.
+ * patterns are replaced. The patterns match the surrounding structure instead of minified
+ * identifier names, so an SDK upgrade only needs a new pattern when the JS logic itself changes.
  */
 androidComponents {
     onVariants { variant ->
@@ -141,17 +142,25 @@ androidComponents {
                     return@doLast
                 }
                 val text = bundleFile.readText(Charsets.ISO_8859_1)
-                val replacements = mapOf(
-                    "_timeoutSeconds=10+(0,_r(d[10]).randomInt)(0,20)" to "_timeoutSeconds=5",
-                    "F({reconnecting:!0,pcId:h})}),3e4)" to "F({reconnecting:!0,pcId:h})}),5e3)",
+                // Entries hold (unpatched pattern, already-patched pattern, replacement). The
+                // second pattern keeps repeated builds idempotent after the merged asset is reused.
+                val replacements: List<Triple<Regex, Regex, (MatchResult) -> String>> = listOf(
+                    Triple(
+                        Regex("_timeoutSeconds=\\d+\\+\\(0,\\w+\\(\\w+\\[\\d+\\]\\)\\.randomInt\\)\\(0,\\d+\\)"),
+                        Regex("_timeoutSeconds=5"),
+                    ) { "_timeoutSeconds=5" },
+                    Triple(
+                        Regex("(\\w+\\(\\{reconnecting:!0,pcId:\\w+\\}\\)\\}\\),)3e4"),
+                        Regex("(\\w+\\(\\{reconnecting:!0,pcId:\\w+\\}\\)\\}\\),)5e3"),
+                    ) { match -> "${match.groupValues[1]}5e3" },
                 )
                 var patched = text
-                replacements.forEach { (from, to) ->
-                    if (patched.contains(from)) {
-                        patched = patched.replace(from, to)
-                    } else if (!patched.contains(to)) {
+                replacements.forEach { (pattern, patchedPattern, replacement) ->
+                    if (pattern.containsMatchIn(patched)) {
+                        patched = pattern.replace(patched, replacement)
+                    } else if (!patchedPattern.containsMatchIn(patched)) {
                         throw GradleException(
-                            "Jitsi reconnect patch target not found in ${bundleFile.name}: $from. " +
+                            "Jitsi reconnect patch target not found in ${bundleFile.name}: ${pattern.pattern}. " +
                                 "Update app/build.gradle.kts for the installed Jitsi SDK version.",
                         )
                     }

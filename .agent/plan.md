@@ -346,3 +346,13 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - `./gradlew :app:bundleRelease` succeeds and emits a single `.aab`
   - `./gradlew :app:assembleRelease` still emits the per-ABI APKs plus the universal APK
   - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+
+### Task_41_UpgradeJitsiSdkTo1163: Upgrade Jitsi Meet SDK to 11.6.3.
+- **Status:** COMPLETED
+- **Updates:** Bumped `jitsiMeetSdk` from 10.3.0 to 11.6.3 in `libs.versions.toml` (version confirmed present in the configured Jitsi Maven repository). SDK 11.6.3 declares `minSdk 26`, so (after user approval) raised `minSdk` 24 → 26 in `app/build.gradle.kts` and removed the now-unreachable Android 7.x PiP fallbacks / deprecated single-argument `onPictureInPictureModeChanged` override from `MainActivity.kt`. The merged JS bundle changed its minified reconnect symbols (`M({reconnecting:!0,pcId:l})}),3e4` instead of `F(...,h)`), so the build-time reconnect patch now uses structural regex patterns for both the reload timeout and the websocket retry; this also tolerates future minifier renames and stays idempotent when the merged asset is reused. Updated `README.md`, `RELEASE_NOTES.md` and the Android agent instructions to the new SDK/minSdk values. Verified `assembleDebug`, `testDebugUnitTest` (97 tests), `lintDebug` and `assembleRelease` (per-ABI arm64-v8a/armeabi-v7a plus universal APK) pass. Device/emulator verification of an actual call is still pending (none connected).
+- **Acceptance Criteria:**
+  - `gradle/libs.versions.toml` pins Jitsi Meet SDK 11.6.3 and the app builds with it
+  - `minSdk` is 26 with no stale API 24/25 code paths left
+  - The Jitsi reconnect patch applies to the 11.6.3 bundle without hardcoded minified identifiers
+  - `assembleDebug`, `testDebugUnitTest`, `lintDebug` and `assembleRelease` pass
+  - Manual: smoke-test an audio-only call on a device/emulator
