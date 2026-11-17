@@ -1,23 +1,34 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.google.devtools.ksp)
     alias(libs.plugins.jetbrains.kotlin.plugin.serialization)
 }
 
-val appVersionName = "1.4"
+val appVersionName = "1.5"
+
+/**
+ * Packing an Android App Bundle needs a single shrunk-resources output, so the per-ABI APK splits
+ * must be switched off whenever a `bundle*` task is requested; otherwise the bundle packaging
+ * fails with "Multiple shrunk-resources files found". APK-only builds keep the splits, so they
+ * still produce one APK per ABI plus a universal APK.
+ *
+ * See https://issuetracker.google.com/402800800.
+ */
+val isBundleBuild = gradle.startParameter.taskNames.any { requestedTask ->
+    requestedTask.substringAfterLast(':').startsWith("bundle", ignoreCase = true)
+}
 
 android {
-    namespace = "com.example.helmChatRisen"
+    namespace = "dev.communicator.helmchatrisen"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.example.helmChatRisen"
-        minSdk = 24
+        applicationId = "dev.communicator.helmchatrisen"
+        minSdk = 26
         targetSdk = 37
-        versionCode = 4
+        versionCode = 5
         versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -63,10 +74,11 @@ android {
             }
         }
     }
-    // Always produce per-ABI release APKs for the two supported ABIs, plus a universal APK.
+    // Per-ABI release APKs for the two supported ABIs, plus a universal APK. Disabled for app
+    // bundle builds (see isBundleBuild above), which need a single, universal output.
     splits {
         abi {
-            isEnable = true
+            isEnable = !isBundleBuild
             reset()
             include("arm64-v8a", "armeabi-v7a")
             isUniversalApk = true
@@ -78,6 +90,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     testOptions {
         unitTests {
@@ -96,7 +109,8 @@ base {
  * asset in place so the SDK reloads the conference after ~5 s instead.
  *
  * The bundle is treated as ISO-8859-1 so every byte round-trips unchanged while the ASCII
- * patterns are replaced.
+ * patterns are replaced. The patterns match the surrounding structure instead of minified
+ * identifier names, so an SDK upgrade only needs a new pattern when the JS logic itself changes.
  */
 androidComponents {
     onVariants { variant ->
@@ -128,17 +142,25 @@ androidComponents {
                     return@doLast
                 }
                 val text = bundleFile.readText(Charsets.ISO_8859_1)
-                val replacements = mapOf(
-                    "_timeoutSeconds=10+(0,_r(d[10]).randomInt)(0,20)" to "_timeoutSeconds=5",
-                    "e({reconnecting:!0,pcId:p})}),3e4)" to "e({reconnecting:!0,pcId:p})}),5e3)",
+                // Entries hold (unpatched pattern, already-patched pattern, replacement). The
+                // second pattern keeps repeated builds idempotent after the merged asset is reused.
+                val replacements: List<Triple<Regex, Regex, (MatchResult) -> String>> = listOf(
+                    Triple(
+                        Regex("_timeoutSeconds=\\d+\\+\\(0,\\w+\\(\\w+\\[\\d+\\]\\)\\.randomInt\\)\\(0,\\d+\\)"),
+                        Regex("_timeoutSeconds=5"),
+                    ) { "_timeoutSeconds=5" },
+                    Triple(
+                        Regex("(\\w+\\(\\{reconnecting:!0,pcId:\\w+\\}\\)\\}\\),)3e4"),
+                        Regex("(\\w+\\(\\{reconnecting:!0,pcId:\\w+\\}\\)\\}\\),)5e3"),
+                    ) { match -> "${match.groupValues[1]}5e3" },
                 )
                 var patched = text
-                replacements.forEach { (from, to) ->
-                    if (patched.contains(from)) {
-                        patched = patched.replace(from, to)
-                    } else if (!patched.contains(to)) {
+                replacements.forEach { (pattern, patchedPattern, replacement) ->
+                    if (pattern.containsMatchIn(patched)) {
+                        patched = pattern.replace(patched, replacement)
+                    } else if (!patchedPattern.containsMatchIn(patched)) {
                         throw GradleException(
-                            "Jitsi reconnect patch target not found in ${bundleFile.name}: $from. " +
+                            "Jitsi reconnect patch target not found in ${bundleFile.name}: ${pattern.pattern}. " +
                                 "Update app/build.gradle.kts for the installed Jitsi SDK version.",
                         )
                     }
@@ -175,18 +197,13 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.navigation3.ui)
-    implementation(libs.androidx.room.ktx)
-    implementation(libs.androidx.room.runtime)
     implementation(libs.jitsi.meet.sdk)
+    implementation(libs.timber)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.core)
     implementation(libs.kotlinx.serialization.json)
     testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-    androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.runner)
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
-    "ksp"(libs.androidx.room.compiler)
 }

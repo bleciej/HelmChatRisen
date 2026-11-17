@@ -79,4 +79,6 @@
     <string name="language_dialog_title">Język aplikacji</string>
     <string name="language_system">Język systemu</string>
     <string name="language_close">Zamknij</string>
+    <string name="call_error_connect_timeout">Nie udało się połączyć. Sprawdź adres serwera i połączenie z internetem.</string>
+    <string name="call_error_reconnect_timeout">Nie udało się wznowić połączenia. Sprawdź sieć i dołącz ponownie.</string>
 </resources>

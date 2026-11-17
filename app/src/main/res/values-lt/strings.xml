@@ -79,4 +79,6 @@
     <string name="language_dialog_title">Programos kalba</string>
     <string name="language_system">Sistemos kalba</string>
     <string name="language_close">Uždaryti</string>
+        <string name="call_error_connect_timeout">Could not connect. Check the server address and your internet connection.</string>
+        <string name="call_error_reconnect_timeout">Could not resume the connection. Check your network and rejoin.</string>
 </resources>

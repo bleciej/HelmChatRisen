@@ -229,3 +229,130 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - Buffered joins/leaves survive request failures and duplicate join events
   - The participant state machine is covered by JVM tests with a fake scheduler
   - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+
+### Task_24_DependencyUpdatesAndCleanup: Update dependencies to latest stable versions and remove unused ones.
+- **Status:** COMPLETED
+- **Updates:** Updated `libs.versions.toml` to latest stable versions compatible with Kotlin 2.3.21: core-ktx 1.19.1, androidx-junit 1.3.0, espresso 3.7.0, lifecycle 2.11.0, compose-bom 2026.09.00, compose-ui 1.12.1, navigation3 1.2.1, adaptive 1.3.0, datastore 1.3.0, jitsi-meet-sdk 10.3.0, Kotlin 2.3.21, KSP 2.3.14. Kept kotlinx-serialization 1.11.0 and coroutines 1.11.0 (compatible with Kotlin 2.3). Removed unused dependencies: camera, coil, retrofit/moshi/okhttp, accompanist, play-services-location, room, espresso, compose ui test junit4/manifest. Updated Jitsi reconnect patch strings for 10.3.0 bundle (pcId:h, F(...)). Verified `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass.
+
+### Task_25_UpgradeKotlinAndSerialization: Upgrade Kotlin to 2.4.21 and kotlinx-serialization to 1.13.0.
+- **Status:** COMPLETED
+- **Updates:** Bumped Kotlin 2.3.21 → 2.4.21, jetbrainsKotlinPluginSerialization 2.3.21 → 2.4.21, kotlinxSerializationCore 1.11.0 → 1.13.0. Removed unused KSP plugin (googleDevtoolsKsp) and its entries from root/app build.gradle.kts and toml. minSdk remains 24 (no change required). Verified `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass.
+
+### Task_26_ReplaceLogWithTimber: Migrate android.util.Log calls to Timber.
+- **Status:** COMPLETED
+- **Updates:** Added Timber 5.0.1 as explicit dependency, enabled buildConfig. Replaced ~40 Log.d/i/w/e calls in JitsiCallManager, BluetoothAudioRouter and AudioCallService with Timber equivalents and removed TAG constants. Planted Timber.DebugTree in MainActivity.onCreate (debug builds). Verified `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass.
+
+### Task_27_TranslateTimeoutMessages: Move CONNECT/RECONNECT timeout messages to string resources.
+- **Status:** COMPLETED
+- **Updates:** Added `call_error_connect_timeout` and `call_error_reconnect_timeout` to default + all locale catalogs. Changed `CallState.Error` to support `messageResId`; replaced hardcoded Polish constants with `R.string` references. Resolved message in HelmChatApp via `stringResource` and logged id in AudioCallService. Verified `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass.
+
+### Task_28_RenamePackage: Rename application package to dev.communicator.helmchatrisen.
+- **Status:** COMPLETED
+- **Updates:** Moved source/test directories from `com/example/helmChatRisen` to `dev/communicator/helmchatrisen`, updated namespace/applicationId and all package/import references. Verified `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass.
+
+### Task_29_FixSonarIssuesBluetoothAudioRouter: Clear all SonarQube/editor findings in BluetoothAudioRouter.
+- **Status:** COMPLETED
+- **Updates:** Cleared every editor/SonarQube finding in `BluetoothAudioRouter.kt`. Added `@SuppressLint("StaticFieldLeak")` to the application-context singleton (it never retains an Activity), extracted the API-31 communication-device routing into `@RequiresApi(S)` helpers (`applySpeakerphoneApi31Plus`, `routeToBuiltInSpeaker`, `routeToBluetoothOrEarpiece`, `routeAudioApi31Plus`) so all legacy SCO/speakerphone calls live in `@Suppress("DEPRECATION")` methods reached only below API 31, and guarded `isSpeakerphoneOn` behind `setSpeakerphoneFlag(on)` (a no-op on API 31+). Split `setSpeakerphone` into `applySpeakerphoneRouting` plus API-specific helpers to bring its cognitive complexity under the Sonar limit, removed the three unused public helpers (`isSpeakerphoneForced`, `toggleSpeakerphone`, `isBluetoothScoConnected`), typed the communication-device list as read-only `List<AudioDeviceInfo>`, replaced the raw `registerReceiver` with `ContextCompat.registerReceiver(..., RECEIVER_NOT_EXPORTED)`, and collapsed the redundant `if/else` in `hasBluetoothPermission`. Also fixed the resulting Kotlin style warnings (when trailing comma, named boolean arguments, clarifying parentheses). Verified `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass and `studio_analyze_file` reports no issues.
+- **Acceptance Criteria:**
+  - No SonarQube/editor warnings remain in `BluetoothAudioRouter.kt`
+  - API 31+ and legacy (< 31) audio-routing behaviour preserved
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+
+### Task_30_FixSonarIssuesAudioCallService: Clear all SonarQube/editor findings in AudioCallService.
+- **Status:** COMPLETED
+- **Updates:** Cleared every editor/SonarQube finding in `AudioCallService.kt`. Removed the unused `kotlinx.coroutines.flow.StateFlow` import; extracted the identical `CallState.Connected`/`CallState.Reconnecting` handling into `applySessionState(roomName, serverUrl)` so the two `when` branches are no longer duplicated; raised the typed `startForeground` guard from API 29 (`Q`) to API 30 (`R`) because `ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE` is API 30; dropped the always-true `SDK_INT >= N` check in `stopForegroundAndSelf()` (minSdk 24) together with its deprecated `stopForeground(true)` fallback; and referenced `NOTIFICATION_SERVICE` without the redundant `Context.` qualifier. Verified `studio_analyze_file` reports no issues, the lint report has no `AudioCallService` entries, and `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass.
+- **Acceptance Criteria:**
+  - No SonarQube/editor warnings remain in `AudioCallService.kt`
+  - Foreground-service typing behaviour preserved on API 30+ and below
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+
+### Task_31_DocumentAudioCallService: Add KDoc to every function in AudioCallService.
+- **Status:** COMPLETED
+- **Updates:** Documented every function in `AudioCallService.kt` with KDoc: the companion `startCall`/`stopCall` entry points, the `onCreate`/`onStartCommand`/`onBind`/`onDestroy` lifecycle overrides, and the private helpers `startCallInternal`, `endCallInternal`, `stopForegroundAndSelf`, `createNotificationChannel`, `buildNotification`, `applySessionState` (filling the empty block) and `updateNotification`. The comments describe the foreground-service/microphone contract, the helmet audio-route ownership and the notification actions. Follow-up: brought the comments into full Javadoc/KDoc format by adding `@param` tags (plus `@return` where a value is produced) to the documented functions that take parameters or return a value - `attachBaseContext`, `startCall`, `stopCall`, `onStartCommand`, `onBind`, `startCallInternal`, `buildNotification` and `applySessionState` - matching the `ServerUrlNormalizer`/`HomeViewModel` convention already used in the project. Re-verified `studio_analyze_file` reports no issues (no unresolved KDoc references) and `assembleDebug`, `testDebugUnitTest` (97 tests) and `lintDebug` pass.
+- **Acceptance Criteria:**
+  - Every function in `AudioCallService.kt` has KDoc
+  - No unresolved KDoc references
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+
+### Task_32_DocumentBluetoothAudioRouter: Add valid Javadoc/KDoc comments to BluetoothAudioRouter.
+- **Status:** COMPLETED
+- **Updates:** Documented the `AudioRoutingState` sealed hierarchy (each state object and data class, with `@param` for `BluetoothConnected.deviceName` and `Error.message`), `getInstance`, the anonymous `BroadcastReceiver.onReceive` override, and every function that had no comment: `applySpeakerphoneRouting`, `applySpeakerphoneApi31Plus`, `routeToBuiltInSpeaker`, `routeToBluetoothOrEarpiece`, `applySpeakerphoneLegacy`, `updateAudioRouting`, `routeAudioApi31Plus`, `routeAudioLegacy`, `stopBluetoothSco`, `clearPreferredDevice`, `setSpeakerphoneFlag`, `requestAudioFocus`, `abandonAudioFocus`, `registerReceivers`, `unregisterReceivers` and `hasBluetoothPermission`. The existing prose blocks (`startAudioRouting`, `stopAudioRouting`, `resetForNewCall`, `setSpeakerphone`) were extended with `@param`/`@return` block tags so every comment is in valid Javadoc/KDoc format, per the new Android Dev agent rule (item 11). `studio_analyze_file` reports no issues (no malformed documentation or unresolved KDoc references) and `assembleDebug`, `testDebugUnitTest` (97 tests) and `lintDebug` pass.
+- **Acceptance Criteria:**
+  - Every class and function in `BluetoothAudioRouter.kt` has KDoc in valid Javadoc format
+  - No malformed-documentation or unresolved-reference warnings
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+
+### Task_33_DocumentRecentRoom: Add valid Javadoc/KDoc comments to RecentRoom.
+- **Status:** COMPLETED
+- **Updates:** Brought every KDoc block in `RecentRoom.kt` into valid Javadoc/KDoc format. Added `@param` tags to the `RecentRoom` data class for its four primary-constructor properties (`roomName`, `serverUrl`, `displayName`, `lastUsedAt`), and added `@param`/`@return` tags to `canonicalServerKey` and `mergeRecentRoom`. `MAX_RECENT_ROOMS` keeps its existing single-line KDoc (a constant has no parameters or return value). `studio_analyze_file` reports no issues and `assembleDebug`, `testDebugUnitTest` (97 tests) and `lintDebug` pass.
+- **Acceptance Criteria:**
+  - Every class and function in `RecentRoom.kt` has KDoc in valid Javadoc format
+  - No malformed-documentation or unresolved-reference warnings
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+
+### Task_34_DocumentRecentRoomsRepository: Add valid Javadoc/KDoc comments to RecentRoomsRepository.
+- **Status:** COMPLETED
+- **Updates:** Brought `RecentRoomsRepository.kt` into valid Javadoc/KDoc format. Added `@param context` to the class KDoc, a KDoc for the public `recentRooms` flow, and `@param`/`@return` tags for `record`, `remove`, `clear`, `decode` and `encode`. `studio_analyze_file` reports no issues and `assembleDebug`, `testDebugUnitTest` (97 tests) and `lintDebug` pass.
+- **Acceptance Criteria:**
+  - Every class and function in `RecentRoomsRepository.kt` has KDoc in valid Javadoc format
+  - No malformed-documentation or unresolved-reference warnings
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+
+### Task_35_DocumentJitsiCallManager: Add valid Javadoc/KDoc comments to JitsiCallManager.
+- **Status:** COMPLETED
+- **Updates:** Brought `JitsiCallManager.kt` into valid Javadoc/KDoc format (50 KDoc blocks). Documented the `CallState` hierarchy (`Idle`, `Connecting`, `Connected`, `Reconnecting`, `Error` with `@param` tags), the public `DEFAULT_SERVER_URL` constant, the `callState`/`isMuted`/`isNetworkAvailable` flows and `getInstance`, and added `@param`/`@return`/`@throws` tags to the public API (`join` including `@throws IllegalArgumentException`, `toggleMute`, `setMuted`, `buildConferenceOptions`, `configureDefaultOptions`, `sanitizeServerUrl`). Documented every remaining private helper and callback override (`registerBroadcastReceiver` and its `onReceive`, `unregisterBroadcastReceiver`, `registerNetworkCallback`, `unregisterNetworkCallback`, `sendBroadcast`, the `ConnectivityManager.NetworkCallback` overrides, `cancelConnectTimeout`/`cancelReconnectTimeout`, `handleBroadcastEvent`, `booleanValue`, `participantId`, `asValidParticipantId`) and completed the block tags on the existing top-level helpers (`participantIdFrom`, `applyParticipantSnapshot`, `isParticipantSnapshotCurrent`, `sanitizeParticipantIds`, `isParticipantSessionLive`). `studio_analyze_file` reports no issues and `assembleDebug`, `testDebugUnitTest` (97 tests) and `lintDebug` pass.
+- **Acceptance Criteria:**
+  - Every class and function in `JitsiCallManager.kt` has KDoc in valid Javadoc format
+  - No malformed-documentation or unresolved-reference warnings
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+
+### Task_36_DocumentJitsiServers: Add valid Javadoc/KDoc comments to JitsiServers.
+- **Status:** COMPLETED
+- **Updates:** Brought `JitsiServers.kt` into valid Javadoc/KDoc format. Converted the `JitsiServer` data class tags from `@property` to `@param` (`url`, `descriptionRes`), added KDocs for the public `presets` and `default` properties, and added `@param`/`@return` tags to `byUrl`. The `host` getter keeps its existing single-line KDoc. Verified the change is comment-only with `git diff`. `assembleDebug`, `testDebugUnitTest` (97 tests) and `lintDebug` pass. Two pre-existing IDE warnings remain and are unrelated to documentation: a "Open in browser" hint on the `https://` literal in `host`, and a "Use destructuring declaration" suggestion on `presets.first { ... }`; the same hint also appears in the untouched `ServerUrlNormalizer.kt`.
+- **Acceptance Criteria:**
+  - Every class and function in `JitsiServers.kt` has KDoc in valid Javadoc format
+  - No malformed-documentation or unresolved-reference warnings
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+
+### Task_37_DocumentParticipantTracker: Add valid Javadoc/KDoc comments to ParticipantTracker.
+- **Status:** COMPLETED
+- **Updates:** Brought `ParticipantTracker.kt` into valid Javadoc/KDoc format. Added `@param` tags to the `ParticipantTracker` class (`scheduler`, `snapshotTimeoutMs`, `onSnapshotSettled`) and to `SnapshotRequest` (`session`, `requestId`, replacing the single-line prose doc), and completed the block tags on the existing prose docs of `onJoined`, `onLeft`, `onSnapshotRequested` (`@return`), `onSnapshotReceived`, `onSnapshotFailed` and `applySnapshot`. Added new KDocs with tags to the previously undocumented members: `ScheduledTimeout.cancel`, `SnapshotTimeoutScheduler.schedule` (`@param`/`@return`), and the private helpers `onSnapshotTimeout`, `settleRequest`, `isCurrent` (`@return`) and `publishCount`. `count`, `onConferenceJoined` and `reset` keep their existing KDocs (no parameters or return values). `studio_analyze_file` reports no issues and `assembleDebug`, `testDebugUnitTest` (97 tests) and `lintDebug` pass. The pre-existing non-documentation IDE hints on the `isLocal || id == localParticipantId` expression and the `if (localParticipantId != null)` block were left untouched.
+- **Acceptance Criteria:**
+  - Every class and function in `ParticipantTracker.kt` has KDoc in valid Javadoc format
+  - No malformed-documentation or unresolved-reference warnings
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+
+### Task_38_DocumentMainActivity: Add valid Javadoc/KDoc comments to MainActivity.
+- **Status:** COMPLETED
+- **Updates:** Brought `MainActivity.kt` into valid Javadoc/KDoc format. Added `@param newBase` to the existing `attachBaseContext` KDoc, and added new KDocs to every previously undocumented member: `onCreate` (`@param savedInstanceState`), the private PiP helpers `observeCallForPip`, `canEnterPip` (`@return`), `enterPipIfPossible`, `updatePipParams` and `buildPipParams` (`@param autoEnter`/`@return`), and the lifecycle/interface overrides `onUserLeaveHint`, both `onPictureInPictureModeChanged` overloads, `onResume`, `onStop`, `onDestroy`, `onNewIntent`, `onActivityResult`, `onRequestPermissionsResult` and `requestPermissions`, each with `@param` tags in declaration order. The class KDoc and the `pipState` KDoc were already complete (the class has no primary-constructor parameters). `studio_analyze_file` reports no documentation issues and `assembleDebug`, `testDebugUnitTest` (97 tests) and `lintDebug` pass. Four pre-existing non-documentation IDE hints remain and were left untouched (boolean-literal argument on `MutableStateFlow(false)`, lambda-out-of-parentheses on `onEnterPictureInPicture`, clarifying parentheses on the `state is CallState.Idle && pipState.value` expression, and a redundant `if` on `if (!isCallScreenVisible) return false`).
+- **Acceptance Criteria:**
+  - Every class and function in `MainActivity.kt` has KDoc in valid Javadoc format
+  - No malformed-documentation or unresolved-reference warnings
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+
+### Task_39_ReviewCleartextHotspot: Document and review the SonarQube S5332 cleartext hotspot.
+- **Status:** COMPLETED
+- **Updates:** The `android:usesCleartextTraffic="true"` attribute in `AndroidManifest.xml` raises SonarQube security hotspot S5332 ("Using clear-text protocols is security-sensitive"). Cleartext is a deliberate product requirement: `JitsiCallManager.sanitizeServerUrl` upgrades the curated presets to https but keeps a rider-typed `http://` scheme for unknown (self-hosted) servers, so the attribute cannot be removed without dropping that feature. Decision (confirmed with the user): keep the behavior and clear the hotspot by reviewing it as **Safe** in SonarQube with a justification. To make the rationale discoverable in-repo, an XML comment explaining the decision was added above the `<application>` element (comment only, no behavior change). `assembleDebug`, `testDebugUnitTest` (97 tests) and `lintDebug` pass; the two remaining Android Lint warnings on the manifest (`PictureInPictureIssue`, `UnusedTranslation`) are pre-existing and unrelated.
+- **Acceptance Criteria:**
+  - The cleartext rationale is documented in the manifest
+  - No code or behavior change
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+  - Manual: the S5332 hotspot is marked "Safe" in SonarQube/SonarLint with the recorded justification
+
+### Task_40_FixBundleWithAbiSplits: Allow app-bundle builds while keeping per-ABI APK splits.
+- **Status:** COMPLETED
+- **Updates:** `:app:bundleRelease` failed with "Multiple shrunk-resources files found in … minifyReleaseWithR8" because the global `splits.abi` config produced three outputs (arm64-v8a, armeabi-v7a, universal), while bundle packaging needs exactly one. Added a computed `isBundleBuild` flag (true when any requested task name ends in `bundle*`) and set `splits.abi.isEnable = !isBundleBuild`, so bundle builds get a single universal output and APK builds keep the per-ABI splits. Verified `:app:bundleRelease` produces a single `HelmChatRisen-1.5-release.aab`, `:app:assembleRelease` still produces the arm64-v8a / armeabi-v7a / universal APKs (with only the matching native libs in each split), and `assembleDebug` + `testDebugUnitTest` (97 tests) + `lintDebug` pass. Note: alternating between APK and bundle builds makes R8/resource-shrinking re-run, since the two configurations produce different intermediates.
+- **Acceptance Criteria:**
+  - `./gradlew :app:bundleRelease` succeeds and emits a single `.aab`
+  - `./gradlew :app:assembleRelease` still emits the per-ABI APKs plus the universal APK
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+
+### Task_41_UpgradeJitsiSdkTo1163: Upgrade Jitsi Meet SDK to 11.6.3.
+- **Status:** COMPLETED
+- **Updates:** Bumped `jitsiMeetSdk` from 10.3.0 to 11.6.3 in `libs.versions.toml` (version confirmed present in the configured Jitsi Maven repository). SDK 11.6.3 declares `minSdk 26`, so (after user approval) raised `minSdk` 24 → 26 in `app/build.gradle.kts` and removed the now-unreachable Android 7.x PiP fallbacks / deprecated single-argument `onPictureInPictureModeChanged` override from `MainActivity.kt`. The merged JS bundle changed its minified reconnect symbols (`M({reconnecting:!0,pcId:l})}),3e4` instead of `F(...,h)`), so the build-time reconnect patch now uses structural regex patterns for both the reload timeout and the websocket retry; this also tolerates future minifier renames and stays idempotent when the merged asset is reused. Updated `README.md`, `RELEASE_NOTES.md` and the Android agent instructions to the new SDK/minSdk values. Verified `assembleDebug`, `testDebugUnitTest` (97 tests), `lintDebug` and `assembleRelease` (per-ABI arm64-v8a/armeabi-v7a plus universal APK) pass. Device/emulator verification of an actual call is still pending (none connected).
+- **Acceptance Criteria:**
+  - `gradle/libs.versions.toml` pins Jitsi Meet SDK 11.6.3 and the app builds with it
+  - `minSdk` is 26 with no stale API 24/25 code paths left
+  - The Jitsi reconnect patch applies to the 11.6.3 bundle without hardcoded minified identifiers
+  - `assembleDebug`, `testDebugUnitTest`, `lintDebug` and `assembleRelease` pass
+  - Manual: smoke-test an audio-only call on a device/emulator
