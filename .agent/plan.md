@@ -356,3 +356,12 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - The Jitsi reconnect patch applies to the 11.6.3 bundle without hardcoded minified identifiers
   - `assembleDebug`, `testDebugUnitTest`, `lintDebug` and `assembleRelease` pass
   - Manual: smoke-test an audio-only call on a device/emulator
+
+### Task_42_ResetMuteStateBetweenCalls: Start every call with a live microphone.
+- **Status:** COMPLETED
+- **Updates:** Reproduced the reported "microphone looks off after joining" on the emulator: ending a call while muted left `JitsiCallManager._isMuted` set to `true`; the next `join()` forwarded that stale value as `startWithAudioMuted`, so Jitsi reported `CONFERENCE_JOINED ... "isAudioMuted":true` while audio playback still worked. Added `resetMuteState()` and call it from both `hangUp()` and `onViewReleased()`, so every new conference starts unmuted unless the rider explicitly mutes it during that call. Added a JVM test covering the reset and made test setup clear singleton state between cases. Verified on `emulator-5554` with a fresh debug install: mute → end call → rejoin now logs `"isAudioMuted":false`, the app shows "Mute microphone" and Jitsi's own control shows "Mute microphone"; normal mute/unmute inside a call still works. `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass.
+- **Acceptance Criteria:**
+  - A mute chosen in one call is not carried into the next call
+  - Jitsi and the app both show an unmuted microphone on a fresh join
+  - In-call mute/unmute behaviour is unchanged
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass

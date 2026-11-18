@@ -15,11 +15,22 @@ class JitsiCallManagerTest {
     @Before
     fun setUp() {
         callManager = JitsiCallManager.getInstance()
+        callManager.resetMuteState()
     }
 
     @Test
     fun defaultServerUrl_isMeetFfmucNet() {
         assertEquals("https://meet.ffmuc.net", JitsiCallManager.DEFAULT_SERVER_URL)
+    }
+
+    @Test
+    fun resetMuteState_clearsMuteFromPreviousCall() {
+        callManager.setMuted(muted = true)
+        assertTrue(callManager.isMuted.value)
+
+        callManager.resetMuteState()
+
+        assertFalse(callManager.isMuted.value)
     }
 
     @Test

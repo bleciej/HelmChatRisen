@@ -275,6 +275,7 @@ class JitsiCallManager {
         cancelConnectTimeout()
         cancelReconnectTimeout()
         reconnectPaused = false
+        resetMuteState()
         unregisterBroadcastReceiver()
         unregisterNetworkCallback()
         currentRoomName = null
@@ -306,12 +307,22 @@ class JitsiCallManager {
     }
 
     /**
+     * Clears a mute chosen in a previous call so the next conference starts with the microphone
+     * live. Jitsi receives the join-time mute state, so leaving this set would silently join the
+     * next room with the microphone muted while audio playback still works.
+     */
+    internal fun resetMuteState() {
+        _isMuted.value = false
+    }
+
+    /**
      * Asks Jitsi to leave the conference and resets the local state immediately so the UI can
      * navigate away without waiting for the SDK round-trip.
      */
     fun hangUp() {
         Timber.i("Leaving Jitsi call for room '$currentRoomName'")
         isLeaving = true
+        resetMuteState()
         cancelConnectTimeout()
         cancelReconnectTimeout()
         reconnectPaused = false
