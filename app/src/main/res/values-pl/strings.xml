@@ -30,6 +30,7 @@
     <!-- Call screen -->
     <string name="call_connecting">Łączenie…</string>
     <string name="call_connected">Połączono</string>
+    <string name="call_ending">Kończenie połączenia…</string>
     <string name="call_mute">Wycisz mikrofon</string>
     <string name="call_unmute">Włącz mikrofon</string>
     <string name="call_leave">Zakończ połączenie</string>
@@ -59,6 +60,7 @@
     <string name="notification_channel_description">Powiadomienia o aktywnej rozmowie interkomu</string>
     <string name="notification_title">HelmChat — %1$s</string>
     <string name="notification_connected">Połączono</string>
+    <string name="notification_ending">Kończenie połączenia…</string>
     <string name="notification_connecting">Łączenie…</string>
     <string name="notification_reconnecting">Ponowne łączenie…</string>
     <string name="notification_mute">Wycisz</string>
@@ -81,4 +83,16 @@
     <string name="language_close">Zamknij</string>
     <string name="call_error_connect_timeout">Nie udało się połączyć. Sprawdź adres serwera i połączenie z internetem.</string>
     <string name="call_error_reconnect_timeout">Nie udało się wznowić połączenia. Sprawdź sieć i dołącz ponownie.</string>
+
+    <!-- Application info dialog -->
+    <string name="app_info_button">Informacje o aplikacji</string>
+    <string name="app_info_title">Informacje o aplikacji</string>
+    <string name="app_info_name">Nazwa aplikacji: %1$s</string>
+    <string name="app_info_version">Wersja: %1$s</string>
+    <string name="app_info_version_code">Kod wersji: %1$s</string>
+    <string name="app_info_tag">Tag: %1$s</string>
+    <string name="app_info_release_date">Data wydania: %1$s</string>
+    <string name="app_info_min_android">Minimalny Android: %1$s</string>
+    <string name="app_info_sdk">SDK docelowy / kompilacji: %1$s</string>
+    <string name="app_info_close">Zamknij</string>
 </resources>

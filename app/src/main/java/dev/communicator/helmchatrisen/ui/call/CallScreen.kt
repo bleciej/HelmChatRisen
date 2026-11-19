@@ -15,6 +15,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -59,6 +62,18 @@ import dev.communicator.helmchatrisen.ui.theme.SpeakerYellow
 
 /**
  * UI state of the in-call screen.
+ *
+ * @param roomName the Jitsi room shown in the header.
+ * @param serverUrl the Jitsi server shown in the header.
+ * @param isConnected whether the intercom is live.
+ * @param isReconnecting whether Jitsi is restoring a dropped conference.
+ * @param isOffline whether the device currently has no default network.
+ * @param isMuted whether the local microphone is muted.
+ * @param isSpeakerOn whether the built-in speaker is forced on.
+ * @param audioRouteLabel the human-readable audio route shown on the route button.
+ * @param participantCount the number of riders in the room, including the local rider.
+ * @param errorMessage an error to show below the header, or `null` when there is none.
+ * @param isEnding whether the app is waiting for Jitsi to finish a requested hang-up.
  */
 data class CallScreenState(
     val roomName: String,
@@ -71,6 +86,7 @@ data class CallScreenState(
     val audioRouteLabel: String? = null,
     val participantCount: Int = 0,
     val errorMessage: String? = null,
+    val isEnding: Boolean = false,
 )
 
 /**
@@ -79,6 +95,18 @@ data class CallScreenState(
  * [conferenceContent] is rendered first, behind the opaque custom controls. It hosts the
  * embedded Jitsi audio engine and is never visible to the rider, except in host-setup mode
  * where Jitsi's own sign-in UI must stay interactive.
+ *
+ * @param state the call status, mute state and audio route displayed to the rider.
+ * @param onToggleMute invoked when the rider taps the microphone control.
+ * @param onToggleSpeaker invoked when the rider switches between speaker and helmet audio.
+ * @param onLeaveCall invoked when the rider ends the call.
+ * @param onInvite invoked when the rider shares the room invitation.
+ * @param modifier the modifier applied to the call root.
+ * @param isInPictureInPicture whether the compact Picture-in-Picture layout is active.
+ * @param onEnterPictureInPicture invoked when the rider minimizes the call.
+ * @param hostSetup whether Jitsi's own sign-in UI must stay interactive.
+ * @param onHostSetupDone invoked when the rider finishes the host sign-in step.
+ * @param conferenceContent the embedded Jitsi view rendered behind the custom overlay.
  */
 @Composable
 fun CallScreen(
@@ -137,6 +165,18 @@ fun CallScreen(
     }
 }
 
+/**
+ * Portrait call layout: status header, large microphone control, audio-route selector and the
+ * prominent end-call button. Short windows use reduced control sizes while keeping every target
+ * large enough for gloved operation.
+ *
+ * @param state the call status, mute state and audio route displayed to the rider.
+ * @param onToggleMute invoked when the rider taps the microphone control.
+ * @param onToggleSpeaker invoked when the rider switches between speaker and helmet audio.
+ * @param onLeaveCall invoked when the rider ends the call.
+ * @param onInvite invoked when the rider shares the room invitation.
+ * @param onEnterPictureInPicture invoked when the rider minimizes the call.
+ */
 @Composable
 private fun CallContent(
     state: CallScreenState,
@@ -154,10 +194,25 @@ private fun CallContent(
         val compactHeight = maxHeight < 560.dp
         val horizontalPadding = if (maxWidth >= 600.dp) 40.dp else 20.dp
         val micSize = if (compactHeight) 136.dp else 168.dp
+        val scrollState = rememberScrollState()
+
+        /**
+         * Keeps the controls centered on tall windows and prevents unbounded-height weights when
+         * a short landscape window has to scroll.
+         */
+        @Composable
+        fun ColumnScope.CallSpacer() {
+            if (compactHeight) {
+                Spacer(Modifier.height(16.dp))
+            } else {
+                Spacer(Modifier.weight(1f))
+            }
+        }
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .then(if (compactHeight) Modifier.verticalScroll(scrollState) else Modifier)
                 .padding(horizontal = horizontalPadding, vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -165,6 +220,7 @@ private fun CallContent(
                 isConnected = state.isConnected,
                 isReconnecting = state.isReconnecting,
                 isOffline = state.isOffline,
+                isEnding = state.isEnding,
             )
             Spacer(Modifier.height(if (compactHeight) 12.dp else 24.dp))
 
@@ -214,11 +270,12 @@ private fun CallContent(
                 )
             }
 
-            Spacer(Modifier.weight(1f))
+            CallSpacer()
 
             MicButton(
                 isMuted = state.isMuted,
                 size = micSize,
+                enabled = !state.isEnding,
                 onClick = onToggleMute,
             )
             Spacer(Modifier.height(if (compactHeight) 12.dp else 20.dp))
@@ -231,17 +288,19 @@ private fun CallContent(
                 color = MaterialTheme.colorScheme.onSurface,
             )
 
-            Spacer(Modifier.weight(1f))
+            CallSpacer()
 
             AudioRouteButton(
                 isSpeakerOn = state.isSpeakerOn,
                 audioRouteLabel = state.audioRouteLabel,
+                enabled = !state.isEnding,
                 onClick = onToggleSpeaker,
             )
             Spacer(Modifier.height(12.dp))
 
             Button(
                 onClick = onLeaveCall,
+                enabled = !state.isEnding,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(84.dp),
@@ -272,6 +331,7 @@ private fun CallContent(
         ) {
             IconButton(
                 onClick = onEnterPictureInPicture,
+                enabled = !state.isEnding,
                 modifier = Modifier.size(64.dp),
             ) {
                 Icon(
@@ -283,6 +343,7 @@ private fun CallContent(
             }
             IconButton(
                 onClick = onInvite,
+                enabled = !state.isEnding,
                 modifier = Modifier.size(64.dp),
             ) {
                 Icon(
@@ -298,7 +359,12 @@ private fun CallContent(
 
 /**
  * Compact layout used inside the Picture-in-Picture window. The system may shrink the window
- * to a thumbnail, so only the room name, mute state and the two essential actions are shown.
+ * to a thumbnail, so only the room name, status and the two essential actions are shown. Controls
+ * are disabled while the call is ending to prevent re-entrant teardown from the compact surface.
+ *
+ * @param state the call status, mute state and audio route displayed to the rider.
+ * @param onToggleMute invoked when the rider taps the microphone control.
+ * @param onLeaveCall invoked when the rider ends the call.
  */
 @Composable
 private fun PipCallContent(
@@ -307,9 +373,16 @@ private fun PipCallContent(
     onLeaveCall: () -> Unit,
 ) {
     val statusColor = when {
+        state.isEnding -> LeaveRed
         state.isReconnecting || state.isOffline -> MotorcycleTertiary
         state.isConnected -> MotorcycleSecondary
         else -> MotorcycleTertiary
+    }
+    val statusLabelRes = when {
+        state.isEnding -> R.string.call_ending
+        state.isReconnecting || state.isOffline -> R.string.call_reconnecting
+        state.isConnected -> R.string.call_connected
+        else -> R.string.call_connecting
     }
 
     Column(
@@ -336,10 +409,20 @@ private fun PipCallContent(
                 overflow = TextOverflow.Ellipsis,
             )
         }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = stringResource(statusLabelRes),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = statusColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Surface(
                 onClick = onToggleMute,
+                enabled = !state.isEnding,
                 modifier = Modifier.size(56.dp),
                 shape = CircleShape,
                 color = if (state.isMuted) MicMutedRed else MicUnmutedGreen,
@@ -349,7 +432,13 @@ private fun PipCallContent(
                     Icon(
                         imageVector = if (state.isMuted) Icons.Filled.MicOff else Icons.Filled.Mic,
                         contentDescription = stringResource(
-                            if (state.isMuted) R.string.call_unmute else R.string.call_mute
+                            if (state.isEnding) {
+                                R.string.call_ending
+                            } else if (state.isMuted) {
+                                R.string.call_unmute
+                            } else {
+                                R.string.call_mute
+                            },
                         ),
                         modifier = Modifier.size(26.dp),
                     )
@@ -357,6 +446,7 @@ private fun PipCallContent(
             }
             Surface(
                 onClick = onLeaveCall,
+                enabled = !state.isEnding,
                 modifier = Modifier.size(56.dp),
                 shape = CircleShape,
                 color = LeaveRed,
@@ -365,7 +455,9 @@ private fun PipCallContent(
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Filled.CallEnd,
-                        contentDescription = stringResource(R.string.call_leave),
+                        contentDescription = stringResource(
+                            if (state.isEnding) R.string.call_ending else R.string.call_leave
+                        ),
                         modifier = Modifier.size(26.dp),
                     )
                 }
@@ -376,7 +468,12 @@ private fun PipCallContent(
 
 /**
  * Host-setup overlay for meet.jit.si. The Jitsi UI stays visible in the middle so the rider can
- * complete Jitsi's own moderator sign-in. The header and footer are the only opaque parts.
+ * complete Jitsi's own moderator sign-in. The header and footer are the only opaque parts, and all
+ * controls are disabled while the call is ending.
+ *
+ * @param state the call status and leave state displayed to the rider.
+ * @param onHostSetupDone invoked when the rider finishes the host sign-in step.
+ * @param onLeaveCall invoked when the rider ends the call.
  */
 @Composable
 private fun HostSetupContent(
@@ -397,7 +494,9 @@ private fun HostSetupContent(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = stringResource(R.string.call_host_setup_title),
+                        text = stringResource(
+                            if (state.isEnding) R.string.call_ending else R.string.call_host_setup_title
+                        ),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground,
@@ -412,6 +511,7 @@ private fun HostSetupContent(
                 Spacer(Modifier.width(12.dp))
                 Button(
                     onClick = onHostSetupDone,
+                    enabled = !state.isEnding,
                     modifier = Modifier.heightIn(min = 56.dp),
                     shape = RoundedCornerShape(16.dp),
                 ) {
@@ -431,6 +531,7 @@ private fun HostSetupContent(
         ) {
             OutlinedButton(
                 onClick = onLeaveCall,
+                enabled = !state.isEnding,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 12.dp)
@@ -454,19 +555,30 @@ private fun HostSetupContent(
     }
 }
 
+/**
+ * Compact status badge shown above the room name.
+ *
+ * @param isConnected whether the intercom is live.
+ * @param isReconnecting whether Jitsi is restoring a dropped conference.
+ * @param isOffline whether the device currently has no default network.
+ * @param isEnding whether the app is waiting for Jitsi to finish a requested hang-up.
+ */
 @Composable
 private fun CallStatusPill(
     isConnected: Boolean,
     isReconnecting: Boolean,
     isOffline: Boolean = false,
+    isEnding: Boolean = false,
 ) {
     val statusColor = when {
+        isEnding -> LeaveRed
         isReconnecting || isOffline -> MotorcycleTertiary
         isConnected -> MotorcycleSecondary
         else -> MotorcycleTertiary
     }
     val label = stringResource(
         when {
+            isEnding -> R.string.call_ending
             isReconnecting || isOffline -> R.string.call_reconnecting
             isConnected -> R.string.call_connected
             else -> R.string.call_connecting
@@ -500,10 +612,19 @@ private fun CallStatusPill(
     }
 }
 
+/**
+ * Large circular microphone toggle.
+ *
+ * @param isMuted whether the microphone is currently muted.
+ * @param size the diameter of the touch target.
+ * @param enabled whether the control accepts taps while the call is being torn down.
+ * @param onClick invoked when the rider taps the control.
+ */
 @Composable
 private fun MicButton(
     isMuted: Boolean,
     size: Dp,
+    enabled: Boolean,
     onClick: () -> Unit,
 ) {
     val background = if (isMuted) MicMutedRed else MicUnmutedGreen
@@ -514,6 +635,7 @@ private fun MicButton(
 
     Surface(
         onClick = onClick,
+        enabled = enabled,
         modifier = Modifier.size(size),
         shape = CircleShape,
         color = background,
@@ -531,10 +653,19 @@ private fun MicButton(
     }
 }
 
+/**
+ * Full-width selector showing the current helmet or speaker route.
+ *
+ * @param isSpeakerOn whether the built-in speaker is forced on.
+ * @param audioRouteLabel the device-specific route name, or `null` to use the generic label.
+ * @param enabled whether the control accepts taps while the call is being torn down.
+ * @param onClick invoked when the rider switches the audio route.
+ */
 @Composable
 private fun AudioRouteButton(
     isSpeakerOn: Boolean,
     audioRouteLabel: String?,
+    enabled: Boolean,
     onClick: () -> Unit,
 ) {
     val label = audioRouteLabel ?: stringResource(
@@ -544,6 +675,7 @@ private fun AudioRouteButton(
 
     OutlinedButton(
         onClick = onClick,
+        enabled = enabled,
         modifier = Modifier
             .fillMaxWidth()
             .height(64.dp),
@@ -648,6 +780,26 @@ private fun CallScreenOfflinePreview() {
     }
 }
 
+/** Preview of the full-screen call layout while the conference is ending. */
+@Preview(showBackground = true, backgroundColor = 0xFF090B0E, heightDp = 800)
+@Composable
+private fun CallScreenEndingPreview() {
+    HelmChatRisenTheme {
+        CallScreen(
+            state = CallScreenState(
+                roomName = "niedzielna-przejezdzajka",
+                serverUrl = "https://meet.ffmuc.net",
+                isConnected = false,
+                isEnding = true,
+            ),
+            onToggleMute = {},
+            onToggleSpeaker = {},
+            onLeaveCall = {},
+            onInvite = {},
+        )
+    }
+}
+
 @Preview(showBackground = true, backgroundColor = 0xFF090B0E, widthDp = 200, heightDp = 200)
 @Composable
 private fun CallScreenPipPreview() {
@@ -663,6 +815,48 @@ private fun CallScreenPipPreview() {
             onLeaveCall = {},
             onInvite = {},
             isInPictureInPicture = true,
+        )
+    }
+}
+
+/** Preview of the compact PiP layout while the conference is ending. */
+@Preview(showBackground = true, backgroundColor = 0xFF090B0E, widthDp = 200, heightDp = 200)
+@Composable
+private fun CallScreenPipEndingPreview() {
+    HelmChatRisenTheme {
+        CallScreen(
+            state = CallScreenState(
+                roomName = "grupa-sena",
+                serverUrl = "https://meet.ffmuc.net",
+                isConnected = false,
+                isEnding = true,
+            ),
+            onToggleMute = {},
+            onToggleSpeaker = {},
+            onLeaveCall = {},
+            onInvite = {},
+            isInPictureInPicture = true,
+        )
+    }
+}
+
+/** Preview of the host-setup overlay while the conference is ending. */
+@Preview(showBackground = true, backgroundColor = 0xFF090B0E, heightDp = 800)
+@Composable
+private fun CallScreenHostSetupEndingPreview() {
+    HelmChatRisenTheme {
+        CallScreen(
+            state = CallScreenState(
+                roomName = "host-setup-room",
+                serverUrl = "https://meet.jit.si",
+                isConnected = false,
+                isEnding = true,
+            ),
+            onToggleMute = {},
+            onToggleSpeaker = {},
+            onLeaveCall = {},
+            onInvite = {},
+            hostSetup = true,
         )
     }
 }

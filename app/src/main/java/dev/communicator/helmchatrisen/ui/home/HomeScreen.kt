@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Person
@@ -68,6 +69,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -124,8 +126,9 @@ fun HomeScreen(
     @SuppressLint("ModifierParameter") modifier: Modifier = Modifier,
 ) {
     var showLanguageDialog by remember { mutableStateOf(false) }
+    var showAppInfoDialog by remember { mutableStateOf(false) }
 
-    val context = LocalContext.current
+    val context: Context = LocalContext.current
     LaunchedEffect(Unit) {
         val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
         if (powerManager != null && !powerManager.isIgnoringBatteryOptimizations(context.packageName)) {
@@ -149,18 +152,32 @@ fun HomeScreen(
         val horizontalPadding = if (maxWidth >= 600.dp) 48.dp else 20.dp
 
         Column(modifier = Modifier.fillMaxSize()) {
-            // Pinned top bar: the language action sits at the top of the app instead of
-            // floating above the scrolling form.
-            Row(
+            // Pinned top bar: absolute edges keep info physically left and language physically
+            // right even when the system uses an RTL locale.
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(56.dp)
                     .padding(horizontal = horizontalPadding, vertical = 4.dp),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(
+                    onClick = { showAppInfoDialog = true },
+                    modifier = Modifier
+                        .align(AbsoluteAlignment.CenterLeft)
+                        .size(56.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Info,
+                        contentDescription = stringResource(R.string.app_info_button),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(28.dp),
+                    )
+                }
+                IconButton(
                     onClick = { showLanguageDialog = true },
-                    modifier = Modifier.size(56.dp),
+                    modifier = Modifier
+                        .align(AbsoluteAlignment.CenterRight)
+                        .size(56.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Translate,
@@ -232,6 +249,10 @@ fun HomeScreen(
             },
             onDismiss = { showLanguageDialog = false },
         )
+    }
+
+    if (showAppInfoDialog) {
+        AppInfoDialog(onDismiss = { showAppInfoDialog = false })
     }
 }
 

@@ -7,6 +7,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.jitsi.meet.sdk.BroadcastEvent
 
 class JitsiCallManagerTest {
 
@@ -270,7 +271,20 @@ class JitsiCallManagerTest {
         assertFalse(isParticipantSessionLive(null, isLeaving = false, callState = CallState.Connected("ride", "url")))
         assertFalse(isParticipantSessionLive("ride", isLeaving = true, callState = CallState.Connected("ride", "url")))
         assertFalse(isParticipantSessionLive("ride", isLeaving = false, callState = CallState.Idle))
+        assertFalse(isParticipantSessionLive("ride", isLeaving = false, callState = CallState.Ending))
         assertFalse(isParticipantSessionLive(null, isLeaving = true, callState = CallState.Idle))
+    }
+
+    @Test
+    fun isHangUpConfirmation_acceptsOnlyJitsiTeardownEvents() {
+        assertTrue(isHangUpConfirmation(BroadcastEvent.Type.CONFERENCE_TERMINATED))
+        assertTrue(isHangUpConfirmation(BroadcastEvent.Type.READY_TO_CLOSE))
+
+        assertFalse(isHangUpConfirmation(BroadcastEvent.Type.CONFERENCE_WILL_JOIN))
+        assertFalse(isHangUpConfirmation(BroadcastEvent.Type.CONFERENCE_JOINED))
+        assertFalse(isHangUpConfirmation(BroadcastEvent.Type.AUDIO_MUTED_CHANGED))
+        assertFalse(isHangUpConfirmation(BroadcastEvent.Type.PARTICIPANT_JOINED))
+        assertFalse(isHangUpConfirmation(BroadcastEvent.Type.PARTICIPANT_LEFT))
     }
 
     @Test
@@ -278,5 +292,42 @@ class JitsiCallManagerTest {
         assertTrue(isParticipantSnapshotCurrent(session = 1, currentSession = 1, requestId = 2, latestRequestId = 2))
         assertFalse(isParticipantSnapshotCurrent(session = 1, currentSession = 2, requestId = 2, latestRequestId = 2))
         assertFalse(isParticipantSnapshotCurrent(session = 1, currentSession = 1, requestId = 1, latestRequestId = 2))
+    }
+
+    /** A stale termination from a previous conference must not touch a fresh join attempt. */
+    @Test
+    fun shouldIgnoreTerminationBeforeJoin_ignoresEventsUntilCurrentConferenceJoins() {
+        val termination = BroadcastEvent.Type.CONFERENCE_TERMINATED
+        val joined = BroadcastEvent.Type.CONFERENCE_JOINED
+
+        assertTrue(shouldIgnoreTerminationBeforeJoin(isLeaving = false, hasConferenceConfirmation = false, type = termination))
+        assertFalse(shouldIgnoreTerminationBeforeJoin(isLeaving = false, hasConferenceConfirmation = true, type = termination))
+        assertFalse(shouldIgnoreTerminationBeforeJoin(isLeaving = true, hasConferenceConfirmation = false, type = termination))
+        assertFalse(shouldIgnoreTerminationBeforeJoin(isLeaving = false, hasConferenceConfirmation = false, type = joined))
+    }
+
+    /** Timers and callbacks from an older teardown generation must be inert. */
+    @Test
+    fun isCurrentTeardown_acceptsOnlyTheActiveHangUp() {
+        val ending = CallState.Ending
+        val idle = CallState.Idle
+
+        assertTrue(isCurrentTeardown(token = 7, currentToken = 7, isLeaving = true, callState = ending))
+        assertFalse(isCurrentTeardown(token = 6, currentToken = 7, isLeaving = true, callState = ending))
+        assertFalse(isCurrentTeardown(token = 7, currentToken = 7, isLeaving = false, callState = ending))
+        assertFalse(isCurrentTeardown(token = 7, currentToken = 7, isLeaving = true, callState = idle))
+    }
+
+    /** Mute commands are accepted in normal calls and ignored during the ending phase. */
+    @Test
+    fun canChangeMute_blocksOnlyDuringEnding() {
+        val room = "ride"
+        val url = "https://meet.ffmuc.net"
+
+        assertTrue(canChangeMute(isLeaving = false, callState = CallState.Connecting(room, url)))
+        assertTrue(canChangeMute(isLeaving = false, callState = CallState.Connected(room, url)))
+        assertTrue(canChangeMute(isLeaving = false, callState = CallState.Idle))
+        assertFalse(canChangeMute(isLeaving = false, callState = CallState.Ending))
+        assertFalse(canChangeMute(isLeaving = true, callState = CallState.Connected(room, url)))
     }
 }

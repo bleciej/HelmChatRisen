@@ -55,6 +55,7 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
+import timber.log.Timber
 import dev.communicator.helmchatrisen.R
 import dev.communicator.helmchatrisen.audio.AudioRoutingState
 import dev.communicator.helmchatrisen.data.AppLanguage
@@ -112,7 +113,18 @@ fun HelmChatApp(
     var isSpeakerOn by remember { mutableStateOf(false) }
     var languageTag by remember { mutableStateOf(AppLanguage.currentTag(context)) }
 
+    /**
+     * Starts the foreground service and pushes the call destination for [request]. Requests made
+     * while a previous conference is ending are ignored so stale teardown events cannot affect a
+     * new call.
+     *
+     * @param request the room, server and host-setup options supplied by the home screen.
+     */
     fun startCall(request: CallRequest) {
+        if (!callManager.canStartNewCall) {
+            Timber.w("Ignoring join request for '${request.roomName}' during ${callState}")
+            return
+        }
         isSpeakerOn = false
         audioRouter.resetForNewCall()
         AudioCallService.startCall(context, request.roomName, request.serverUrl)
@@ -152,23 +164,40 @@ fun HelmChatApp(
     }
 
     val currentRoute = backStack.lastOrNull()
-    var hasJoinedCall by remember(currentRoute) { mutableStateOf(false) }
+    var joinedRouteKey by remember { mutableStateOf<CallRoute?>(null) }
+    val hasJoinedCall = currentRoute is CallRoute && joinedRouteKey == currentRoute
+
+    /**
+     * Removes the call destination after a terminal state, keeping at least one back-stack entry.
+     */
+    fun dismissCallRoute() {
+        if (backStack.isEmpty()) return
+        if (backStack.size > 1) {
+            backStack.removeLastOrNull()
+        } else {
+            // A restored call destination can be the only entry; replace it instead of emptying
+            // the Navigation 3 back stack.
+            backStack[backStack.lastIndex] = HomeRoute
+        }
+    }
 
     LaunchedEffect(callState, currentRoute) {
         if (currentRoute is CallRoute) {
             when (callState) {
                 is CallState.Connecting,
                 is CallState.Connected,
-                is CallState.Reconnecting -> hasJoinedCall = true
-                is CallState.Idle -> if (hasJoinedCall && backStack.size > 1) {
-                    // The service stops itself as soon as the call state reaches Idle, and
-                    // leaveCall() stops it explicitly, so no extra stopCall() is needed here.
-                    backStack.removeLastOrNull()
+                is CallState.Ending,
+                is CallState.Reconnecting -> joinedRouteKey = currentRoute
+                is CallState.Idle -> if (hasJoinedCall) {
+                    // The service observes the same Idle state and stops its own foreground
+                    // notification and audio route, so no direct stopCall() is needed here.
+                    joinedRouteKey = null
+                    dismissCallRoute()
                 }
                 is CallState.Error -> Unit
             }
         } else {
-            hasJoinedCall = false
+            joinedRouteKey = null
         }
     }
 
@@ -176,12 +205,18 @@ fun HelmChatApp(
         onCallScreenVisibilityChanged(currentRoute is CallRoute)
     }
 
-    fun leaveCall() {
-        callManager.hangUp()
-        AudioCallService.stopCall(context)
-        if (backStack.size > 1) {
-            backStack.removeLastOrNull()
-        }
+    /**
+     * Asks Jitsi to leave while keeping the call destination mounted until the SDK confirms the
+     * hang-up. Removing the destination earlier would dispose the embedded view with HANG_UP still
+     * in flight and leave the microphone active.
+     *
+     * @return `true` when the call screen will be removed by the [CallState.Idle] observer.
+     */
+    fun leaveCall(): Boolean {
+        if (currentRoute is CallRoute) joinedRouteKey = currentRoute
+        val teardownPending = callManager.hangUp()
+        if (!teardownPending) dismissCallRoute()
+        return teardownPending
     }
 
     val windowAdaptiveInfo = currentWindowAdaptiveInfoV2()
@@ -202,13 +237,7 @@ fun HelmChatApp(
             modifier = Modifier.fillMaxSize(),
             onBack = {
                 if (backStack.lastOrNull() is CallRoute) {
-                    callManager.hangUp()
-                    AudioCallService.stopCall(context)
-                    if (backStack.size > 1) {
-                        backStack.removeLastOrNull()
-                    } else {
-                        (context as? Activity)?.finish()
-                    }
+                    leaveCall()
                 } else if (backStack.size > 1) {
                     backStack.removeLastOrNull()
                 } else {
@@ -312,6 +341,7 @@ fun HelmChatApp(
                             audioRouteLabel = audioRouteLabel,
                             participantCount = participantCount,
                             errorMessage = errorMessage,
+                            isEnding = callState is CallState.Ending,
                         ),
                         onToggleMute = { callManager.toggleMute() },
                         onToggleSpeaker = {

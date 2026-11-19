@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">HelmChat Risen</string>
 
     <!-- Home / join screen -->
@@ -32,6 +32,7 @@
     <!-- Call screen -->
     <string name="call_connecting">Connecting…</string>
     <string name="call_connected">Connected</string>
+    <string name="call_ending" tools:ignore="MissingTranslation">Ending call…</string>
     <string name="call_mute">Mute microphone</string>
     <string name="call_unmute">Unmute microphone</string>
     <string name="call_leave">End call</string>
@@ -61,6 +62,7 @@
     <string name="notification_channel_description">Notifications about an active intercom call</string>
     <string name="notification_title">HelmChat — %1$s</string>
     <string name="notification_connected">Connected</string>
+    <string name="notification_ending" tools:ignore="MissingTranslation">Ending call…</string>
     <string name="notification_connecting">Connecting…</string>
     <string name="notification_reconnecting">Reconnecting…</string>
     <string name="notification_mute">Mute</string>
@@ -83,4 +85,16 @@
     <string name="language_close">Close</string>
     <string name="call_error_connect_timeout">Could not connect. Check the server address and your internet connection.</string>
     <string name="call_error_reconnect_timeout">Could not resume the connection. Check your network and rejoin.</string>
+
+    <!-- Application info dialog -->
+    <string name="app_info_button" tools:ignore="MissingTranslation">Application info</string>
+    <string name="app_info_title" tools:ignore="MissingTranslation">Application info</string>
+    <string name="app_info_name" tools:ignore="MissingTranslation">Application name: %1$s</string>
+    <string name="app_info_version" tools:ignore="MissingTranslation">Version: %1$s</string>
+    <string name="app_info_version_code" tools:ignore="MissingTranslation">Version code: %1$s</string>
+    <string name="app_info_tag" tools:ignore="MissingTranslation">Tag: %1$s</string>
+    <string name="app_info_release_date" tools:ignore="MissingTranslation">Release date: %1$s</string>
+    <string name="app_info_min_android" tools:ignore="MissingTranslation">Minimum Android: %1$s</string>
+    <string name="app_info_sdk" tools:ignore="MissingTranslation">Target / compile SDK: %1$s</string>
+    <string name="app_info_close" tools:ignore="MissingTranslation">Close</string>
 </resources>
