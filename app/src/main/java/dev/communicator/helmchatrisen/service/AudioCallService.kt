@@ -82,8 +82,9 @@ class AudioCallService : Service() {
         }
 
         /**
-         * Asks the running service to hang up and stop itself. Safe to call when no call is
-         * active.
+         * Asks the running service to begin hanging up. The service keeps its foreground
+         * notification and audio route until Jitsi reaches a terminal state, so the ending status
+         * remains visible while conference teardown is in flight. Safe when no call is active.
          *
          * @param context the context used to deliver the end-call intent.
          */
@@ -127,12 +128,8 @@ class AudioCallService : Service() {
                     Timber.e("Call error: ${state.message ?: state.messageResId}")
                     updateNotification()
                 }
-                is CallState.Idle -> {
-                    if (callActive) {
-                        callActive = false
-                        stopForegroundAndSelf()
-                    }
-                }
+                is CallState.Ending -> updateNotification()
+                is CallState.Idle -> finishCall()
             }
         }.launchIn(serviceScope)
 
@@ -231,14 +228,34 @@ class AudioCallService : Service() {
     }
 
     /**
-     * Hangs up the Jitsi conference (when a call is active) and stops the foreground service.
+     * Begins conference teardown without dropping the foreground service or audio route yet.
+     *
+     * The [CallState.Idle] observer calls [finishCall] once Jitsi confirms the hang-up or the
+     * manager's fallback timeout expires. Repeated end actions are ignored.
      */
     private fun endCallInternal() {
-        Timber.i("Ending call")
-        if (callActive) {
-            callActive = false
-            jitsiCallManager.hangUp()
+        if (!callActive) return
+        if (jitsiCallManager.callState.value is CallState.Ending) {
+            Timber.d("Call teardown already in progress, ignoring repeated end action")
+            updateNotification()
+            return
         }
+        Timber.i("Ending call")
+        val teardownPending = jitsiCallManager.hangUp()
+        if (teardownPending) {
+            updateNotification()
+        } else {
+            Timber.i("Jitsi had no active conference to leave")
+            finishCall()
+        }
+    }
+
+    /**
+     * Stops the foreground service only after the call reached a terminal state.
+     */
+    private fun finishCall() {
+        if (!callActive) return
+        callActive = false
         stopForegroundAndSelf()
     }
 
@@ -307,8 +324,9 @@ class AudioCallService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val muted = jitsiCallManager.isMuted.value
+        val isEnding = jitsiCallManager.callState.value is CallState.Ending
         val status = when {
+            isEnding -> getString(R.string.notification_ending)
             !jitsiCallManager.isNetworkAvailable.value ->
                 getString(R.string.notification_reconnecting)
             jitsiCallManager.callState.value is CallState.Connected ->
@@ -318,7 +336,7 @@ class AudioCallService : Service() {
             else -> getString(R.string.notification_connecting)
         }
 
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.notification_title, activeRoomName))
             .setContentText(status)
             .setSubText(activeServerUrl)
@@ -327,17 +345,23 @@ class AudioCallService : Service() {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
-            .addAction(
+
+        // While ending, the actions would re-enter a teardown that is already in progress.
+        if (!isEnding) {
+            val muted = jitsiCallManager.isMuted.value
+            builder.addAction(
                 if (muted) android.R.drawable.ic_lock_silent_mode_off else android.R.drawable.ic_lock_silent_mode,
                 getString(if (muted) R.string.notification_unmute else R.string.notification_mute),
                 pendingToggleMuteIntent
             )
-            .addAction(
+            builder.addAction(
                 android.R.drawable.ic_menu_close_clear_cancel,
                 getString(R.string.notification_end),
                 pendingEndCallIntent
             )
-            .build()
+        }
+
+        return builder.build()
     }
 
     /**

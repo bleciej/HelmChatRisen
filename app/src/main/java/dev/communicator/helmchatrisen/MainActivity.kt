@@ -59,6 +59,9 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
     @Volatile
     private var isCallScreenVisible = false
 
+    /** Guards the one-shot Jitsi host teardown across configuration changes and real finishes. */
+    private var hostDestroyed = false
+
     /**
      * Applies the user-selected UI language on Android 12L and lower. Android 13+ handles the
      * per-app locale through the system and leaves the base context untouched.
@@ -178,6 +181,7 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
         }
 
         val muted = callManager.isMuted.value
+        val isEnding = callManager.callState.value is CallState.Ending
         val muteAction = RemoteAction(
             Icon.createWithResource(
                 this,
@@ -206,6 +210,8 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             ),
         )
+        muteAction.isEnabled = !isEnding
+        endAction.isEnabled = !isEnding
         builder.setActions(listOf(muteAction, endAction))
 
         return builder.build()
@@ -248,13 +254,22 @@ class MainActivity : FragmentActivity(), JitsiMeetActivityInterface {
         super.onStop()
     }
 
-    /** Hangs up and stops the call service on a real finish, then destroys the Jitsi host. */
+    /**
+     * Releases the Jitsi host exactly once. On a real finish the conference is torn down
+     * synchronously before the host goes away; teardown pending from the UI is left to the manager
+     * and foreground service so the SDK still has a chance to acknowledge it.
+     */
     override fun onDestroy() {
-        if (isFinishing) {
-            JitsiCallManager.getInstance().hangUp()
-            stopService(Intent(this, AudioCallService::class.java))
+        if (!hostDestroyed) {
+            hostDestroyed = true
+            if (isFinishing) {
+                val teardownPending = callManager.hangUp(immediate = true)
+                if (!teardownPending) {
+                    stopService(Intent(this, AudioCallService::class.java))
+                }
+            }
+            JitsiMeetActivityDelegate.onHostDestroy(this)
         }
-        JitsiMeetActivityDelegate.onHostDestroy(this)
         super.onDestroy()
     }
 

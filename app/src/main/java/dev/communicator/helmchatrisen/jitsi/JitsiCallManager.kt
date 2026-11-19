@@ -47,6 +47,9 @@ sealed class CallState {
      */
     data class Connected(val roomName: String, val serverUrl: String) : CallState()
 
+    /** The rider asked to leave and the app is waiting for Jitsi to finish the conference teardown. */
+    object Ending : CallState()
+
     /**
      * The conference dropped unexpectedly (network loss, server restart). Jitsi keeps its view
      * alive and reloads the conference on its own; the app must not navigate away while this is
@@ -84,6 +87,19 @@ class JitsiCallManager {
         private const val CONNECT_TIMEOUT_MS = 30_000L
 
         /**
+         * How long the app waits for Jitsi to acknowledge a hang-up before it falls back to
+         * resetting the embedded view. Jitsi's external API is asynchronous, so disposing the view
+         * immediately would drop the HANG_UP event and leave the microphone capture alive.
+         */
+        private const val HANG_UP_CONFIRMATION_TIMEOUT_MS = 3_000L
+
+        /**
+         * Additional grace period after the fallback view reset before the UI is released even if
+         * Jitsi still sends no termination event.
+         */
+        private const val HANG_UP_ABORT_TIMEOUT_MS = 2_000L
+
+        /**
          * How long Jitsi may spend trying to restore a dropped conference before the app gives
          * up and shows an error. The Jitsi reload dialog is patched to retry after 5 seconds,
          * so this is only a safety net for unrecoverable failures.
@@ -119,6 +135,13 @@ class JitsiCallManager {
     private val _isMuted = MutableStateFlow(false)
     /** Whether the local microphone is currently muted. */
     val isMuted: StateFlow<Boolean> = _isMuted.asStateFlow()
+
+    /**
+     * Whether a new conference may be started. `Ending` is deliberately excluded so a second
+     * call cannot be launched while the previous conference is still tearing down.
+     */
+    val canStartNewCall: Boolean
+        get() = _callState.value is CallState.Idle || _callState.value is CallState.Error
 
     /**
      * `ParticipantsService` holds its callbacks through [java.lang.ref.WeakReference], so the
@@ -167,6 +190,25 @@ class JitsiCallManager {
     private var reconnectPaused = false
     private var isLeaving = false
     private val mainHandler: Handler by lazy { Handler(Looper.getMainLooper()) }
+
+    /**
+     * The embedded view hosting the active conference. The manager owns it strongly from join until
+     * terminal cleanup so a teardown callback cannot be dropped by garbage collection or by an
+     * `AndroidView.onRelease` that runs before Jitsi confirms the hang-up.
+     */
+    private var activeView: JitsiMeetView? = null
+
+    /** Incremented for every join so stale teardown timers from an older call can be ignored. */
+    private var sessionGeneration = 0L
+
+    /** The generation being torn down, or [Long.MAX_VALUE] while no teardown is in progress. */
+    private var teardownGeneration = Long.MAX_VALUE
+
+    /** Whether the SDK has confirmed that the current conference actually joined at least once. */
+    private var hasConferenceConfirmation = false
+
+    private var hangUpConfirmationTimeout: Runnable? = null
+    private var hangUpAbortTimeout: Runnable? = null
 
     private var connectivityManager: ConnectivityManager? = null
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
@@ -234,10 +276,21 @@ class JitsiCallManager {
     ) {
         require(roomName.isNotBlank()) { "Room name cannot be empty" }
 
+        if (_callState.value is CallState.Ending) {
+            Timber.w("Ignoring join request for '$roomName' while a hang-up is still in progress")
+            return
+        }
+
         val activeServerUrl = sanitizeServerUrl(serverUrl)
+        releaseActiveView()
+        sessionGeneration += 1
+        teardownGeneration = Long.MAX_VALUE
+        hasConferenceConfirmation = false
         currentServerUrl = activeServerUrl
         currentRoomName = roomName
         isLeaving = false
+        activeView = view
+        cancelHangUpTimeouts()
         _isMuted.value = isMuted
         resetParticipantSession()
 
@@ -269,16 +322,32 @@ class JitsiCallManager {
     }
 
     /**
-     * Called when the embedded view is released / removed from the UI hierarchy.
+     * Reports whether the embedded view may join a conference. A view recreated during a hang-up
+     * is left attached but is not allowed to start a new Jitsi session.
+     *
+     * @return `true` when the manager is not currently tearing a call down.
      */
-    fun onViewReleased() {
-        cancelConnectTimeout()
-        cancelReconnectTimeout()
-        reconnectPaused = false
-        unregisterBroadcastReceiver()
-        unregisterNetworkCallback()
-        currentRoomName = null
-        resetParticipantSession()
+    fun canJoinConference(): Boolean = !isLeaving && _callState.value !is CallState.Ending
+
+    /**
+     * Called when the embedded view is released / removed from the UI hierarchy.
+     *
+     * The manager owns native cleanup: it aborts and disposes the view before resetting local
+     * state, so a late termination callback cannot be dropped by a release that ran too early.
+     *
+     * @param view the view being released, or `null` to release the manager's current view.
+     */
+    fun onViewReleased(view: JitsiMeetView? = null) {
+        if (view != null && activeView != null && activeView !== view) {
+            Timber.d("Ignoring release for a view that is no longer owned by the manager")
+            return
+        }
+        releaseActiveView()
+        if (isLeaving && _callState.value is CallState.Ending) {
+            finishHangUp()
+            return
+        }
+        finalizeSession()
         if (_callState.value !is CallState.Idle) {
             _callState.value = CallState.Idle
         }
@@ -290,6 +359,7 @@ class JitsiCallManager {
      * @return the new muted state.
      */
     fun toggleMute(): Boolean {
+        if (!canChangeMute(isLeaving, _callState.value)) return _isMuted.value
         val newMuted = !_isMuted.value
         setMuted(newMuted)
         return newMuted
@@ -301,28 +371,163 @@ class JitsiCallManager {
      * @param muted `true` to mute the microphone, `false` to unmute it.
      */
     fun setMuted(muted: Boolean) {
+        if (!canChangeMute(isLeaving, _callState.value)) return
         _isMuted.value = muted
         sendBroadcast(BroadcastIntentHelper.buildSetAudioMutedIntent(muted))
     }
 
     /**
-     * Asks Jitsi to leave the conference and resets the local state immediately so the UI can
-     * navigate away without waiting for the SDK round-trip.
+     * Clears a mute chosen in a previous call so the next conference starts with the microphone
+     * live. Jitsi receives the join-time mute state, so leaving this set would silently join the
+     * next room with the microphone muted while audio playback still works.
      */
-    fun hangUp() {
-        Timber.i("Leaving Jitsi call for room '$currentRoomName'")
+    internal fun resetMuteState() {
+        _isMuted.value = false
+    }
+
+    /**
+     * Asks Jitsi to leave the conference and keeps the call screen mounted until the SDK confirms
+     * the leave. Disposing the embedded view before HANG_UP is processed drops the external-API
+     * event and leaves the local microphone capture alive until the whole app is killed.
+     *
+     * @param immediate `true` to skip the confirmation window and release everything synchronously;
+     *   used only when the hosting Activity is being destroyed for real.
+     * @return `true` when a teardown is in progress and the caller must wait for [CallState.Idle]
+     *   before removing the call screen, `false` when no call was active.
+     */
+    fun hangUp(immediate: Boolean = false): Boolean {
+        if (isLeaving && _callState.value is CallState.Ending) {
+            Timber.d("Hang-up already in progress, ignoring duplicate request")
+            return true
+        }
+        val room = currentRoomName
+        if (room == null && _callState.value is CallState.Idle) {
+            Timber.d("No active Jitsi call to leave")
+            return false
+        }
+
+        Timber.i("Leaving Jitsi call for room '$room'")
         isLeaving = true
+        teardownGeneration = sessionGeneration
+        // Show the microphone as muted for the whole teardown; the SDK is asked to stop capture
+        // below, but its acknowledgement can arrive after the UI has already been released.
+        _isMuted.value = true
+        resetParticipantSession()
+        cancelConnectTimeout()
+        cancelReconnectTimeout()
+        cancelHangUpTimeouts()
+        reconnectPaused = false
+        unregisterNetworkCallback()
+        // Publish Ending before sending the external API events so a fast acknowledgement cannot
+        // be applied to a state that still looks like an active call.
+        _callState.value = CallState.Ending
+        sendBroadcast(BroadcastIntentHelper.buildSetAudioMutedIntent(true))
+        sendBroadcast(BroadcastIntentHelper.buildHangUpIntent())
+        if (immediate) {
+            Timber.i("Releasing Jitsi view immediately while the host is being destroyed")
+            finishHangUp()
+        } else {
+            scheduleHangUpConfirmationTimeout(teardownGeneration)
+        }
+        return true
+    }
+
+    /**
+     * Finalizes a hang-up after Jitsi emitted a termination event or the fallback deadline elapsed.
+     *
+     * Receivers and timeouts are released here rather than in [hangUp]: the SDK still needs a
+     * chance to publish its termination event while the embedded view remains attached.
+     */
+    private fun finishHangUp() {
+        if (!isLeaving && _callState.value !is CallState.Ending) return
+        cancelHangUpTimeouts()
+        releaseActiveView()
+        finalizeSession()
+        _callState.value = CallState.Idle
+    }
+
+    /**
+     * Releases the embedded Jitsi view exactly once.
+     *
+     * [JitsiMeetView.abort] clears the React props and [JitsiMeetView.dispose] frees the native
+     * resources; both are needed before the manager forgets the view.
+     */
+    private fun releaseActiveView() {
+        val view = activeView ?: return
+        activeView = null
+        try {
+            view.abort()
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to abort the Jitsi view")
+        }
+        try {
+            view.dispose()
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to dispose the Jitsi view")
+        }
+    }
+
+    /**
+     * Clears per-call state that must not leak into the next conference.
+     *
+     * Native view cleanup is handled separately by [releaseActiveView].
+     */
+    private fun finalizeSession() {
+        cancelHangUpTimeouts()
         cancelConnectTimeout()
         cancelReconnectTimeout()
         reconnectPaused = false
-        unregisterNetworkCallback()
-        sendBroadcast(BroadcastIntentHelper.buildHangUpIntent())
-        // Stop reacting to queued Jitsi events: a CONFERENCE_JOINED posted just before the
-        // hang-up would otherwise re-arm participant tracking for a finished call.
+        isLeaving = false
+        teardownGeneration = Long.MAX_VALUE
+        hasConferenceConfirmation = false
+        resetMuteState()
         unregisterBroadcastReceiver()
+        unregisterNetworkCallback()
         currentRoomName = null
         resetParticipantSession()
-        _callState.value = CallState.Idle
+    }
+
+    /**
+     * Bounds the asynchronous hang-up with two deadlines. The first resets the React props when
+     * Jitsi sends no termination event; the second finally releases the UI if even that produced
+     * no acknowledgement.
+     *
+     * @param token the generation the timeout belongs to; stale timers are ignored.
+     */
+    private fun scheduleHangUpConfirmationTimeout(token: Long) {
+        cancelHangUpTimeouts()
+        val confirmationTimeout = Runnable {
+            if (!isCurrentHangUp(token)) return@Runnable
+            Timber.w("Jitsi did not confirm hang-up, resetting the conference view")
+            activeView?.abort()
+            val abortTimeout = Runnable {
+                if (isCurrentHangUp(token)) {
+                    Timber.w("Forcing local call teardown after hang-up timeout")
+                    finishHangUp()
+                }
+            }
+            hangUpAbortTimeout = abortTimeout
+            mainHandler.postDelayed(abortTimeout, HANG_UP_ABORT_TIMEOUT_MS)
+        }
+        hangUpConfirmationTimeout = confirmationTimeout
+        mainHandler.postDelayed(confirmationTimeout, HANG_UP_CONFIRMATION_TIMEOUT_MS)
+    }
+
+    /**
+     * Reports whether a timeout still belongs to the hang-up in progress.
+     *
+     * @param token the generation captured by the timer.
+     * @return `true` while no newer call has superseded that teardown.
+     */
+    private fun isCurrentHangUp(token: Long): Boolean =
+        isCurrentTeardown(token, teardownGeneration, isLeaving, _callState.value)
+
+    /** Cancels both hang-up deadlines, ignoring timers that have already fired. */
+    private fun cancelHangUpTimeouts() {
+        hangUpConfirmationTimeout?.let(mainHandler::removeCallbacks)
+        hangUpConfirmationTimeout = null
+        hangUpAbortTimeout?.let(mainHandler::removeCallbacks)
+        hangUpAbortTimeout = null
     }
 
     /**
@@ -648,10 +853,22 @@ class JitsiCallManager {
      * @param event the event to apply.
      */
     private fun handleBroadcastEvent(event: BroadcastEvent) {
+        // Keep the receiver registered during hang-up so the confirmation can arrive, but ignore
+        // every other queued event from the conference that is being torn down.
+        if (isLeaving && !isHangUpConfirmation(event.type)) {
+            Timber.d("Ignoring ${event.type} while leaving the conference")
+            return
+        }
+        if (shouldIgnoreTerminationBeforeJoin(isLeaving, hasConferenceConfirmation, event.type)) {
+            Timber.d("Ignoring stale ${event.type} before the new conference joined")
+            return
+        }
+
         when (event.type) {
             BroadcastEvent.Type.CONFERENCE_WILL_JOIN -> {
                 // A new join attempt (including Jitsi's own automatic reload) supersedes any
                 // pending reconnect timeout.
+                hasConferenceConfirmation = true
                 cancelReconnectTimeout()
                 currentRoomName?.let { room ->
                     if (_callState.value !is CallState.Connected) {
@@ -668,6 +885,7 @@ class JitsiCallManager {
                     return
                 }
                 val room = currentRoomName ?: return
+                hasConferenceConfirmation = true
                 _callState.value = CallState.Connected(room, currentServerUrl)
                 participantTracker.onConferenceJoined()
                 refreshParticipantCount()
@@ -675,10 +893,16 @@ class JitsiCallManager {
 
             BroadcastEvent.Type.CONFERENCE_TERMINATED,
             BroadcastEvent.Type.READY_TO_CLOSE -> {
+                if (isLeaving) {
+                    Timber.i("Jitsi confirmed the hang-up")
+                    finishHangUp()
+                    return
+                }
                 cancelConnectTimeout()
                 resetParticipantSession()
+                hasConferenceConfirmation = false
                 val room = currentRoomName
-                if (!isLeaving && room != null) {
+                if (room != null) {
                     // Jitsi reloads the conference on its own after a transient drop; stay on
                     // the call screen and show the reconnecting state instead of navigating home.
                     Timber.i("Conference for room '$room' ended unexpectedly, waiting for reload")
@@ -820,7 +1044,68 @@ internal fun isParticipantSessionLive(
     roomName: String?,
     isLeaving: Boolean,
     callState: CallState,
-): Boolean = roomName != null && !isLeaving && callState !is CallState.Idle
+): Boolean = roomName != null && !isLeaving &&
+    callState !is CallState.Idle && callState !is CallState.Ending
+
+/**
+ * Reports whether a Jitsi broadcast is the acknowledgement that a requested hang-up completed.
+ *
+ * Only these two events are allowed through while the manager is in [CallState.Ending]; all other
+ * events from the dying conference are discarded by the manager's event handler.
+ *
+ * @param type the Jitsi event type to classify.
+ * @return `true` for a conference-termination or ready-to-close event.
+ */
+internal fun isHangUpConfirmation(type: BroadcastEvent.Type): Boolean =
+    type == BroadcastEvent.Type.CONFERENCE_TERMINATED ||
+        type == BroadcastEvent.Type.READY_TO_CLOSE
+
+/**
+ * Reports whether a termination event arrived before the current conference confirmed its join.
+ *
+ * Such an event belongs to a previous session and must not push a freshly started call into
+ * `Reconnecting`.
+ *
+ * @param isLeaving `true` when the rider requested a hang-up.
+ * @param hasConferenceConfirmation `true` after this session reported `CONFERENCE_WILL_JOIN` or
+ *   `CONFERENCE_JOINED`.
+ * @param type the Jitsi event type to classify.
+ * @return `true` when the event should be ignored.
+ */
+internal fun shouldIgnoreTerminationBeforeJoin(
+    isLeaving: Boolean,
+    hasConferenceConfirmation: Boolean,
+    type: BroadcastEvent.Type,
+): Boolean = !isLeaving && !hasConferenceConfirmation && isHangUpConfirmation(type)
+
+/**
+ * Reports whether a hang-up timeout still belongs to the teardown in progress.
+ *
+ * @param token the generation captured when the timeout was scheduled.
+ * @param currentToken the generation of the active teardown.
+ * @param isLeaving `true` while the rider is leaving.
+ * @param callState the current call state.
+ * @return `true` when the timeout may still finalize the call.
+ */
+internal fun isCurrentTeardown(
+    token: Long,
+    currentToken: Long,
+    isLeaving: Boolean,
+    callState: CallState,
+): Boolean = token == currentToken && isLeaving && callState is CallState.Ending
+
+/**
+ * Reports whether a mute command may still be applied to the current call.
+ *
+ * Commands issued during a hang-up are ignored so a late tap cannot overwrite the forced mute or
+ * re-enable the microphone after teardown has begun.
+ *
+ * @param isLeaving `true` while the rider is leaving.
+ * @param callState the current call state.
+ * @return `true` when mute changes are accepted.
+ */
+internal fun canChangeMute(isLeaving: Boolean, callState: CallState): Boolean =
+    !isLeaving && callState !is CallState.Ending
 
 /**
  * Returns this id when it is a real participant id, or `null` for blank and stringified

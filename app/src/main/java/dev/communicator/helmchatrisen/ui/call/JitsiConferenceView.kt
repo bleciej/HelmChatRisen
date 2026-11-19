@@ -13,6 +13,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import dev.communicator.helmchatrisen.jitsi.JitsiCallManager
 import org.jitsi.meet.sdk.JitsiMeetActivityDelegate
 import org.jitsi.meet.sdk.JitsiMeetView
+import timber.log.Timber
 
 /**
  * Hosts the embedded [JitsiMeetView] used for the actual audio stream.
@@ -52,21 +53,23 @@ fun JitsiConferenceView(
                 // the view was not present during Activity.onResume().
                 JitsiMeetActivityDelegate.onHostResume(hostActivity)
                 applyInteractivity(view, interactive)
-                callManager.join(
-                    view = view,
-                    roomName = roomName,
-                    serverUrl = serverUrl,
-                    displayName = displayName,
-                    isMuted = isMuted,
-                    token = token,
-                )
+                if (callManager.canJoinConference()) {
+                    callManager.join(
+                        view = view,
+                        roomName = roomName,
+                        serverUrl = serverUrl,
+                        displayName = displayName,
+                        isMuted = isMuted,
+                        token = token,
+                    )
+                } else {
+                    Timber.w("Skipping Jitsi join while the previous call is still ending")
+                }
             }
         },
         update = { view -> applyInteractivity(view, interactive) },
         onRelease = { view ->
-            callManager.onViewReleased()
-            view.abort()
-            view.dispose()
+            callManager.onViewReleased(view)
         },
     )
 }

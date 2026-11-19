@@ -4,7 +4,36 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.plugin.serialization)
 }
 
+/** Version name shared by the artifact names and the in-app Application info dialog. */
 val appVersionName = "1.5"
+
+/** Version code for the 1.5 release line. */
+val appVersionCode = 5
+
+/** Release tag published for this build (kept in sync with RELEASE_NOTES.md). */
+val appReleaseTag = "V$appVersionName"
+
+/** Release date published for this build (kept in sync with RELEASE_NOTES.md). */
+val appReleaseDate = "2026-11-17"
+
+/** Minimum supported API level, also shown in the Application info dialog. */
+val appMinSdk = 26
+
+/** API level the app targets and is optimized for. */
+val appTargetSdk = 37
+
+/** SDK level used to compile the app. */
+val appCompileSdk = 37
+
+/** Human-readable Android version for [appMinSdk]. */
+val minAndroidDisplay = "8.0 (API $appMinSdk)"
+
+/** Collapses to one number when target and compile levels match, otherwise shows both. */
+val sdkDisplay = if (appTargetSdk == appCompileSdk) {
+    appTargetSdk.toString()
+} else {
+    "$appTargetSdk / $appCompileSdk"
+}
 
 /**
  * Packing an Android App Bundle needs a single shrunk-resources output, so the per-ABI APK splits
@@ -21,15 +50,25 @@ val isBundleBuild = gradle.startParameter.taskNames.any { requestedTask ->
 android {
     namespace = "dev.communicator.helmchatrisen"
     compileSdk {
-        version = release(37)
+        version = release(appCompileSdk)
     }
 
     defaultConfig {
         applicationId = "dev.communicator.helmchatrisen"
-        minSdk = 26
-        targetSdk = 37
-        versionCode = 5
+        minSdk = appMinSdk
+        targetSdk = appTargetSdk
+        versionCode = appVersionCode
         versionName = appVersionName
+
+        // Release metadata exposed to the in-app Application info dialog so its values
+        // always come from the same source as the published artifacts.
+        buildConfigField("String", "RELEASE_TAG", "\"$appReleaseTag\"")
+        buildConfigField("String", "RELEASE_DATE", "\"$appReleaseDate\"")
+        buildConfigField("int", "MIN_SDK", "$appMinSdk")
+        buildConfigField("int", "TARGET_SDK", "$appTargetSdk")
+        buildConfigField("int", "COMPILE_SDK", "$appCompileSdk")
+        buildConfigField("String", "MIN_ANDROID", "\"$minAndroidDisplay\"")
+        buildConfigField("String", "SDK_LEVELS", "\"$sdkDisplay\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
