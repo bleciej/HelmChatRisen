@@ -80,20 +80,6 @@ class AudioCallService : Service() {
             }
             ContextCompat.startForegroundService(context, intent)
         }
-
-        /**
-         * Asks the running service to begin hanging up. The service keeps its foreground
-         * notification and audio route until Jitsi reaches a terminal state, so the ending status
-         * remains visible while conference teardown is in flight. Safe when no call is active.
-         *
-         * @param context the context used to deliver the end-call intent.
-         */
-        fun stopCall(context: Context) {
-            val intent = Intent(context, AudioCallService::class.java).apply {
-                action = ACTION_END_CALL
-            }
-            context.startService(intent)
-        }
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -268,23 +254,22 @@ class AudioCallService : Service() {
     }
 
     /**
-     * Registers the low-importance call channel on Android 8.0+; a no-op on older releases,
-     * which have no notification channels.
+     * Registers the low-importance call channel used by the ongoing notification.
+     *
+     * Notification channels are available on every supported API level (minSdk 26).
      */
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                getString(R.string.notification_channel_name),
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = getString(R.string.notification_channel_description)
-                setShowBadge(false)
-            }
-            val notificationManager =
-                getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            getString(R.string.notification_channel_name),
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = getString(R.string.notification_channel_description)
+            setShowBadge(false)
         }
+        val notificationManager =
+            getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(channel)
     }
 
     /**

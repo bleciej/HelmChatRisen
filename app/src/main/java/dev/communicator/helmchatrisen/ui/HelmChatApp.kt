@@ -303,7 +303,7 @@ fun HelmChatApp(
             onJoined = { route -> joinedRouteKey = route },
             onIdle = {
                 // The service observes the same Idle state and stops its own foreground
-                // notification and audio route, so no direct stopCall() is needed here.
+                // notification and audio route, so no extra service command is needed here.
                 joinedRouteKey = null
                 dismissCallRoute()
             },
