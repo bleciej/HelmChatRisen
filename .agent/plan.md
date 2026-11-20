@@ -422,3 +422,116 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - `BuildConfig` exposes the new version/code/tag and release artifacts use the `1.6` names
   - `RELEASE_NOTES.md` matches the declared release metadata and output names
   - `assembleDebug`, `testDebugUnitTest`, `lintDebug` and `assembleRelease` pass
+
+### Task_49_FixAudioRouteToggleWhenNoHeadset: Lock the call audio-route button to the speaker without a headset.
+- **Status:** COMPLETED
+- **Updates:** The call-screen speaker/headset button used an independent local `isSpeakerOn` boolean, so with no headset connected it incorrectly showed "Interkom / słuchawki", stayed tappable and toggled the actual audio route. `BluetoothAudioRouter` now publishes `isHeadsetConnected`, detecting Bluetooth SCO/A2DP, wired/USB headsets and SCO-capable headsets whose channel is not open yet, and re-evaluating it on call start, SCO state changes, Bluetooth/wired headset plug events and noisy-audio. With no headset the router routes call audio to the built-in speaker (all API levels) and ignores toggle requests. Added `AudioRouteControl.kt` with a pure `resolveAudioRouteControl` helper: no headset → speaker shown and switching disabled; headset connected → button mirrors the active route and toggles between headset and speaker. `HelmChatApp` derives the button state and label from these flows instead of local mutable state, and `CallScreenState.canSwitchAudioRoute` disables the control while no headset is connected (or during teardown). Added `AudioRouteControlTest` (7 JVM tests) and a no-headset preview. Verified `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass; no device/emulator is available for manual audio-routing verification.
+- **Acceptance Criteria:**
+  - With no headset connected the button shows "Głośnik telefonu", uses the speaker icon and cannot be toggled
+  - With a headset connected the button toggles audio between the helmet/headset and the phone speaker
+  - Headset connect/disconnect during a call updates the button's enabled state
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+  - Manual: verify on a device with and without a Bluetooth helmet intercom connected
+
+### Task_50_SkipIntercomConnectingWithoutHeadset: Use the phone speaker immediately when no headset is attached.
+- **Status:** COMPLETED
+- **Updates:** Device testing showed "Łączenie z interkomem" even with no headset connected. Two causes were removed from `BluetoothAudioRouter`: headset detection no longer uses `AudioManager.isBluetoothScoAvailableOffCall` (some devices report SCO as available with nothing attached), it now checks actually connected HFP/A2DP devices through `BluetoothManager.getConnectedDevices` plus wired/USB audio outputs; and SCO broadcasts are handled by `handleScoStateChanged`, which never publishes `ConnectingBluetooth`/`Error` unless a headset is genuinely connected, otherwise it immediately re-routes to the phone speaker. Added a JVM test proving that a pending SCO connection with no headset still resolves to the speaker. Verified `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass; physical re-verification is still needed.
+- **Acceptance Criteria:**
+  - Without a connected headset the call screen shows "Głośnik telefonu" immediately and never "Łączenie z interkomem"
+  - A connected Bluetooth headset is detected through active HFP/A2DP links, not a spurious SCO-available flag
+  - SCO error/connecting broadcasts without a headset keep the phone-speaker route
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+  - Manual: re-test on the device that reproduced the "connecting" state
+
+### Task_51_FixBluetoothProfileCrashOnCallStart: Prevent call-start crash on devices without HFP/A2DP profiles.
+- **Status:** COMPLETED
+- **Updates:** Reproduced the reported crash on `emulator-5554`: tapping "Dołącz do rozmowy" threw `java.lang.IllegalArgumentException: Profile not supported: 1` from `BluetoothManager.getConnectedDevices(BluetoothProfile.HEADSET)` inside `BluetoothAudioRouter.hasConnectedBluetoothHeadset()`, during `resetForNewCall()` before Jitsi could connect. Extracted a testable `hasConnectedBluetoothHeadset(connectedDevices)` helper that queries HFP and A2DP through a supplied lookup and treats any failed/unavailable profile query (including `IllegalArgumentException`, `SecurityException` from a permission race, and `null` results) as "no headset" instead of crashing. `BluetoothAudioRouter` now calls it via `manager::getConnectedDevices` behind the existing permission guard. Added `BluetoothHeadsetDetectionTest` with 5 JVM tests covering unsupported profiles, revoked permission, null/empty results and real HFP/A2DP links. Reinstalled the rebuilt universal debug APK on the emulator and repeated the join flow: no FATAL crash, app process stays alive, and the only remaining logs are caught, logged warnings for unsupported profiles. Verified `assembleDebug`, `testDebugUnitTest` (120 tests) and `lintDebug` pass.
+- **Acceptance Criteria:**
+  - Tapping join on a device/emulator that does not support Bluetooth HFP/A2DP no longer crashes
+  - A failed profile lookup cannot hide a headset reported by the other supported profile
+  - Permission revocation or a null lookup result degrades to the phone-speaker route
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+  - Manual: reproduced and re-verified on `emulator-5554`
+
+### Task_52_DetectHeadsetConnectionImmediately: Enable the audio-route button as soon as a headset connects.
+- **Status:** COMPLETED
+- **Updates:** Headset detection still relied on re-querying `AudioManager`/`BluetoothManager`, which can lag behind the actual connection broadcast, so a newly connected headset did not immediately enable the in-call route button while a disconnect did. The receiver now reads the connection state straight from the event: `Intent.ACTION_HEADSET_PLUG` uses its `state` extra (`1` plugged, `0` unplugged) and `BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED` uses `BluetoothProfile.EXTRA_STATE` (`STATE_CONNECTED` enables, other states fall back to re-detection so another headset is not hidden). `updateAudioRouting` accepts an optional forced headset flag from those broadcasts. `handleScoStateChanged` also treats `SCO_AUDIO_STATE_CONNECTED` as proof of a headset instead of letting a stale device query reset it. `registerReceivers` now feeds the sticky `ACTION_HEADSET_PLUG` intent into the receiver, so a headset connected before the call is picked up at call start. Added `wiredHeadsetConnectionState` and `isBluetoothHeadsetConnected` helpers plus 2 JVM tests. Verified `assembleDebug`, `testDebugUnitTest` (122 tests) and `lintDebug` pass. A full connection/disconnection cycle still needs confirmation on a physical phone with a real helmet intercom; the emulator cannot send the protected `HEADSET_PLUG` broadcast from adb shell.
+- **Acceptance Criteria:**
+  - Connecting a wired, USB or Bluetooth headset during a call enables the audio-route button without waiting for a disconnect
+  - Disconnects still disable the button unless another headset remains connected
+  - A headset connected before joining a call is detected from the sticky plug broadcast
+  - SCO connect/disconnect broadcasts cannot overwrite a verified headset connection with a stale query
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+
+### Task_53_ReworkInCallAudioRouting: Make helmet/headset routes reliable during an active conference.
+- **Status:** COMPLETED
+- **Updates:** Real-phone testing of issues 1–3 exposed three separate routing faults. (1) Bluetooth detection accepted A2DP, which Android cannot use for two-way calls (`setCommunicationDevice()` rejects it); HFP/SCO is now the only Bluetooth route tracked, in `AudioDeviceSelection.kt`, `AudioRouteControl.kt` and `hasConnectedBluetoothHeadset()`. (2) Profile/plug broadcasts can arrive before the audio device is enumerated, so `BluetoothAudioRouter` now registers an `AudioDeviceCallback`, tracks a `HeadsetKind` (NONE/BLUETOOTH/WIRED) and runs bounded, generation-guarded retries (250 ms … 3 s) with `startBluetoothSco()` for HFP; exhausted retries fall back to the phone speaker instead of leaving "Łączenie z interkomem" on screen. (3) A headset disconnect now clears `isSpeakerphoneForced` and resets SCO state, so reconnecting mid-call becomes the active route without restarting the conference; wired/USB devices (USB > wired > headphones) are selected via `setCommunicationDevice()` and never show the SCO "connecting" state. Jitsi keeps `audio-focus.disabled=true` (verified in SDK 12.1.5: this leaves mode/focus/SCO entirely to the app) and now also `audio-device-button.enabled=false` so its hidden UI cannot offer a route the native layer does not own. Added `AudioDeviceSelectionTest` (7) and updated `BluetoothHeadsetDetectionTest` (8) and `AudioRouteControlTest` (8) for HFP-only behavior. Verified `assembleDebug`, `testDebugUnitTest` (132 tests after Task_54) and `lintDebug` (0 errors) pass and all three ABI debug APKs build. A smoke join on `emulator-5554` reached `CONFERENCE_JOINED` with no crash; physical headset connect/reconnect/USB verification is still required.
+- **Acceptance Criteria:**
+  - Bluetooth HFP headset connected during a call becomes the active route; A2DP-only outputs are ignored
+  - Bluetooth disconnect/reconnect mid-call restores the headset route without rejoining the conference
+  - Wired/USB headset connects without a stuck "Łączenie z interkomem" state
+  - Retry exhaustion always returns to the phone speaker; a no-headset state keeps the speaker route disabled
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+  - Manual: verify on the physical phone that reproduced issues 1–3
+
+### Task_54_HardenJitsiReconnectTiming: Verify and fix the delay before Jitsi rejoins the room.
+- **Status:** COMPLETED
+- **Updates:** Audited Jitsi SDK 12.1.5's minified bundle: the patched reload dialog (`_timeoutSeconds=5`) now fires about 6.5 s after an error (was 11.5–31.5 s), while XMPP ping detection takes 15–30 s and the conference-request backoff can reach 120 s, so the real worst case is longer than the dialog alone. The previous second patch only shortened WatchRTC telemetry, not call recovery, and was removed. Kotlin-side faults were the main cause of intermittent failures: `CONFERENCE_WILL_JOIN` cancelled the watchdog without re-arming, the watchdog accepted only `Reconnecting` (not Jitsi's `Connecting` during reload), its 45 s deadline was shorter than Jitsi's own backoff, offline time counted against it, and `join()` released the old view while still subscribed to its broadcasts. `JitsiCallManager` now uses `RECONNECT_RELOAD_TIMEOUT_MS = 60 s` after termination and `REJOIN_COMPLETION_TIMEOUT_MS = 150 s` after `WILL_JOIN`, tracks `pendingReconnectRoom`, pauses/resumes the countdown across network loss (including `onUnavailable`), accepts both transient states via `isReconnectWatchdogState`, and unregisters the old receiver before releasing the view. Added 2 JVM tests (132 total) and a build-time assertion that the reload patch produced `_timeoutSeconds=5`. Verified `assembleDebug`, `testDebugUnitTest` and `lintDebug` (0 errors) pass and all three ABI debug APKs build; real network-loss rejoin still needs device verification.
+- **Acceptance Criteria:**
+  - Jitsi reload dialog delay measured at ~6.5 s; XMPP/backoff delays documented, not patched blind
+  - Reconnect watchdog covers `Connecting` and `Reconnecting` and outlasts Jitsi's 120 s backoff
+  - Offline periods pause the watchdog and resume it when the network returns
+  - A stale termination from a previous view cannot put a new join into `Reconnecting`
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+  - Manual: toggle airplane mode mid-call on the physical phone and confirm the room rejoins
+
+### Task_55_KeepSpeakerChoiceWithConnectedUsbHeadset: Stop USB speaker toggles from bouncing back to the headset.
+- **Status:** COMPLETED
+- **Updates:** Real-phone testing confirmed USB/BT connect/disconnect and USB→headset switching, but selecting the phone speaker while a USB headset stayed connected immediately returned to the headset. Three causes were removed from `BluetoothAudioRouter`: (1) `updateAudioRouting()` cleared `isSpeakerphoneForced` whenever a transient re-detection returned `HeadsetKind.NONE`, so a late device callback undid the rider's choice; the flag now resets only on a confirmed plug/profile/device-removal/noisy disconnect. (2) `handleScoStateChanged()` and every routing re-evaluation now go through the new `resolveRouteTarget()` helper, so a forced speaker outranks a connected headset and a late SCO connected/disconnected broadcast cannot undo it. (3) `routeToBuiltInSpeaker()` no longer ignores a failed `setCommunicationDevice()`; it clears any explicit communication device and enables the legacy speakerphone flag as a fallback, which is required on devices that reject the built-in speaker while a USB headset is enumerated. `AudioDeviceCallback` now forwards newly added headset families and real headset removals directly, and general API methods use `setSpeakerphoneFlag(false)` before selecting a headset so no legacy override fights the selected device. Added 4 JVM tests covering route precedence and callback-derived headset families (136 total). Verified `assembleDebug`, `testDebugUnitTest` (136 tests, 0 failures) and `lintDebug` (0 errors) pass and all three ABI debug APKs build; final USB→speaker retention still needs a physical-phone retest.
+- **Acceptance Criteria:**
+  - With a USB headset connected, tapping "Głośnik telefonu" keeps the speaker route until the rider taps back or a real disconnect occurs
+  - Late audio-device, SCO and plug callbacks cannot override the rider's explicit speaker choice
+  - A real headset disconnect still clears the forced speaker so the next connection becomes active without rejoining
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+  - Manual: on the physical phone, USB connected → switch to phone speaker → confirm it stays there, then switch back to the headset and verify BT/USB connect/disconnect again
+
+### Task_56_ApplyAudioRoutingAndReconnectReviewFixes: Apply five scoped review follow-ups.
+- **Status:** COMPLETED
+- **Updates:** Applied the five requested fixes to the uncommitted review changeset. (1) `BluetoothAudioRouter.resetForNewCall()` now publishes headset availability only while routing is active and otherwise keeps `NONE`/`false`, and the duplicate reset call was removed from `HelmChatApp.startCall()` (the service still resets in `startCallInternal()`). (2) `AudioDeviceCallback.onAudioDevicesAdded()` re-detects the full headset state instead of deriving it only from newly added devices, so plugging in USB/wired audio cannot override an active Bluetooth helmet route; the removed-devices callback still uses `headsetKindFromAudioDevices`. (3) `registerReceivers()` no longer replays a sticky broadcast, leaving initial detection to `startAudioRouting()`. (4) `updateAudioRouting()` clears the rider's forced-speaker choice and stops SCO only when a disconnect event leaves no headset at all, so disconnecting a non-active device preserves the route. (5) `JitsiCallManager` cancels the 30 s connect timeout when `CONFERENCE_WILL_JOIN` arms the 150 s rejoin watchdog, with a testable `handsOverJoinDeadlineToRejoin` predicate. Added JVM tests for Bluetooth-over-wired family priority and timeout ownership hand-over. Verified `testDebugUnitTest` (138 tests), `lintDebug` (0 errors) and `assembleDebug` pass. Device checks remain for sticky-broadcast removal with a headset already connected, partial headset disconnects and Bluetooth/USB coexistence.
+- **Acceptance Criteria:**
+  - No stale headset state is published after routing stops, and reset happens once per call start
+  - Adding a wired/USB device cannot hijack an active Bluetooth intercom route
+  - Sticky broadcasts are no longer replayed before routing becomes active
+  - A partial headset disconnect preserves the rider's speaker choice and live SCO channel
+  - WILL_JOIN hands the join deadline from the connect timeout to the rejoin watchdog
+  - `testDebugUnitTest`, `lintDebug` and `assembleDebug` pass
+
+### Task_57_FixRoutingStateMachineAndJoinDeadlineReviewFindings: Harden audio-route transitions and initial-join timeout ownership.
+- **Status:** COMPLETED
+- **Updates:** Applied the five review findings to the uncommitted audio/Jitsi changeset. (1) `updateAudioRouting()` now reconciles broadcast hints with a full detection through `resolveBroadcastHeadsetKind()`, so `ACTION_HEADSET_PLUG` can enable a wired route immediately without downgrading an active Bluetooth SCO intercom. (2) `handleScoStateChanged()` clears the forced-speaker flag and SCO state when a SCO event leaves no headset, via the shared `shouldClearSpeakerOverrideOnDisconnect()` predicate. (3) API 31+ wired/USB routes no longer enter the Bluetooth SCO retry loop; `shouldScheduleBluetoothRouteRetry()` restricts retries and the speaker fallback to active Bluetooth routes. (4) `JitsiCallManager` tracks `hasConnectedConference` so `CONFERENCE_WILL_JOIN` only hands the 30 s connect timeout over to the 150 s rejoin watchdog after a real `CONFERENCE_JOINED`; first joins keep the short deadline. (5) `AudioDeviceCallback.onAudioDevicesAdded()` ignores non-headset/wired-only batches during Bluetooth calls and preserves the retry attempt index (`resetRouteRetryAttempt = false`) so repeated enumeration cannot starve the timeout. Added JVM tests for all new predicates and updated the timeout hand-over test. Verified `testDebugUnitTest` (143 tests, 0 failures), `lintDebug` (0 errors) and `assembleDebug` (arm64-v8a, armeabi-v7a and universal APKs) pass; IDE analysis reports no errors on the changed Kotlin files. Manual device checks remain for wired/BT coexistence, SCO-disconnect headset swaps and real network-loss rejoin.
+- **Acceptance Criteria:**
+  - A wired plug event cannot replace a live Bluetooth intercom route
+  - A SCO disconnect with no remaining headset resets stale speaker override state
+  - Wired/USB routes never fall back to the speaker after a Bluetooth retry timeout
+  - First joins retain the 30 s connect timeout; only rejoins use the 150 s watchdog
+  - Audio-device callbacks cannot restart the Bluetooth retry sequence
+  - `testDebugUnitTest`, `lintDebug` and `assembleDebug` pass
+
+### Task_58_FixAudioRoutingAndWatchdogReviewFindings: Apply the remaining review findings.
+- **Status:** COMPLETED
+- **Updates:** Fixed the latest review findings in `BluetoothAudioRouter`, `JitsiCallManager` and their helpers. (1) The rider's speaker choice is now held by a stateful `RoutePreference` and latched after a Bluetooth route timeout, so the SCO DISCONNECTED broadcast cannot restart the retry loop; stateful JVM tests cover the latch, full-disconnect reset and rider toggle. (2) Switching to wired/USB uses `shouldReleaseScoForHeadsetKind()` to close SCO, so a later return to Bluetooth starts a fresh HFP session. (3) `resolveHeadsetKind()` treats an open SCO channel as proof of a headset and keeps Bluetooth priority over wired/USB; pure tests cover all branches. (4) `ReconnectDeadline` tracks elapsed-real-time remaining time with generation-free pause/resume; `JitsiCallManager` resumes the watchdog with the leftover duration instead of restarting the full 60/150 s timer, covered by fake-clock tests. (5) `bluetoothReceiver` ignores broadcasts while routing is inactive and `isRoutingActive` flips before receiver registration and before cleanup. (7) Bluetooth profile lookups run on a daemon thread with a cached, generation-guarded result applied on the main thread; connected broadcasts update the cache directly while disconnects trigger a fresh lookup. (8) Every `clearCommunicationDevice()` call goes through the API-31-guarded `clearPreferredDevice()` and speakerphone-flag writes are exception-guarded. Finding #6 was confirmed intentional: no-headset audio uses the built-in speaker, and `AudioRoutingState.EarpieceConnected` is now documented as an idle/reset state rather than an active output. Verified `assembleDebug` (all three ABI APKs), `testDebugUnitTest` (156 tests, 0 failures) and `lintDebug` (0 errors, 30 pre-existing warnings); device/emulator audio verification is still pending.
+- **Acceptance Criteria:**
+  - Bluetooth route timeout stays on the speaker until the rider explicitly retries the headset
+  - Bluetooth → wired → Bluetooth handovers restart SCO; an open SCO channel is detected as a headset
+  - Reconnect watchdog resumes with the time left before the outage, not a full new deadline
+  - Broadcasts during call teardown cannot mutate routing state, and profile lookups never block the main thread
+  - All communication-device/speakerphone writes are guarded and no-headset speaker-only behavior is documented
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+
+### Task_59_ClearQualityFindingsInAudioAndJitsiChanges: Remove Sonar/IDE smells without behavior changes.
+- **Status:** COMPLETED
+- **Updates:** Cleared the local SonarLint/IDE findings introduced by the uncommitted audio/Jitsi changeset. `BluetoothAudioRouter.kt` now uses read-only sequences for platform device arrays, splits SCO-state handling into documented helpers, and keeps legacy audio-focus branches out of min-SDK-26 code. `JitsiCallManager.kt` splits broadcast handling into helpers to lower cognitive complexity, uses a trailing lambda for participant callbacks, and formats multi-branch `when` entries per IDE rules. `HelmChatApp.kt` extracts route UI state/actions and navigation/permission helpers, uses destructuring and named arguments, and keeps route labels in a small composable helper. `CallScreen.kt` replaces chained `if/else` with `when` and fixes trailing commas. `AudioDeviceSelection.kt` uses sequences/destructuring and clarifying parentheses. IDE analysis now reports no errors or warnings in the changed Kotlin files; the only earlier non-actionable hint was the IDE's "open URL in browser" gutter action on configured Jitsi URLs. No behavior changes were intended, so no new tests were required. detekt is not configured in this project and was not run. Verified `./gradlew assembleDebug testDebugUnitTest lintDebug`: build successful, arm64-v8a/armeabi-v7a/universal debug APKs produced, 156 unit tests passed (0 failures/errors), lint 0 errors and 27 pre-existing warnings in unrelated files, and `git diff --check` clean. `./gradlew connectedAndroidTest` also passed on the available emulator (1 instrumented test, 0 failures); physical helmet-intercom audio and real network-loss verification remains pending.
+- **Acceptance Criteria:**
+  - IDE/Sonar analysis reports no actionable findings in changed Kotlin files
+  - Static cleanup preserves audio-only routing and reconnect behavior
+  - `assembleDebug`, `testDebugUnitTest`, `connectedAndroidTest`, `lintDebug` and `git diff --check` pass

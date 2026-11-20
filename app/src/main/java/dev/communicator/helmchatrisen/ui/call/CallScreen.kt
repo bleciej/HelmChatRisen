@@ -69,7 +69,8 @@ import dev.communicator.helmchatrisen.ui.theme.SpeakerYellow
  * @param isReconnecting whether Jitsi is restoring a dropped conference.
  * @param isOffline whether the device currently has no default network.
  * @param isMuted whether the local microphone is muted.
- * @param isSpeakerOn whether the built-in speaker is forced on.
+ * @param isSpeakerOn whether the built-in speaker is the active audio route.
+ * @param canSwitchAudioRoute whether a headset is connected so the route can be switched.
  * @param audioRouteLabel the human-readable audio route shown on the route button.
  * @param participantCount the number of riders in the room, including the local rider.
  * @param errorMessage an error to show below the header, or `null` when there is none.
@@ -83,6 +84,7 @@ data class CallScreenState(
     val isOffline: Boolean = false,
     val isMuted: Boolean = false,
     val isSpeakerOn: Boolean = false,
+    val canSwitchAudioRoute: Boolean = true,
     val audioRouteLabel: String? = null,
     val participantCount: Int = 0,
     val errorMessage: String? = null,
@@ -242,32 +244,36 @@ private fun CallContent(
                 overflow = TextOverflow.Ellipsis,
             )
 
-            if (state.errorMessage != null) {
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = stringResource(R.string.call_error, state.errorMessage),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.error,
-                    textAlign = TextAlign.Center,
-                )
-            } else if (state.isReconnecting || state.isOffline) {
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = stringResource(R.string.call_reconnecting_hint),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MotorcycleTertiary,
-                    textAlign = TextAlign.Center,
-                )
-            } else if (state.participantCount > 0) {
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = stringResource(R.string.call_participants, state.participantCount),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            when {
+                state.errorMessage != null -> {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = stringResource(R.string.call_error, state.errorMessage),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                state.isReconnecting || state.isOffline -> {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = stringResource(R.string.call_reconnecting_hint),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MotorcycleTertiary,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                state.participantCount > 0 -> {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = stringResource(R.string.call_participants, state.participantCount),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
 
             CallSpacer()
@@ -281,7 +287,7 @@ private fun CallContent(
             Spacer(Modifier.height(if (compactHeight) 12.dp else 20.dp))
             Text(
                 text = stringResource(
-                    if (state.isMuted) R.string.call_unmute else R.string.call_mute
+                    if (state.isMuted) R.string.call_unmute else R.string.call_mute,
                 ),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
@@ -293,7 +299,7 @@ private fun CallContent(
             AudioRouteButton(
                 isSpeakerOn = state.isSpeakerOn,
                 audioRouteLabel = state.audioRouteLabel,
-                enabled = !state.isEnding,
+                enabled = !state.isEnding && state.canSwitchAudioRoute,
                 onClick = onToggleSpeaker,
             )
             Spacer(Modifier.height(12.dp))
@@ -456,7 +462,7 @@ private fun PipCallContent(
                     Icon(
                         imageVector = Icons.Filled.CallEnd,
                         contentDescription = stringResource(
-                            if (state.isEnding) R.string.call_ending else R.string.call_leave
+                            if (state.isEnding) R.string.call_ending else R.string.call_leave,
                         ),
                         modifier = Modifier.size(26.dp),
                     )
@@ -495,7 +501,7 @@ private fun HostSetupContent(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(
-                            if (state.isEnding) R.string.call_ending else R.string.call_host_setup_title
+                            if (state.isEnding) R.string.call_ending else R.string.call_host_setup_title,
                         ),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
@@ -656,9 +662,9 @@ private fun MicButton(
 /**
  * Full-width selector showing the current helmet or speaker route.
  *
- * @param isSpeakerOn whether the built-in speaker is forced on.
+ * @param isSpeakerOn whether the built-in speaker is the active audio route.
  * @param audioRouteLabel the device-specific route name, or `null` to use the generic label.
- * @param enabled whether the control accepts taps while the call is being torn down.
+ * @param enabled whether the control accepts taps; disabled without a headset or during teardown.
  * @param onClick invoked when the rider switches the audio route.
  */
 @Composable
@@ -732,6 +738,29 @@ private fun CallScreenMutedPreview() {
                 isConnected = false,
                 isMuted = true,
                 isSpeakerOn = true,
+            ),
+            onToggleMute = {},
+            onToggleSpeaker = {},
+            onLeaveCall = {},
+            onInvite = {},
+        )
+    }
+}
+
+/** Preview of the call layout when no headset is connected and the route control is locked to the speaker. */
+@Preview(showBackground = true, backgroundColor = 0xFF090B0E, heightDp = 800)
+@Composable
+private fun CallScreenNoHeadsetPreview() {
+    HelmChatRisenTheme {
+        CallScreen(
+            state = CallScreenState(
+                roomName = "poranny-dojazd",
+                serverUrl = "https://meet.ffmuc.net",
+                isConnected = true,
+                isSpeakerOn = true,
+                canSwitchAudioRoute = false,
+                audioRouteLabel = stringResource(R.string.call_speaker_on),
+                participantCount = 2,
             ),
             onToggleMute = {},
             onToggleSpeaker = {},

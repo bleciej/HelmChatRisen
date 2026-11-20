@@ -156,13 +156,16 @@ base {
 }
 
 /**
- * Jitsi's bundled JS hard-codes a 10–30 s conference reload delay and a 30 s websocket retry.
- * Both make a transient motorcycle-network drop feel like a dropped call. Patch the merged
- * asset in place so the SDK reloads the conference after ~5 s instead.
+ * Jitsi's bundled JS shows a reload dialog with a random 10–30 s countdown after an unrecoverable
+ * conference error. On a motorcycle connection that feels like a dropped call, so the merged asset
+ * is patched in place to use a five-second countdown (~6.5 s until reload, including the dialog's
+ * own delay).
  *
- * The bundle is treated as ISO-8859-1 so every byte round-trips unchanged while the ASCII
- * patterns are replaced. The patterns match the surrounding structure instead of minified
- * identifier names, so an SDK upgrade only needs a new pattern when the JS logic itself changes.
+ * XMPP ping detection and the conference-request backoff are left untouched: they are Jitsi's
+ * own recovery logic and the app's reconnect watchdog is sized to outlast them. The bundle is
+ * treated as ISO-8859-1 so every byte round-trips unchanged while the ASCII pattern is replaced.
+ * The pattern matches the surrounding structure instead of minified identifier names, so an SDK
+ * upgrade only needs a new pattern when the JS logic itself changes.
  */
 androidComponents {
     onVariants { variant ->
@@ -183,7 +186,7 @@ androidComponents {
         val mergedBundle = layout.buildDirectory
             .file("intermediates/assets/${variant.name}/merge${variantName}Assets/index.android.bundle")
         val patchTask = tasks.register("patch${variantName}JitsiReconnect") {
-            description = "Shortens Jitsi's conference/websocket reconnect delays."
+            description = "Shortens Jitsi's conference reload dialog delay."
             group = "build"
             dependsOn("merge${variantName}Assets")
             val bundleFile = mergedBundle.get().asFile
@@ -201,10 +204,6 @@ androidComponents {
                         Regex("_timeoutSeconds=\\d+\\+\\(0,\\w+\\(\\w+\\[\\d+\\]\\)\\.randomInt\\)\\(0,\\d+\\)"),
                         Regex("_timeoutSeconds=5"),
                     ) { "_timeoutSeconds=5" },
-                    Triple(
-                        Regex("(\\w+\\(\\{reconnecting:!0,pcId:\\w+\\}\\)\\}\\),)3e4"),
-                        Regex("(\\w+\\(\\{reconnecting:!0,pcId:\\w+\\}\\)\\}\\),)5e3"),
-                    ) { match -> "${match.groupValues[1]}5e3" },
                 )
                 var patched = text
                 replacements.forEach { (pattern, patchedPattern, replacement) ->
@@ -216,6 +215,9 @@ androidComponents {
                                 "Update app/build.gradle.kts for the installed Jitsi SDK version.",
                         )
                     }
+                }
+                check("_timeoutSeconds=5" in patched) {
+                    "Jitsi reload-dialog patch did not produce the expected value in ${bundleFile.name}"
                 }
                 if (patched != text) {
                     bundleFile.writeText(patched, Charsets.ISO_8859_1)

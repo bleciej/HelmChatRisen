@@ -25,6 +25,73 @@ class JitsiCallManagerTest {
     }
 
     @Test
+    fun isReconnectWatchdogState_coversBothTransientStates() {
+        assertTrue(isReconnectWatchdogState(CallState.Reconnecting("room", "https://server")))
+        assertTrue(isReconnectWatchdogState(CallState.Connecting("room", "https://server")))
+        assertFalse(isReconnectWatchdogState(CallState.Connected("room", "https://server")))
+        assertFalse(isReconnectWatchdogState(CallState.Idle))
+        assertFalse(isReconnectWatchdogState(CallState.Error(messageResId = 0)))
+        assertFalse(isReconnectWatchdogState(CallState.Ending))
+    }
+
+    /** WILL_JOIN keeps the first-join deadline and only hands it over for an actual rejoin. */
+    @Test
+    fun handsOverJoinDeadlineToRejoin_onlyAfterTheConferenceHasConnected() {
+        assertFalse(
+            handsOverJoinDeadlineToRejoin(
+                type = BroadcastEvent.Type.CONFERENCE_WILL_JOIN,
+                callState = CallState.Connecting("ride", "https://server"),
+                hasConnectedConference = false,
+            ),
+        )
+        assertTrue(
+            handsOverJoinDeadlineToRejoin(
+                type = BroadcastEvent.Type.CONFERENCE_WILL_JOIN,
+                callState = CallState.Connecting("ride", "https://server"),
+                hasConnectedConference = true,
+            ),
+        )
+        assertTrue(
+            handsOverJoinDeadlineToRejoin(
+                type = BroadcastEvent.Type.CONFERENCE_WILL_JOIN,
+                callState = CallState.Reconnecting("ride", "https://server"),
+                hasConnectedConference = false,
+            ),
+        )
+        assertFalse(
+            handsOverJoinDeadlineToRejoin(
+                type = BroadcastEvent.Type.CONFERENCE_JOINED,
+                callState = CallState.Connecting("ride", "https://server"),
+                hasConnectedConference = true,
+            ),
+        )
+        assertFalse(
+            handsOverJoinDeadlineToRejoin(
+                type = BroadcastEvent.Type.CONFERENCE_WILL_JOIN,
+                callState = CallState.Connected("ride", "https://server"),
+                hasConnectedConference = true,
+            ),
+        )
+        assertFalse(
+            handsOverJoinDeadlineToRejoin(
+                type = BroadcastEvent.Type.CONFERENCE_WILL_JOIN,
+                callState = CallState.Idle,
+                hasConnectedConference = false,
+            ),
+        )
+    }
+
+    @Test
+    fun reconnectTimeOutConstants_outlastJitsiBackoff() {
+        assertTrue(JitsiCallManager.RECONNECT_RELOAD_TIMEOUT_MS >= 60_000L)
+        assertTrue(JitsiCallManager.REJOIN_COMPLETION_TIMEOUT_MS >= 120_000L)
+        assertTrue(
+            JitsiCallManager.REJOIN_COMPLETION_TIMEOUT_MS >
+                JitsiCallManager.RECONNECT_RELOAD_TIMEOUT_MS,
+        )
+    }
+
+    @Test
     fun resetMuteState_clearsMuteFromPreviousCall() {
         callManager.setMuted(muted = true)
         assertTrue(callManager.isMuted.value)
