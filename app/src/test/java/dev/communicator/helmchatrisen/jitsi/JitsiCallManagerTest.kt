@@ -124,7 +124,7 @@ class JitsiCallManagerTest {
 
     @Test
     fun participantIdFrom_readsFlatParticipantIdUsedByCurrentSdk() {
-        // Jitsi 10.x sends the participant info flattened into the extras, keyed "participantId".
+        // Jitsi sends the participant info flattened into the extras, keyed "participantId".
         val data = mapOf(
             "participantId" to "a1b2c3",
             "displayName" to "RiderOne",

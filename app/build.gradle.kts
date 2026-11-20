@@ -5,10 +5,10 @@ plugins {
 }
 
 /** Version name shared by the artifact names and the in-app Application info dialog. */
-val appVersionName = "1.5"
+val appVersionName = "1.6"
 
-/** Version code for the 1.5 release line. */
-val appVersionCode = 5
+/** Version code for the 1.6 release line. */
+val appVersionCode = 6
 
 /** Release tag published for this build (kept in sync with RELEASE_NOTES.md). */
 val appReleaseTag = "V$appVersionName"
@@ -25,14 +25,24 @@ val appTargetSdk = 37
 /** SDK level used to compile the app. */
 val appCompileSdk = 37
 
+/** Minor compile SDK revision required by Compose 1.13.0 and newer AndroidX artifacts. */
+val appCompileSdkMinor = 2
+
 /** Human-readable Android version for [appMinSdk]. */
 val minAndroidDisplay = "8.0 (API $appMinSdk)"
 
+/** Human-readable compile SDK including the extension/minor revision when present. */
+val compileSdkDisplay = if (appCompileSdkMinor > 0) {
+    "$appCompileSdk.$appCompileSdkMinor"
+} else {
+    appCompileSdk.toString()
+}
+
 /** Collapses to one number when target and compile levels match, otherwise shows both. */
-val sdkDisplay = if (appTargetSdk == appCompileSdk) {
+val sdkDisplay = if (appTargetSdk == appCompileSdk && appCompileSdkMinor == 0) {
     appTargetSdk.toString()
 } else {
-    "$appTargetSdk / $appCompileSdk"
+    "$appTargetSdk / $compileSdkDisplay"
 }
 
 /**
@@ -50,7 +60,9 @@ val isBundleBuild = gradle.startParameter.taskNames.any { requestedTask ->
 android {
     namespace = "dev.communicator.helmchatrisen"
     compileSdk {
-        version = release(appCompileSdk)
+        version = release(appCompileSdk) {
+            minorApiLevel = appCompileSdkMinor
+        }
     }
 
     defaultConfig {
@@ -67,6 +79,7 @@ android {
         buildConfigField("int", "MIN_SDK", "$appMinSdk")
         buildConfigField("int", "TARGET_SDK", "$appTargetSdk")
         buildConfigField("int", "COMPILE_SDK", "$appCompileSdk")
+        buildConfigField("int", "COMPILE_SDK_MINOR", "$appCompileSdkMinor")
         buildConfigField("String", "MIN_ANDROID", "\"$minAndroidDisplay\"")
         buildConfigField("String", "SDK_LEVELS", "\"$sdkDisplay\"")
 

@@ -1,16 +1,16 @@
-# HelmChat Risen 1.5 — Release Notes
+# HelmChat Risen 1.6 — Release Notes
 
 |                      |                                  |
 |----------------------|----------------------------------|
-| Version              | 1.5                              |
-| Version code         | 5                                |
-| Tag                  | `V1.5`                           |
+| Version              | 1.6                              |
+| Version code         | 6                                |
+| Tag                  | `V1.6`                           |
 | Release date         | 2026-11-17                       |
 | Minimum Android      | 8.0 (API 26)                     |
-| Target / compile SDK | 37                               |
+| Target / compile SDK | 37 / 37.2                        |
 | Application ID       | `dev.communicator.helmchatrisen` |
 
-HelmChat Risen 1.5 is a maintenance release focused on the package rename to
+HelmChat Risen 1.6 is a maintenance release focused on the package rename to
 `dev.communicator.helmchatrisen`, cleaner and better-documented audio/call
 internals, and packaging fixes for Android App Bundle builds. It keeps the same
 audio-only Jitsi call flow, participant tracking, helmet routing, and
@@ -50,8 +50,11 @@ motorcycle-optimized UI introduced in earlier releases.
 - Migrated logging to Timber and localized call errors (`01ad837`).
 - Removed KSP, bumped Kotlin, and refreshed Compose/Jitsi SDK and other
   dependencies while pruning unused libraries (`3d9ff9f`, `54b60c8`, `7820020`).
-- Upgraded Jitsi Meet SDK to 11.6.3 and raised `minSdk` to 26 to match its
+- Upgraded Jitsi Meet SDK to 12.1.5 and raised `minSdk` to 26 to match its
   manifest requirement; dropped the now-unreachable API 24/25 PiP fallbacks.
+- Refreshed AndroidX dependencies to Lifecycle 2.11.1, Compose BOM 2026.11.01
+  (Compose 1.13.0) and Navigation 3 1.2.2; raised the compile SDK minor level to
+  37.2 as required by the new Compose artifacts.
 
 ### Audio routing and call lifecycle
 
@@ -76,7 +79,7 @@ motorcycle-optimized UI introduced in earlier releases.
 - Added manifest/tooling annotations for the foreground-service policy and target
   API context, and removed the redundant launcher activity label in favor of the
   application label.
-- Bumped `versionName` to `1.5` (with `versionCode` at `5`).
+- Bumped `versionName` to `1.6` (with `versionCode` at `6`).
 - Disabled ABI splits when a `bundle*` Gradle task is requested so AAB builds do
   not fail with "Multiple shrunk-resources files found" (see Google issue
   402800800); APK builds continue to produce per-ABI and universal outputs.
@@ -119,8 +122,8 @@ motorcycle-optimized UI introduced in earlier releases.
 
 - Gradle (Kotlin DSL), AGP 9, version catalog; Java 11 bytecode target (JDK 17+
   required to build).
-- SDK levels: `compileSdk 37` / `targetSdk 37` / `minSdk 26` (required by Jitsi
-  Meet SDK 11.6.3).
+- SDK levels: `compileSdk 37.2` / `targetSdk 37` / `minSdk 26` (required by Jitsi
+  Meet SDK 12.1.5 and Compose 1.13.0).
 - Release APK builds: **per-ABI** (`arm64-v8a`, `armeabi-v7a`) plus a universal
   APK, R8-minified and resource-shrunk.
 - **App Bundle builds (`bundle*`)**: ABI splits are disabled automatically to
@@ -128,12 +131,12 @@ motorcycle-optimized UI introduced in earlier releases.
 - Release signing is supplied out-of-band via Gradle properties
   `releaseStoreFile`, `releaseStorePassword`, `releaseKeyAlias`, and
   `releaseKeyPassword`; signing material is never committed.
-- Deterministic output names: `HelmChatRisen-1.5-release-<abi>.apk` and
-  `HelmChatRisen-1.5-release.apk`.
+- Deterministic output names: `HelmChatRisen-1.6-release-<abi>.apk` and
+  `HelmChatRisen-1.6-release.apk`.
 - The build patches the merged Jitsi JS bundle to shorten reconnect delays; its
   patterns ignore minified identifier names and fail loudly if the JS logic
   changes in a future SDK upgrade.
-- Version metadata: `versionName` `1.5`, `versionCode` `5`.
+- Version metadata: `versionName` `1.6`, `versionCode` `6`.
 
 ## Testing
 
@@ -173,14 +176,14 @@ motorcycle-optimized UI introduced in earlier releases.
 - App label: `HelmChat Risen`; in-app title: `HelmChat - Risen`.
 - Release signing configuration is required for signed release artifacts; debug
   builds work without it.
-- Release APKs: `HelmChatRisen-1.5-release-arm64-v8a.apk`,
-  `HelmChatRisen-1.5-release-armeabi-v7a.apk`, and the universal
-  `HelmChatRisen-1.5-release.apk`.
+- Release APKs: `HelmChatRisen-1.6-release-arm64-v8a.apk`,
+  `HelmChatRisen-1.6-release-armeabi-v7a.apk`, and the universal
+  `HelmChatRisen-1.6-release.apk`.
 
 ## Building release artifacts
 
 ```bash
-git checkout V1.5   # once the release tag exists
+git checkout V1.6   # once the release tag exists
 ./gradlew assembleRelease
 # For Play/App Bundle packaging:
 ./gradlew bundleRelease

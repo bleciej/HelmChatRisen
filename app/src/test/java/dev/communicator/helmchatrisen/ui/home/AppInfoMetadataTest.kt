@@ -38,10 +38,18 @@ class AppInfoMetadataTest {
     /** The SDK summary must follow the target/compile rule used by the build script. */
     @Test
     fun sdkLevels_matchTargetAndCompile() {
-        val expected = if (BuildConfig.TARGET_SDK == BuildConfig.COMPILE_SDK) {
+        val compileSdk = if (BuildConfig.COMPILE_SDK_MINOR == 0) {
+            BuildConfig.COMPILE_SDK.toString()
+        } else {
+            "${BuildConfig.COMPILE_SDK}.${BuildConfig.COMPILE_SDK_MINOR}"
+        }
+        val expected = if (
+            BuildConfig.TARGET_SDK == BuildConfig.COMPILE_SDK &&
+            BuildConfig.COMPILE_SDK_MINOR == 0
+        ) {
             BuildConfig.TARGET_SDK.toString()
         } else {
-            "${BuildConfig.TARGET_SDK} / ${BuildConfig.COMPILE_SDK}"
+            "${BuildConfig.TARGET_SDK} / $compileSdk"
         }
 
         assertEquals(expected, BuildConfig.SDK_LEVELS)

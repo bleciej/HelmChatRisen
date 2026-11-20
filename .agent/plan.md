@@ -393,3 +393,32 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - New calls and PiP/host/full-screen controls are blocked while ending
   - RTL top-bar placement, app-info metadata/labels and locale catalogs are consistent
   - `assembleDebug`, `assembleRelease`, `testDebugUnitTest` (107 tests) and `lintDebug` pass; no ADB device/emulator is available for instrumented or manual audio verification
+
+### Task_46_UpgradeJitsiSdkTo1215: Upgrade Jitsi Meet SDK to 12.1.5.
+- **Status:** COMPLETED
+- **Updates:** Bumped `jitsiMeetSdk` from 11.6.3 to 12.1.5 in `gradle/libs.versions.toml`. The originally requested 12.1.0 could not be used: its published POM declares three dependencies with `unspecified` versions (`android:amplitude-analytics-react-native`, `android:giphy-react-native-sdk`, `android:sayem314-react-native-keep-awake`) and no matching artifacts exist, and Jitsi's changelog skips 12.1.0 (12.0.0 → 12.1.1). After confirming with the user, the latest patched 12.1.x release was used instead. 12.1.x keeps React Native 0.79.7 on the old architecture (the Fabric/Bridgeless switch is 13.x), minSdk 26, and the same `JitsiMeetView`/broadcast/config-override/feature-flag APIs, so no Kotlin source changes were needed; generalized one stale "Jitsi 10.x" comment in `JitsiCallManagerTest`. The build-time reconnect patch in `app/build.gradle.kts` matched the 12.1.5 minified bundle without any regex change. Refreshed the SDK version in `README.md` and `RELEASE_NOTES.md`. Verified `assembleDebug`, `testDebugUnitTest` (107 tests), `lintDebug` (only the informational 13.3.0-available advisory, deliberately deferred) and `assembleRelease` (per-ABI arm64-v8a/armeabi-v7a plus universal APKs) pass. Device/emulator verification of an actual call is still pending (none connected).
+- **Acceptance Criteria:**
+  - `gradle/libs.versions.toml` pins Jitsi Meet SDK 12.1.5 and the app builds with it
+  - Audio-only config, broadcast events and feature flags remain valid with no source changes
+  - The Jitsi reconnect patch applies to the 12.1.5 bundle without changes
+  - `assembleDebug`, `testDebugUnitTest`, `lintDebug` and `assembleRelease` pass
+  - Manual: smoke-test an audio-only call on a device/emulator
+
+### Task_47_RefreshAndroidxDependencies: Refresh Lifecycle, Compose and Navigation 3 libraries.
+- **Status:** COMPLETED
+- **Updates:** Bumped `lifecycleRuntimeKtx`, `lifecycleViewmodelCompose` and `lifecycleRuntimeCompose` from 2.11.0 to 2.11.1, `composeBom` from 2026.09.00 to 2026.11.01 (Compose 1.13.0) and `navigation3Ui`/`navigation3Runtime` from 1.2.1 to 1.2.2 in `gradle/libs.versions.toml`. The new Compose artifacts require compileSdk 37.1+, so `app/build.gradle.kts` now sets `minorApiLevel = 2` on the existing compileSdk 37 while leaving `minSdk` 26 and `targetSdk` 37 unchanged; Android SDK platform 37.2 was installed locally because no 37.1+ platform and no `sdkmanager` were available. Updated the SDK-level lines in `README.md` and `RELEASE_NOTES.md`. No Kotlin/Compose source changes were needed; Navigation 3 1.2.2 keeps the same back-stack and `NavDisplay` APIs. Verified clean `assembleDebug`, `testDebugUnitTest` (107 tests), `lintDebug` (0 errors; only the pre-existing informational Jitsi 13.3.0 advisory) and `assembleRelease` (per-ABI arm64-v8a/armeabi-v7a plus universal APKs) pass, with both configuration cache disabled and enabled.
+- **Acceptance Criteria:**
+  - `gradle/libs.versions.toml` pins Lifecycle 2.11.1, Compose BOM 2026.11.01 and Navigation 3 1.2.2
+  - `compileSdk` uses minor level 37.2 without changing minSdk/targetSdk or app metadata behavior
+  - Navigation 3 and Compose sources compile unchanged against the new versions
+  - `assembleDebug`, `testDebugUnitTest`, `lintDebug` and `assembleRelease` pass
+  - Manual: smoke-test navigation and the in-app SDK info label on a device/emulator
+
+### Task_48_BumpVersionTo16: Bump application version to 1.6 (code 6).
+- **Status:** COMPLETED
+- **Updates:** Changed `appVersionName` to `1.6` and `appVersionCode` to `6` in `app/build.gradle.kts`; the derived `appReleaseTag` is now `V1.6`. Synchronized the version, code, tag, build bullet, output names and checkout snippet in `RELEASE_NOTES.md`. `appReleaseDate` was intentionally left at `2026-11-17` because no new release date was specified. `AppInfoMetadataTest` needs no change because it asserts relationships rather than fixed release numbers. Verified clean `assembleDebug`, `testDebugUnitTest` (107 tests), `lintDebug` (0 errors; 30 pre-existing warnings) and `assembleRelease` pass; release outputs are `HelmChatRisen-1.6-release-arm64-v8a.apk`, `HelmChatRisen-1.6-release-armeabi-v7a.apk` and the universal `HelmChatRisen-1.6-release.apk`. The verification run needed a larger Gradle daemon heap and fewer workers because the default 2 GiB heap hit OOM in D8/R8/lint.
+- **Acceptance Criteria:**
+  - `app/build.gradle.kts` declares versionName `1.6` and versionCode `6`
+  - `BuildConfig` exposes the new version/code/tag and release artifacts use the `1.6` names
+  - `RELEASE_NOTES.md` matches the declared release metadata and output names
+  - `assembleDebug`, `testDebugUnitTest`, `lintDebug` and `assembleRelease` pass
