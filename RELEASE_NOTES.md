@@ -301,12 +301,13 @@ management, and applies the latest invite-copy and PiP-position UI changes.
   version reports it.
 - Local debug APK output under `/app/debug/` and raw `.agent/*logcat*.txt`
   captures are ignored by Git.
+- Android Gradle Plugin is pinned to 9.5.2 in the version catalog.
 
 ### Verification
 
 - Final candidate tree: `./gradlew testDebugUnitTest assembleDebug lintDebug
   --console=plain` passed with 178 JVM tests (0 failures, 0 errors, 0 skipped),
-  lint reported 0 errors / 26 warnings, and debug APKs were produced for
+  lint reported 0 errors / 25 warnings, and debug APKs were produced for
   `arm64-v8a`, `armeabi-v7a` and universal.
 - `./gradlew assembleRelease --console=plain` and, in a separate invocation,
   `./gradlew bundleRelease --console=plain` also passed, producing the three
@@ -359,7 +360,7 @@ The following capabilities are carried forward into the current 1.6 build.
 
 ## Build & packaging
 
-- Gradle Kotlin DSL, version catalog and AGP 9; app source compatibility is
+- Gradle Kotlin DSL, version catalog and AGP 9.5.2; app source compatibility is
   Java 11 while the Gradle daemon JVM toolchain is 21.
 - SDK levels: `compileSdk 37.2` / `targetSdk 37` / `minSdk 26` (required by
   Jitsi Meet SDK 12.1.5 and Compose 1.13.0).

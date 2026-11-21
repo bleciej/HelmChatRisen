@@ -35,7 +35,7 @@ Riders need reliable voice communication, not video. HelmChat strips everything 
 | VoIP          | Jitsi Meet SDK 12.1.5 (audio-only)                                              |
 | Audio routing | Android `AudioManager`, Bluetooth SCO/HFP                                       |
 | Persistence   | DataStore Preferences (recent rooms), SharedPreferences (language < Android 13) |
-| Build         | Gradle 9.6.0 (Kotlin DSL), AGP 9.5.1, version catalog                           |
+| Build         | Gradle 9.6.0 (Kotlin DSL), AGP 9.5.2, version catalog                           |
 | SDK levels    | compileSdk 37.2 / targetSdk 37 / minSdk 26                                      |
 
 ## Project layout
