@@ -25,7 +25,7 @@
     <string name="home_join">Anslut till samtal</string>
     <string name="home_join_hint">Endast röstanslutning — ingen video, mindre data och längre batteritid.</string>
     <string name="home_invite">Bjud in</string>
-    <string name="home_invite_message">Gå med i min HelmChat-intercom!\nRum: %1$s\nLänk: %2$s</string>
+    <string name="home_invite_message">Gå med i mitt HelmChat-samtal!\nRum: %1$s\nLänk: %2$s</string>
 
     <!-- Call screen -->
     <string name="call_connecting">Ansluter…</string>

@@ -25,7 +25,7 @@
     <string name="home_join">Csatlakozás a híváshoz</string>
     <string name="home_join_hint">Csak hangkapcsolat — nincs videó, kevesebb adat és hosszabb akkumulátor-élettartam.</string>
     <string name="home_invite">Meghívás</string>
-    <string name="home_invite_message">Csatlakozz a HelmChat interkomomhoz!\nSzoba: %1$s\nLink: %2$s</string>
+    <string name="home_invite_message">Csatlakozz a HelmChat-beli beszélgetésemhez!\nSzoba: %1$s\nLink: %2$s</string>
 
     <!-- Call screen -->
     <string name="call_connecting">Csatlakozás…</string>

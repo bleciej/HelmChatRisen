@@ -397,4 +397,23 @@ class JitsiCallManagerTest {
         assertFalse(canChangeMute(isLeaving = false, callState = CallState.Ending))
         assertFalse(canChangeMute(isLeaving = true, callState = CallState.Connected(room, url)))
     }
+
+    /** A failed or finished call must never be revived by a late Jitsi termination event. */
+    @Test
+    fun terminalCallState_coversFailureAndFinishedStates() {
+        assertTrue(isTerminalCallState(CallState.Idle))
+        assertTrue(isTerminalCallState(CallState.Ending))
+        assertTrue(isTerminalCallState(CallState.Error(messageResId = 0)))
+
+        assertFalse(isTerminalCallState(CallState.Connecting("ride", "https://server")))
+        assertFalse(isTerminalCallState(CallState.Connected("ride", "https://server")))
+        assertFalse(isTerminalCallState(CallState.Reconnecting("ride", "https://server")))
+    }
+
+    /** The error must stay visible long enough to read, but not block a new call indefinitely. */
+    @Test
+    fun errorDisplayTimeout_isBounded() {
+        assertTrue(JitsiCallManager.ERROR_DISPLAY_TIMEOUT_MS >= 2_000L)
+        assertTrue(JitsiCallManager.ERROR_DISPLAY_TIMEOUT_MS <= 10_000L)
+    }
 }

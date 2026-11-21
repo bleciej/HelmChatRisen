@@ -168,9 +168,9 @@ fun CallScreen(
 }
 
 /**
- * Portrait call layout: status header, large microphone control, audio-route selector and the
- * prominent end-call button. Short windows use reduced control sizes while keeping every target
- * large enough for gloved operation.
+ * Portrait call layout: status header, Picture-in-Picture and invite actions in opposite top
+ * corners, large microphone control, audio-route selector and the prominent end-call button. Short
+ * windows use reduced control sizes while keeping every target large enough for gloved operation.
  *
  * @param state the call status, mute state and audio route displayed to the rider.
  * @param onToggleMute invoked when the rider taps the microphone control.
@@ -330,23 +330,27 @@ private fun CallContent(
             }
         }
 
+        IconButton(
+            onClick = onEnterPictureInPicture,
+            enabled = !state.isEnding,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(top = 8.dp, start = 8.dp)
+                .size(64.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.PictureInPictureAlt,
+                contentDescription = stringResource(R.string.call_pip_enter),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(30.dp),
+            )
+        }
+
         Row(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(top = 8.dp, end = 8.dp),
         ) {
-            IconButton(
-                onClick = onEnterPictureInPicture,
-                enabled = !state.isEnding,
-                modifier = Modifier.size(64.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.PictureInPictureAlt,
-                    contentDescription = stringResource(R.string.call_pip_enter),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(30.dp),
-                )
-            }
             IconButton(
                 onClick = onInvite,
                 enabled = !state.isEnding,

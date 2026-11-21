@@ -2,6 +2,7 @@ package dev.communicator.helmchatrisen.audio
 
 import android.bluetooth.BluetoothProfile
 import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -115,6 +116,80 @@ class AudioDeviceSelectionTest {
         assertNull(
             headsetKindFromAudioDevices(
                 listOf(AudioDeviceCandidate(AudioDeviceInfo.TYPE_BUILTIN_SPEAKER, "Phone")),
+            ),
+        )
+    }
+
+    @Test
+    fun lastScoDeviceRemoval_confirmsBluetoothDisconnect() {
+        val removed = listOf(
+            AudioDeviceCandidate(AudioDeviceInfo.TYPE_BLUETOOTH_SCO, "Helmet"),
+            AudioDeviceCandidate(AudioDeviceInfo.TYPE_BLUETOOTH_SCO, "Helmet"),
+        )
+        val remaining = listOf(
+            AudioDeviceCandidate(AudioDeviceInfo.TYPE_BUILTIN_SPEAKER, "Phone"),
+        )
+
+        assertTrue(hasBluetoothScoDevice(removed))
+        assertFalse(hasBluetoothScoDevice(remaining))
+        assertTrue(
+            shouldConfirmBluetoothDisconnectFromDevices(
+                removedDevices = removed,
+                remainingDevices = remaining,
+            ),
+        )
+    }
+
+    @Test
+    fun removalWithAnotherScoDevice_keepsTheBluetoothRoute() {
+        val removed = listOf(
+            AudioDeviceCandidate(AudioDeviceInfo.TYPE_BLUETOOTH_SCO, "Helmet A"),
+        )
+        val remaining = listOf(
+            AudioDeviceCandidate(AudioDeviceInfo.TYPE_BLUETOOTH_SCO, "Helmet B"),
+        )
+
+        assertFalse(
+            shouldConfirmBluetoothDisconnectFromDevices(
+                removedDevices = removed,
+                remainingDevices = remaining,
+            ),
+        )
+    }
+
+    @Test
+    fun wiredOnlyRemoval_doesNotConfirmBluetoothDisconnect() {
+        val removed = listOf(
+            AudioDeviceCandidate(AudioDeviceInfo.TYPE_WIRED_HEADSET, "Wired headset"),
+        )
+        val remaining = listOf(
+            AudioDeviceCandidate(AudioDeviceInfo.TYPE_BUILTIN_SPEAKER, "Phone"),
+        )
+
+        assertFalse(
+            shouldConfirmBluetoothDisconnectFromDevices(
+                removedDevices = removed,
+                remainingDevices = remaining,
+            ),
+        )
+    }
+
+    /**
+     * While stale Bluetooth signals are suppressed, an SCO device must not be counted as a wired
+     * headset. Otherwise the router would stop SCO and publish a nameless intercom route instead of
+     * routing to the phone speaker.
+     */
+    @Test
+    fun suppressedBluetooth_scoDeviceIsNotAWiredHeadset() {
+        val scoOnly = listOf(
+            AudioDeviceCandidate(AudioDeviceInfo.TYPE_BLUETOOTH_SCO, "Helmet intercom"),
+            AudioDeviceCandidate(AudioDeviceInfo.TYPE_BUILTIN_SPEAKER, "Phone"),
+        )
+
+        assertFalse(hasNonBluetoothHeadsetDevice(scoOnly))
+        assertTrue(
+            hasNonBluetoothHeadsetDevice(
+                scoOnly + AudioDeviceCandidate(AudioDeviceInfo.TYPE_WIRED_HEADSET, "Wired headset"),
             ),
         )
     }
@@ -355,5 +430,361 @@ class AudioDeviceSelectionTest {
                 addedKind = HeadsetKind.WIRED,
             ),
         )
+    }
+
+    /**
+     * Mode recovery must be limited to an active call that has lost communication mode, so teardown
+     * and callbacks from a finished call cannot put the device back into call audio.
+     */
+    @Test
+    fun communicationMode_isReassertedOnlyForAnActiveCall() {
+        assertTrue(
+            shouldReassertCommunicationMode(
+                isRoutingActive = true,
+                currentMode = AudioManager.MODE_NORMAL,
+            ),
+        )
+        // MODE_RINGTONE is telephony-owned: an incoming GSM call keeps its own audio path.
+        assertFalse(
+            shouldReassertCommunicationMode(
+                isRoutingActive = true,
+                currentMode = AudioManager.MODE_RINGTONE,
+            ),
+        )
+        assertFalse(
+            shouldReassertCommunicationMode(
+                isRoutingActive = true,
+                currentMode = AudioManager.MODE_IN_COMMUNICATION,
+            ),
+        )
+        assertFalse(
+            shouldReassertCommunicationMode(
+                isRoutingActive = true,
+                currentMode = AudioManager.MODE_IN_CALL,
+            ),
+        )
+        assertFalse(
+            shouldReassertCommunicationMode(
+                isRoutingActive = false,
+                currentMode = AudioManager.MODE_NORMAL,
+            ),
+        )
+        assertFalse(
+            shouldReassertCommunicationMode(
+                isRoutingActive = false,
+                currentMode = AudioManager.MODE_IN_COMMUNICATION,
+            ),
+        )
+    }
+
+    /**
+     * Only an explicit disconnect event confirmed by a negative lookup may latch suppression. A
+     * negative lookup on its own can be a transient profile/permission race and must not block a
+     * still-connected helmet from reconnecting.
+     */
+    @Test
+    fun staleBluetoothSignals_requireAnExplicitDisconnectAndANegativeLookup() {
+        assertTrue(
+            shouldIgnoreStaleBluetoothSignals(
+                disconnectReported = true,
+                profileStillConnected = false,
+            ),
+        )
+        assertFalse(
+            shouldIgnoreStaleBluetoothSignals(
+                disconnectReported = true,
+                profileStillConnected = true,
+            ),
+        )
+        assertFalse(
+            shouldIgnoreStaleBluetoothSignals(
+                disconnectReported = false,
+                profileStillConnected = false,
+            ),
+        )
+        assertFalse(
+            shouldIgnoreStaleBluetoothSignals(
+                disconnectReported = false,
+                profileStillConnected = true,
+            ),
+        )
+    }
+
+    /**
+     * Reproduces the disconnect report: SCO and cached profile still claim a headset, but once the
+     * lookup disproves it the route must fall back to the phone speaker.
+     */
+    @Test
+    fun confirmedBluetoothDisconnect_ignoresStaleScoSignalsAndUsesSpeaker() {
+        val kind = resolveHeadsetKind(
+            hasScoAudioDevice = true,
+            hasHeadsetAudioDevice = false,
+            isBluetoothScoOn = true,
+            hasBluetoothHeadsetProfile = true,
+            isWiredHeadsetOn = false,
+            includeBluetooth = false,
+        )
+
+        assertEquals(HeadsetKind.NONE, kind)
+        assertEquals(RouteTarget.SPEAKER, resolveRouteTarget(kind, isSpeakerphoneForced = false))
+    }
+
+    /**
+     * The speaker toggle and wired handover close SCO themselves. The resulting disconnect
+     * broadcast must not be read as the headset going away, otherwise an empty HFP lookup detaches
+     * the still-paired headset until Bluetooth is restarted. The local stop token is the only proof
+     * of an app-initiated teardown: a rider's forced-speaker choice is not passed to this rule.
+     */
+    @Test
+    @Suppress("DEPRECATION")
+    fun expectedScoDisconnect_isDetectedOnlyForAppInitiatedTeardown() {
+        assertTrue(
+            isExpectedScoDisconnect(
+                state = AudioManager.SCO_AUDIO_STATE_DISCONNECTED,
+                scoStopRequestedLocally = true,
+            ),
+        )
+        // A helmet that physically disconnects during speaker playback is a genuine disconnect,
+        // even though the rider has chosen the built-in speaker.
+        assertFalse(
+            isExpectedScoDisconnect(
+                state = AudioManager.SCO_AUDIO_STATE_DISCONNECTED,
+                scoStopRequestedLocally = false,
+            ),
+        )
+        assertFalse(
+            isExpectedScoDisconnect(
+                state = AudioManager.SCO_AUDIO_STATE_CONNECTED,
+                scoStopRequestedLocally = true,
+            ),
+        )
+    }
+
+    /**
+     * A wired or USB headset remains a valid route after the Bluetooth helmet disconnects, so the
+     * stale SCO signals must not force the phone speaker while another intercom is still attached.
+     */
+    @Test
+    fun confirmedBluetoothDisconnect_keepsAWiredHeadsetAsTheActiveFamily() {
+        assertEquals(
+            HeadsetKind.WIRED,
+            resolveHeadsetKind(
+                hasScoAudioDevice = true,
+                hasHeadsetAudioDevice = true,
+                isBluetoothScoOn = true,
+                hasBluetoothHeadsetProfile = true,
+                isWiredHeadsetOn = false,
+                includeBluetooth = false,
+            ),
+        )
+    }
+
+    @Test
+    fun staleBluetoothSuppression_latchesUntilAFreshPositiveLookup() {
+        assertFalse(
+            advanceStaleBluetoothSignalSuppression(
+                profileStillConnected = false,
+                disconnectConfirmedByLookup = false,
+                previouslyIgnoring = false,
+            ),
+        )
+        assertTrue(
+            advanceStaleBluetoothSignalSuppression(
+                profileStillConnected = false,
+                disconnectConfirmedByLookup = true,
+                previouslyIgnoring = false,
+            ),
+        )
+        // The latch survives later lookups that cannot prove a new connection.
+        assertTrue(
+            advanceStaleBluetoothSignalSuppression(
+                profileStillConnected = false,
+                disconnectConfirmedByLookup = false,
+                previouslyIgnoring = true,
+            ),
+        )
+        // A fresh positive lookup releases it immediately, even if a disconnect is still pending.
+        assertFalse(
+            advanceStaleBluetoothSignalSuppression(
+                profileStillConnected = true,
+                disconnectConfirmedByLookup = true,
+                previouslyIgnoring = true,
+            ),
+        )
+    }
+
+    /**
+     * Drives the full teardown sequence with pure decisions: a confirmed HFP disconnect latches the
+     * suppression, stopping SCO emits a stale DISCONNECTED broadcast, and the route must stay on the
+     * speaker until a fresh positive connection releases the latch.
+     */
+    @Test
+    @Suppress("DEPRECATION")
+    fun confirmedDisconnect_staleScoBroadcastKeepsTheSpeakerRoute() {
+        var ignoringStaleBluetoothSignals = advanceStaleBluetoothSignalSuppression(
+            profileStillConnected = false,
+            disconnectConfirmedByLookup = shouldIgnoreStaleBluetoothSignals(
+                disconnectReported = true,
+                profileStillConnected = false,
+            ),
+            previouslyIgnoring = false,
+        )
+        assertTrue(ignoringStaleBluetoothSignals)
+
+        // The stale SCO shutdown is not app-initiated once the local stop token is consumed, but the
+        // latched decision must still hide the lingering device and SCO flag.
+        assertFalse(
+            isExpectedScoDisconnect(
+                state = AudioManager.SCO_AUDIO_STATE_DISCONNECTED,
+                scoStopRequestedLocally = false,
+            ),
+        )
+        val staleKind = resolveHeadsetKind(
+            hasScoAudioDevice = true,
+            hasHeadsetAudioDevice = false,
+            isBluetoothScoOn = true,
+            hasBluetoothHeadsetProfile = true,
+            isWiredHeadsetOn = false,
+            includeBluetooth = !ignoringStaleBluetoothSignals,
+        )
+        assertEquals(HeadsetKind.NONE, staleKind)
+        assertEquals(RouteTarget.SPEAKER, resolveRouteTarget(staleKind, isSpeakerphoneForced = false))
+
+        ignoringStaleBluetoothSignals = advanceStaleBluetoothSignalSuppression(
+            profileStillConnected = true,
+            disconnectConfirmedByLookup = false,
+            previouslyIgnoring = ignoringStaleBluetoothSignals,
+        )
+        assertFalse(ignoringStaleBluetoothSignals)
+        assertEquals(
+            HeadsetKind.BLUETOOTH,
+            resolveHeadsetKind(
+                hasScoAudioDevice = true,
+                hasHeadsetAudioDevice = false,
+                isBluetoothScoOn = true,
+                hasBluetoothHeadsetProfile = true,
+                isWiredHeadsetOn = false,
+                includeBluetooth = !ignoringStaleBluetoothSignals,
+            ),
+        )
+    }
+
+    /**
+     * With no headset broadcast at all, the watchdog must keep checking while the call is active
+     * and must never re-arm itself after teardown clears the active flag.
+     */
+    @Test
+    fun communicationModeRecovery_keepsRunningOnlyWhileRoutingIsActive() {
+        val isRoutingActive = true
+        repeat(3) {
+            assertTrue(shouldContinueModeRecovery(isRoutingActive))
+            assertTrue(
+                shouldReassertCommunicationMode(
+                    isRoutingActive = isRoutingActive,
+                    currentMode = AudioManager.MODE_NORMAL,
+                ),
+            )
+        }
+
+        assertFalse(shouldContinueModeRecovery(isRoutingActive = false))
+        assertFalse(
+            shouldReassertCommunicationMode(
+                isRoutingActive = false,
+                currentMode = AudioManager.MODE_NORMAL,
+            ),
+        )
+    }
+
+    /**
+     * Background A2DP music can suspend and resume the SCO channel. While another headset family is
+     * still attached, the named intercom route must survive a transient error so the control keeps
+     * showing the helmet instead of the generic intercom label.
+     */
+    @Test
+    fun scoError_keepsTheLastNamedHeadsetRoute() {
+        assertEquals(
+            AudioRoutingState.HeadsetConnected("Helmet intercom"),
+            resolveScoErrorRoutingState(
+                kind = HeadsetKind.BLUETOOTH,
+                lastConnectedName = "Helmet intercom",
+            ),
+        )
+        assertEquals(
+            AudioRoutingState.HeadsetConnected("USB headset"),
+            resolveScoErrorRoutingState(
+                kind = HeadsetKind.WIRED,
+                lastConnectedName = "USB headset",
+            ),
+        )
+    }
+
+    @Test
+    fun scoError_withoutANameWaitsForTheHeadset() {
+        assertEquals(
+            AudioRoutingState.ConnectingBluetooth,
+            resolveScoErrorRoutingState(
+                kind = HeadsetKind.BLUETOOTH,
+                lastConnectedName = null,
+            ),
+        )
+        assertEquals(
+            AudioRoutingState.ConnectingBluetooth,
+            resolveScoErrorRoutingState(
+                kind = HeadsetKind.WIRED,
+                lastConnectedName = null,
+            ),
+        )
+    }
+
+    @Test
+    fun scoError_withoutAnyHeadsetIsReportedAsAnError() {
+        assertEquals(
+            AudioRoutingState.Error("Bluetooth SCO connection failed"),
+            resolveScoErrorRoutingState(
+                kind = HeadsetKind.NONE,
+                lastConnectedName = null,
+            ),
+        )
+    }
+
+    /**
+     * A helmet reconnect observed only as a newly enumerated SCO output must clear the confirmed
+     * disconnect latch. Otherwise a later unforced re-detection would hide the returning intercom.
+     */
+    @Test
+    fun deviceCallbackReconnect_clearsStaleBluetoothSuppression() {
+        assertTrue(
+            shouldClearBluetoothSuppressionOnReconnect(
+                forcedKind = HeadsetKind.BLUETOOTH,
+                hasScoDevice = true,
+            ),
+        )
+        assertFalse(
+            shouldClearBluetoothSuppressionOnReconnect(
+                forcedKind = HeadsetKind.BLUETOOTH,
+                hasScoDevice = false,
+            ),
+        )
+        assertFalse(
+            shouldClearBluetoothSuppressionOnReconnect(
+                forcedKind = HeadsetKind.WIRED,
+                hasScoDevice = true,
+            ),
+        )
+        assertFalse(
+            shouldClearBluetoothSuppressionOnReconnect(
+                forcedKind = null,
+                hasScoDevice = true,
+            ),
+        )
+    }
+
+    /** Teardown must not overwrite an audio mode owned by an incoming or active GSM call. */
+    @Test
+    fun teardown_keepsTelephonyOwnedAudioMode() {
+        assertTrue(shouldRestoreNormalAudioMode(AudioManager.MODE_NORMAL))
+        assertTrue(shouldRestoreNormalAudioMode(AudioManager.MODE_IN_COMMUNICATION))
+        assertFalse(shouldRestoreNormalAudioMode(AudioManager.MODE_IN_CALL))
+        assertFalse(shouldRestoreNormalAudioMode(AudioManager.MODE_RINGTONE))
     }
 }

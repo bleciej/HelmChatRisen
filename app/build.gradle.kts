@@ -14,7 +14,7 @@ val appVersionCode = 6
 val appReleaseTag = "V$appVersionName"
 
 /** Release date published for this build (kept in sync with RELEASE_NOTES.md). */
-val appReleaseDate = "2026-11-17"
+val appReleaseDate = "2026-11-21"
 
 /** Minimum supported API level, also shown in the Application info dialog. */
 val appMinSdk = 26
@@ -86,8 +86,9 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     signingConfigs {
-        // Release signing is supplied out-of-band and is never committed.
-        // Provide via Gradle properties (e.g. ~/.gradle/gradle.properties) or -P:
+        // Release signing is supplied out-of-band and is never committed. When no properties
+        // are provided the release variant builds unsigned; verify APKs with apksigner before
+        // publishing. Provide via Gradle properties (e.g. ~/.gradle/gradle.properties) or -P:
         //   releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword
         val signingPropertyNames = listOf(
             "releaseStoreFile",

@@ -25,7 +25,7 @@
     <string name="home_join">Присоединиться к звонку</string>
     <string name="home_join_hint">Только голосовая связь — без видео, меньше данных и дольше работает батарея.</string>
     <string name="home_invite">Пригласить</string>
-    <string name="home_invite_message">Присоединяйтесь к моему интеркому HelmChat!\nКомната: %1$s\nСсылка: %2$s</string>
+    <string name="home_invite_message">Присоединяйтесь к моему разговору в HelmChat!\nКомната: %1$s\nСсылка: %2$s</string>
 
     <!-- Call screen -->
     <string name="call_connecting">Подключение…</string>

@@ -7,8 +7,8 @@ import org.junit.Test
 
 /**
  * Covers the stateful rider-speaker choice used by the router: a Bluetooth route timeout latches
- * the speaker, a late SCO event cannot restart retries, and only a real disconnect or an explicit
- * rider toggle clears the latch.
+ * the speaker, a late SCO event cannot restart retries, a real headset connection releases the
+ * timeout latch, and only a confirmed disconnect or an explicit rider toggle clears a rider choice.
  */
 class RoutePreferenceTest {
 
@@ -67,6 +67,43 @@ class RoutePreferenceTest {
             headsetDisconnected = false,
             kind = HeadsetKind.NONE,
         )
+
+        assertFalse(cleared)
+        assertTrue(preference.isSpeakerForced)
+    }
+
+    @Test
+    fun headsetConnectionAfterTimeout_resumesAutomaticHeadsetRouting() {
+        val preference = RoutePreference()
+
+        preference.latchSpeakerAfterTimeout()
+        val cleared = preference.clearTimeoutLatchOnHeadsetConnected(HeadsetKind.BLUETOOTH)
+
+        assertTrue(cleared)
+        assertFalse(preference.isSpeakerForced)
+        assertEquals(
+            RouteTarget.HEADSET,
+            resolveRouteTarget(HeadsetKind.BLUETOOTH, preference.isSpeakerForced),
+        )
+    }
+
+    @Test
+    fun plainRedetectionAfterTimeout_keepsTheSpeakerFallback() {
+        val preference = RoutePreference()
+
+        preference.latchSpeakerAfterTimeout()
+        val cleared = preference.clearTimeoutLatchOnHeadsetConnected(null)
+
+        assertFalse(cleared)
+        assertTrue(preference.isSpeakerForced)
+    }
+
+    @Test
+    fun explicitSpeakerChoice_survivesAHeadsetConnectionEvent() {
+        val preference = RoutePreference()
+
+        preference.setForced(enable = true)
+        val cleared = preference.clearTimeoutLatchOnHeadsetConnected(HeadsetKind.BLUETOOTH)
 
         assertFalse(cleared)
         assertTrue(preference.isSpeakerForced)

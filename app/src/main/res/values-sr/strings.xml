@@ -25,7 +25,7 @@
     <string name="home_join">Придружи се разговору</string>
     <string name="home_join_hint">Веза само за звук — без видеа, мање података и дуже трајање батерије.</string>
     <string name="home_invite">Позови</string>
-    <string name="home_invite_message">Придружи се мом HelmChat интеркому!\nСоба: %1$s\nВеза: %2$s</string>
+    <string name="home_invite_message">Придружи се мом разговору на HelmChat-у!\nСоба: %1$s\nВеза: %2$s</string>
 
     <!-- Call screen -->
     <string name="call_connecting">Повезивање…</string>

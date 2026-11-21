@@ -25,7 +25,7 @@
     <string name="home_join">הצטרף לשיחה</string>
     <string name="home_join_hint">חיבור קולי בלבד — ללא וידאו, פחות נתונים וסוללה לאורך זמן.</string>
     <string name="home_invite">הזמן</string>
-    <string name="home_invite_message">הצטרף לאינטרקום HelmChat שלי!\nחדר: %1$s\nקישור: %2$s</string>
+    <string name="home_invite_message">הצטרף לשיחה שלי ב-HelmChat!\nחדר: %1$s\nקישור: %2$s</string>
 
     <!-- Call screen -->
     <string name="call_connecting">מתחבר…</string>

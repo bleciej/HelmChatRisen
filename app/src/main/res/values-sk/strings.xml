@@ -25,7 +25,7 @@
     <string name="home_join">Pripojiť sa k hovoru</string>
     <string name="home_join_hint">Spojenie iba hlasom — žiadne video, menej dát a dlhšia výdrž batérie.</string>
     <string name="home_invite">Pozvať</string>
-    <string name="home_invite_message">Pripoj sa k môjmu interkomu HelmChat!\nMiestnosť: %1$s\nOdkaz: %2$s</string>
+    <string name="home_invite_message">Pripoj sa k mojemu rozhovoru v HelmChati!\nMiestnosť: %1$s\nOdkaz: %2$s</string>
 
     <!-- Call screen -->
     <string name="call_connecting">Pripájanie…</string>

@@ -22,6 +22,11 @@
         JitsiCallManager.sanitizeServerUrl always upgrades the curated presets to https and keeps a
         rider-typed http:// scheme only for unknown servers.
     -->
+    <!--
+        MainActivity uses the reviewed compact PiP layout. The optional source-rect hint is
+        deliberately omitted, so the recommendation is suppressed here: this lint version reports
+        PictureInPictureIssue at the application element, not at the activity.
+    -->
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -33,6 +38,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.HelmChatRisen"
         android:usesCleartextTraffic="true"
+        tools:ignore="PictureInPictureIssue"
         tools:targetApi="33">
 
         <service
@@ -40,6 +46,11 @@
             android:exported="false"
             android:foregroundServiceType="microphone" />
 
+        <!--
+            Portrait is locked for glove-friendly controls while MainActivity supports
+            Picture-in-Picture with a compact layout; both activity-level lint warnings are
+            deliberate and suppressed below.
+        -->
         <activity
             android:name=".MainActivity"
             android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"

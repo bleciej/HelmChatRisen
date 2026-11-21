@@ -75,10 +75,14 @@ internal fun resolveBroadcastHeadsetKind(
  * the sticky SCO broadcast handling, and Bluetooth always outranks wired/USB routes.
  *
  * @param hasScoAudioDevice whether the platform enumerated a Bluetooth SCO output.
- * @param hasHeadsetAudioDevice whether wired, headphone or USB headset outputs were enumerated.
+ * @param hasHeadsetAudioDevice whether wired, headphone or USB headset outputs were enumerated,
+ *   excluding Bluetooth SCO so suppressed Bluetooth signals cannot select a wired route.
  * @param isBluetoothScoOn whether the legacy SCO switch is currently on.
  * @param hasBluetoothHeadsetProfile whether a cached HFP profile lookup found a headset.
  * @param isWiredHeadsetOn the deprecated wired-headset flag, used only on older releases.
+ * @param includeBluetooth whether stale SCO/profile signals may still select a Bluetooth route.
+ *   A confirmed HFP disconnect clears this so a lingering SCO channel cannot keep the intercom
+ *   route alive, while wired/USB headsets are still considered normally.
  * @return the family the router must activate, or [HeadsetKind.NONE] when nothing is attached.
  */
 internal fun resolveHeadsetKind(
@@ -87,8 +91,10 @@ internal fun resolveHeadsetKind(
     isBluetoothScoOn: Boolean,
     hasBluetoothHeadsetProfile: Boolean,
     isWiredHeadsetOn: Boolean,
+    includeBluetooth: Boolean = true,
 ): HeadsetKind = when {
-    hasScoAudioDevice || isBluetoothScoOn || hasBluetoothHeadsetProfile -> HeadsetKind.BLUETOOTH
+    includeBluetooth &&
+        (hasScoAudioDevice || isBluetoothScoOn || hasBluetoothHeadsetProfile) -> HeadsetKind.BLUETOOTH
     hasHeadsetAudioDevice || isWiredHeadsetOn -> HeadsetKind.WIRED
     else -> HeadsetKind.NONE
 }
@@ -114,6 +120,103 @@ internal fun shouldReleaseScoForHeadsetKind(kind: HeadsetKind): Boolean =
  */
 internal fun shouldRefreshBluetoothProfileAfterEvent(state: Int): Boolean =
     !isBluetoothHeadsetConnected(state)
+
+/**
+ * Reports whether an explicit disconnect event and a negative HFP lookup together prove that the
+ * Bluetooth headset is gone. A negative lookup on its own can be a transient profile/permission
+ * race and must not latch suppression, otherwise a still-connected helmet cannot reconnect. Once a
+ * real disconnect is confirmed, stale SCO and cached-profile signals must stop keeping the intercom
+ * route alive.
+ *
+ * @param disconnectReported whether a plug/profile/SCO event reported a disconnect.
+ * @param profileStillConnected whether the fresh HFP lookup still found a headset.
+ * @return `true` when Bluetooth signals must be ignored for the next route decision.
+ */
+internal fun shouldIgnoreStaleBluetoothSignals(
+    disconnectReported: Boolean,
+    profileStillConnected: Boolean,
+): Boolean = disconnectReported && !profileStillConnected
+
+/**
+ * Reports whether a newly enumerated Bluetooth SCO output proves that a helmet reconnected after a
+ * confirmed HFP disconnect. The router must drop stale-signal suppression in that case, otherwise a
+ * later unforced re-detection could hide the returning headset and fall back to the phone speaker.
+ *
+ * @param forcedKind the headset family reported by the device-added callback.
+ * @param hasScoDevice whether the platform enumerated a Bluetooth SCO output.
+ * @return `true` when stale Bluetooth signals must no longer be ignored.
+ */
+internal fun shouldClearBluetoothSuppressionOnReconnect(
+    forcedKind: HeadsetKind?,
+    hasScoDevice: Boolean,
+): Boolean = forcedKind == HeadsetKind.BLUETOOTH && hasScoDevice
+
+/**
+ * Reports whether intercom teardown may restore the normal audio mode and clear the speaker flag.
+ * An active or ringing GSM call owns those settings, so the router must leave them untouched.
+ *
+ * @param currentMode the mode reported by [AudioManager.getMode].
+ * @return `true` when no telephony call owns the audio mode.
+ */
+internal fun shouldRestoreNormalAudioMode(currentMode: Int): Boolean =
+    currentMode != AudioManager.MODE_IN_CALL && currentMode != AudioManager.MODE_RINGTONE
+
+/**
+ * Advances the latched stale-Bluetooth suppression after a completed HFP lookup. The decision must
+ * survive later broadcasts and retries: a confirmed disconnect also makes the router stop SCO, and
+ * the resulting DISCONNECTED event still reports the stale device and profile signals. A fresh
+ * positive lookup clears the latch immediately so a newly attached helmet is routed normally.
+ *
+ * @param profileStillConnected whether the fresh HFP lookup still found a headset.
+ * @param disconnectConfirmedByLookup whether this lookup proved that the headset is gone.
+ * @param previouslyIgnoring whether stale Bluetooth signals were already being ignored.
+ * @return `true` while stale SCO and cached-profile signals must continue to be ignored.
+ */
+internal fun advanceStaleBluetoothSignalSuppression(
+    profileStillConnected: Boolean,
+    disconnectConfirmedByLookup: Boolean,
+    previouslyIgnoring: Boolean,
+): Boolean = !profileStillConnected && (disconnectConfirmedByLookup || previouslyIgnoring)
+
+/**
+ * Reports whether an SCO disconnect is the expected side effect of this router closing the channel
+ * (speaker toggle or wired handover) rather than the headset actually going away. Such broadcasts
+ * must not refresh the HFP profile with a disconnect flag or clear the rider's speaker choice: the
+ * resulting empty profile lookup would mark a still-connected headset as absent until Bluetooth is
+ * restarted. A rider's forced-speaker preference is deliberately not evidence: a physical
+ * disconnect during speaker playback must still be detected.
+ *
+ * @param state the SCO state reported by the broadcast.
+ * @param scoStopRequestedLocally whether the router itself called `stopBluetoothSco()`.
+ * @return `true` when the disconnect must be treated as app-initiated.
+ */
+@Suppress("DEPRECATION")
+internal fun isExpectedScoDisconnect(
+    state: Int,
+    scoStopRequestedLocally: Boolean,
+): Boolean = when (state) {
+    AudioManager.SCO_AUDIO_STATE_DISCONNECTED -> scoStopRequestedLocally
+    else -> false
+}
+
+/**
+ * Chooses the route state published after a transient SCO error. While a headset is still attached
+ * the last named route is kept, so the call control does not fall back to the generic intercom label
+ * during the bounded retry that reconnects the channel. Only a failure with no headset at all is
+ * reported as an error.
+ *
+ * @param kind the headset family still detected after the error.
+ * @param lastConnectedName the device name from the last successful headset route, or `null`.
+ * @return the routing state to publish.
+ */
+internal fun resolveScoErrorRoutingState(
+    kind: HeadsetKind,
+    lastConnectedName: String?,
+): AudioRoutingState = when {
+    kind == HeadsetKind.NONE -> AudioRoutingState.Error("Bluetooth SCO connection failed")
+    lastConnectedName != null -> AudioRoutingState.HeadsetConnected(lastConnectedName)
+    else -> AudioRoutingState.ConnectingBluetooth
+}
 
 /**
  * Reports whether a confirmed disconnect leaves no headset and must reset the rider's speaker
@@ -143,6 +246,33 @@ internal fun shouldScheduleBluetoothRouteRetry(
     isRoutingActive: Boolean,
     isSpeakerphoneForced: Boolean,
 ): Boolean = (isRoutingActive && kind == HeadsetKind.BLUETOOTH && !isSpeakerphoneForced)
+
+/**
+ * Reports whether an active intercom must restore [AudioManager.MODE_IN_COMMUNICATION]. The app
+ * deliberately takes no audio focus, so focus callbacks cannot restore the mode when a transient
+ * focus holder or an OEM audio policy resets it mid-call. Telephony-owned modes
+ * ([AudioManager.MODE_IN_CALL] and [AudioManager.MODE_RINGTONE]) are left untouched so an incoming
+ * phone call keeps its own audio path from the first ring.
+ *
+ * @param isRoutingActive whether the router currently owns call audio.
+ * @param currentMode the audio mode reported by the platform.
+ * @return `true` only while routing is active and the mode is neither communication nor telephony.
+ */
+internal fun shouldReassertCommunicationMode(isRoutingActive: Boolean, currentMode: Int): Boolean =
+    isRoutingActive &&
+        currentMode != AudioManager.MODE_IN_COMMUNICATION &&
+        currentMode != AudioManager.MODE_IN_CALL &&
+        currentMode != AudioManager.MODE_RINGTONE
+
+/**
+ * Reports whether the periodic communication-mode recovery must stay scheduled after a check. The
+ * decision depends only on the active call, never on a headset event, so a stable conference with
+ * no broadcasts still keeps the recovery watchdog alive.
+ *
+ * @param isRoutingActive whether the router currently owns call audio.
+ * @return `true` while another recovery check must be scheduled.
+ */
+internal fun shouldContinueModeRecovery(isRoutingActive: Boolean): Boolean = isRoutingActive
 
 /**
  * Reports whether newly published audio devices can change the active headset route. Non-headset
@@ -190,6 +320,20 @@ internal fun selectHeadsetDevice(
 }
 
 /**
+ * Reports whether the supplied devices contain a wired or USB headset, explicitly excluding
+ * Bluetooth SCO. SCO devices are part of [isHeadsetDeviceType], but while stale Bluetooth signals
+ * are suppressed they must not be misclassified as a wired route: that would stop SCO and publish a
+ * nameless headset route instead of falling back to the phone speaker after a real disconnect.
+ *
+ * @param devices the audio devices to inspect.
+ * @return `true` when at least one wired or USB headset is present.
+ */
+internal fun hasNonBluetoothHeadsetDevice(devices: Iterable<AudioDeviceCandidate>): Boolean =
+    devices.any { (deviceType, _) ->
+        deviceType != AudioDeviceInfo.TYPE_BLUETOOTH_SCO && isHeadsetDeviceType(deviceType)
+    }
+
+/**
  * Derives a headset family directly from devices reported by an audio-device callback. Platform
  * callbacks can arrive before a corresponding plug/profile broadcast, so this avoids waiting for a
  * separate query that may still return a stale device list.
@@ -200,11 +344,33 @@ internal fun selectHeadsetDevice(
  */
 internal fun headsetKindFromAudioDevices(devices: Iterable<AudioDeviceCandidate>): HeadsetKind? =
     when {
-        devices.any { (deviceType, _) -> deviceType == AudioDeviceInfo.TYPE_BLUETOOTH_SCO } ->
-            HeadsetKind.BLUETOOTH
+        hasBluetoothScoDevice(devices) -> HeadsetKind.BLUETOOTH
         devices.any { (deviceType, _) -> isHeadsetDeviceType(deviceType) } -> HeadsetKind.WIRED
         else -> null
     }
+
+/**
+ * Reports whether the platform still enumerates a Bluetooth SCO output. This is the most reliable
+ * disconnect signal on devices whose HFP profile query is unsupported by the OEM Bluetooth stack.
+ *
+ * @param devices the devices currently enumerated by [AudioManager.getDevices].
+ * @return `true` when at least one Bluetooth SCO output is available.
+ */
+internal fun hasBluetoothScoDevice(devices: Iterable<AudioDeviceCandidate>): Boolean =
+    devices.any { (deviceType, _) -> deviceType == AudioDeviceInfo.TYPE_BLUETOOTH_SCO }
+
+/**
+ * Reports whether a device-removal callback proves that the last Bluetooth HFP route is gone. A
+ * single SCO removal must not clear the cached HFP state while another SCO output remains.
+ *
+ * @param removedDevices devices reported as removed by the platform callback.
+ * @param remainingDevices devices still enumerated after the removal.
+ * @return `true` when the router must drop its cached HFP state and suppress stale Bluetooth signals.
+ */
+internal fun shouldConfirmBluetoothDisconnectFromDevices(
+    removedDevices: Iterable<AudioDeviceCandidate>,
+    remainingDevices: Iterable<AudioDeviceCandidate>,
+): Boolean = hasBluetoothScoDevice(removedDevices) && !hasBluetoothScoDevice(remainingDevices)
 
 /**
  * Maps a platform audio device to the testable projection used by [selectHeadsetDevice].

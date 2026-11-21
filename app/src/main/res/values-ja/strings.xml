@@ -25,7 +25,7 @@
     <string name="home_join">通話に参加</string>
     <string name="home_join_hint">音声のみの接続 — 動画なし、データ使用量が少なく、バッテリーが長持ちします。</string>
     <string name="home_invite">招待</string>
-    <string name="home_invite_message">HelmChat インターコムに参加しよう！\nルーム: %1$s\nリンク: %2$s</string>
+    <string name="home_invite_message">HelmChat での会話に参加しよう！\nルーム: %1$s\nリンク: %2$s</string>
 
     <!-- Call screen -->
     <string name="call_connecting">接続中…</string>

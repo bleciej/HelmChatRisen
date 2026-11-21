@@ -25,7 +25,7 @@
     <string name="home_join">Deelnemen aan gesprek</string>
     <string name="home_join_hint">Alleen spraak — geen video, minder data en een langere batterijduur.</string>
     <string name="home_invite">Uitnodigen</string>
-    <string name="home_invite_message">Doe mee met mijn HelmChat-intercom!\nKamer: %1$s\nLink: %2$s</string>
+    <string name="home_invite_message">Doe mee met mijn HelmChat-gesprek!\nKamer: %1$s\nLink: %2$s</string>
 
     <!-- Call screen -->
     <string name="call_connecting">Verbinden…</string>

@@ -25,7 +25,7 @@
     <string name="home_join">Anruf beitreten</string>
     <string name="home_join_hint">Nur-Sprach-Verbindung — kein Video, weniger Daten und längere Akkulaufzeit.</string>
     <string name="home_invite">Einladen</string>
-    <string name="home_invite_message">Komm in meinen HelmChat-Interkom!\nRaum: %1$s\nLink: %2$s</string>
+    <string name="home_invite_message">Nimm an meiner HelmChat-Unterhaltung teil!\nRaum: %1$s\nLink: %2$s</string>
 
     <!-- Call screen -->
     <string name="call_connecting">Verbinden…</string>

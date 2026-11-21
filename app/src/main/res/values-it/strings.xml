@@ -25,7 +25,7 @@
     <string name="home_join">Partecipa alla chiamata</string>
     <string name="home_join_hint">Connessione solo voce — nessun video, meno dati e batteria più duratura.</string>
     <string name="home_invite">Invita</string>
-    <string name="home_invite_message">Unisciti al mio intercom HelmChat!\nStanza: %1$s\nLink: %2$s</string>
+    <string name="home_invite_message">Unisciti alla mia conversazione su HelmChat!\nStanza: %1$s\nLink: %2$s</string>
 
     <!-- Call screen -->
     <string name="call_connecting">Connessione…</string>

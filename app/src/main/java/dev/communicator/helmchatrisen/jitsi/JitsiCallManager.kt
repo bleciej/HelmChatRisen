@@ -88,6 +88,13 @@ class JitsiCallManager {
         private const val CONNECT_TIMEOUT_MS = 30_000L
 
         /**
+         * How long a failed call stays on screen before the manager publishes [CallState.Idle] and
+         * the call route is dismissed. Native cleanup happens immediately; only the error message
+         * is kept visible for this short window.
+         */
+        internal const val ERROR_DISPLAY_TIMEOUT_MS = 4_000L
+
+        /**
          * How long the app waits for Jitsi to acknowledge a hang-up before it falls back to
          * resetting the embedded view. Jitsi's external API is asynchronous, so disposing the view
          * immediately would drop the HANG_UP event and leave the microphone capture alive.
@@ -194,6 +201,7 @@ class JitsiCallManager {
 
     private var connectTimeout: Runnable? = null
     private var reconnectTimeout: Runnable? = null
+    private var errorIdleTimeout: Runnable? = null
     private var reconnectPaused = false
 
     /** Remaining watchdog time is measured from elapsed realtime so offline time is not counted. */
@@ -316,6 +324,7 @@ class JitsiCallManager {
         isLeaving = false
         activeView = view
         cancelHangUpTimeouts()
+        cancelErrorIdleTimeout()
         _isMuted.value = isMuted
         resetParticipantSession()
 
@@ -340,8 +349,7 @@ class JitsiCallManager {
             scheduleConnectTimeout(roomName)
         } catch (e: Exception) {
             Timber.e(e, "Failed to join room '$roomName'")
-            cancelConnectTimeout()
-            _callState.value = CallState.Error(e.message ?: "Failed to join room")
+            failCall(CallState.Error(message = e.message ?: "Failed to join room"))
         }
     }
 
@@ -425,7 +433,9 @@ class JitsiCallManager {
             return true
         }
         val room = currentRoomName
-        if (room == null && _callState.value is CallState.Idle) {
+        if (room == null &&
+            (_callState.value is CallState.Idle || _callState.value is CallState.Error)
+        ) {
             Timber.d("No active Jitsi call to leave")
             return false
         }
@@ -440,6 +450,7 @@ class JitsiCallManager {
         cancelConnectTimeout()
         cancelReconnectTimeout()
         cancelHangUpTimeouts()
+        cancelErrorIdleTimeout()
         reconnectPaused = false
         unregisterNetworkCallback()
         // Publish Ending before sending the external API events so a fast acknowledgement cannot
@@ -468,6 +479,56 @@ class JitsiCallManager {
         releaseActiveView()
         finalizeSession()
         _callState.value = CallState.Idle
+    }
+
+    /**
+     * Tears down a failed call while keeping its error message visible briefly.
+     *
+     * The Jitsi view, broadcast receiver and network callback are released immediately so a failed
+     * connection cannot keep the microphone, audio route or foreground service alive. The state
+     * changes to [CallState.Idle] after [ERROR_DISPLAY_TIMEOUT_MS] so the rider can read the error
+     * before Navigation 3 removes the call route.
+     *
+     * @param error the error state carrying the message for the rider.
+     */
+    private fun failCall(error: CallState.Error) {
+        if (_callState.value is CallState.Error) return
+        Timber.e("Call failed: ${error.message ?: error.messageResId}")
+        isLeaving = true
+        cancelConnectTimeout()
+        cancelReconnectTimeout()
+        cancelHangUpTimeouts()
+        cancelErrorIdleTimeout()
+        reconnectPaused = false
+        unregisterNetworkCallback()
+        sendBroadcast(BroadcastIntentHelper.buildSetAudioMutedIntent(true))
+        sendBroadcast(BroadcastIntentHelper.buildHangUpIntent())
+        releaseActiveView()
+        finalizeSession()
+        _callState.value = error
+        scheduleIdleAfterError()
+    }
+
+    /**
+     * Publishes [CallState.Idle] after a failed call so the call route is dismissed only once the
+     * error message has been shown.
+     */
+    private fun scheduleIdleAfterError() {
+        cancelErrorIdleTimeout()
+        val runnable = Runnable {
+            errorIdleTimeout = null
+            if (_callState.value is CallState.Error) {
+                _callState.value = CallState.Idle
+            }
+        }
+        errorIdleTimeout = runnable
+        mainHandler.postDelayed(runnable, ERROR_DISPLAY_TIMEOUT_MS)
+    }
+
+    /** Cancels a pending transition from a failed call back to [CallState.Idle]. */
+    private fun cancelErrorIdleTimeout() {
+        errorIdleTimeout?.let(mainHandler::removeCallbacks)
+        errorIdleTimeout = null
     }
 
     /**
@@ -500,6 +561,7 @@ class JitsiCallManager {
         cancelHangUpTimeouts()
         cancelConnectTimeout()
         cancelReconnectTimeout()
+        cancelErrorIdleTimeout()
         reconnectPaused = false
         isLeaving = false
         teardownGeneration = Long.MAX_VALUE
@@ -617,9 +679,10 @@ class JitsiCallManager {
             .setFeatureFlag("notifications.enabled", false)
             .setFeatureFlag("call-integration.enabled", false)
             .setFeatureFlag("pip.enabled", false)
-            // HelmChat owns audio focus/mode/routing through BluetoothAudioRouter so music can
-            // keep playing (ducked) and navigation prompts do not end the call. Hiding Jitsi's
-            // audio-device picker prevents a route choice the native layer cannot apply.
+            // HelmChat owns audio mode/routing through BluetoothAudioRouter and deliberately does
+            // not request audio focus, so background radio/music keeps its own focus and is not
+            // explicitly ducked by this app.
+            // Hiding Jitsi's audio-device picker prevents a route choice the native layer cannot apply.
             .setFeatureFlag("audio-focus.disabled", true)
             .setFeatureFlag("audio-device-button.enabled", false)
 
@@ -790,7 +853,7 @@ class JitsiCallManager {
         val runnable = Runnable {
             if (_callState.value is CallState.Connecting && currentRoomName == roomName) {
                 Timber.w("Connection to room '$roomName' timed out")
-                _callState.value = CallState.Error(messageResId = R.string.call_error_connect_timeout)
+                failCall(CallState.Error(messageResId = R.string.call_error_connect_timeout))
             }
         }
         connectTimeout = runnable
@@ -836,7 +899,7 @@ class JitsiCallManager {
             reconnectDeadline.clear()
             if (isReconnectWatchdogState(_callState.value) && currentRoomName == roomName) {
                 Timber.w("Reconnect to room '$roomName' timed out")
-                _callState.value = CallState.Error(messageResId = R.string.call_error_reconnect_timeout)
+                failCall(CallState.Error(messageResId = R.string.call_error_reconnect_timeout))
             }
         }
         reconnectTimeout = runnable
@@ -922,10 +985,15 @@ class JitsiCallManager {
 
     /**
      * Translates a Jitsi broadcast event into call-state, mute-state and participant updates.
+     * Events arriving after a failed call are discarded so a late termination cannot revive it.
      *
      * @param event the event to apply.
      */
     private fun handleBroadcastEvent(event: BroadcastEvent) {
+        if (_callState.value is CallState.Error) {
+            Timber.d("Ignoring ${event.type} after the call failed")
+            return
+        }
         if (shouldIgnoreEventWhileLeaving(event)) return
         when (event.type) {
             BroadcastEvent.Type.CONFERENCE_WILL_JOIN -> handleConferenceWillJoin()
@@ -1020,6 +1088,10 @@ class JitsiCallManager {
         if (isLeaving) {
             Timber.i("Jitsi confirmed the hang-up")
             finishHangUp()
+            return
+        }
+        if (isTerminalCallState(_callState.value)) {
+            Timber.d("Ignoring termination in terminal call state ${_callState.value::class.simpleName}")
             return
         }
         cancelConnectTimeout()
@@ -1194,6 +1266,18 @@ internal fun shouldIgnoreTerminationBeforeJoin(
  */
 internal fun isReconnectWatchdogState(callState: CallState): Boolean =
     callState is CallState.Reconnecting || callState is CallState.Connecting
+
+/**
+ * Reports whether a call state is terminal and must not be revived by a late Jitsi event.
+ *
+ * [CallState.Ending] is terminal for ordinary events; only the explicit hang-up confirmation is
+ * allowed through by the manager while it is active.
+ *
+ * @param callState the state to classify.
+ * @return `true` for [CallState.Idle], [CallState.Ending] and [CallState.Error].
+ */
+internal fun isTerminalCallState(callState: CallState): Boolean =
+    callState is CallState.Idle || callState is CallState.Ending || callState is CallState.Error
 
 /**
  * Reports whether a WILL_JOIN event transfers the join deadline from the short connect timeout to

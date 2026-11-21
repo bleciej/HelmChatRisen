@@ -25,7 +25,7 @@
     <string name="home_join">Pievienoties zvanam</string>
     <string name="home_join_hint">Savienojums tikai ar balsi — nav video, mazāk datu un ilgāks akumulatora darbības laiks.</string>
     <string name="home_invite">Uzaicināt</string>
-    <string name="home_invite_message">Pievienojies manam HelmChat interkomam!\nTelpa: %1$s\nSaite: %2$s</string>
+    <string name="home_invite_message">Pievienojies manai HelmChat sarunai!\nTelpa: %1$s\nSaite: %2$s</string>
 
     <!-- Call screen -->
     <string name="call_connecting">Savieno…</string>

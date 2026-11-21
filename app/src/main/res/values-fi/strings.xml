@@ -25,7 +25,7 @@
     <string name="home_join">Liity puheluun</string>
     <string name="home_join_hint">Vain puheyhteys — ei videota, vähemmän dataa ja pidempi akunkesto.</string>
     <string name="home_invite">Kutsu</string>
-    <string name="home_invite_message">Liity HelmChat-intercomiini!\nHuone: %1$s\nLinkki: %2$s</string>
+    <string name="home_invite_message">Liity HelmChat-keskusteluuni!\nHuone: %1$s\nLinkki: %2$s</string>
 
     <!-- Call screen -->
     <string name="call_connecting">Yhdistetään…</string>

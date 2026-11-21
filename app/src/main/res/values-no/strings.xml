@@ -25,7 +25,7 @@
     <string name="home_join">Bli med i samtalen</string>
     <string name="home_join_hint">Kun tale — ingen video, mindre data og lengre batteritid.</string>
     <string name="home_invite">Inviter</string>
-    <string name="home_invite_message">Bli med i HelmChat-intercomen min!\nRom: %1$s\nLenke: %2$s</string>
+    <string name="home_invite_message">Bli med i samtalen min på HelmChat!\nRom: %1$s\nLenke: %2$s</string>
 
     <!-- Call screen -->
     <string name="call_connecting">Kobler til…</string>

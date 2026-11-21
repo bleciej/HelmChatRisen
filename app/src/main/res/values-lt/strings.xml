@@ -25,7 +25,7 @@
     <string name="home_join">Prisijungti prie skambučio</string>
     <string name="home_join_hint">Ryšys tik balsu — jokio vaizdo, mažiau duomenų ir ilgesnė baterijos veikimo trukmė.</string>
     <string name="home_invite">Pakviesti</string>
-    <string name="home_invite_message">Prisijunk prie mano HelmChat interkomo!\nPatalpa: %1$s\nNuoroda: %2$s</string>
+    <string name="home_invite_message">Prisijunk prie mano HelmChat pokalbio!\nPatalpa: %1$s\nNuoroda: %2$s</string>
 
     <!-- Call screen -->
     <string name="call_connecting">Jungiamasi…</string>

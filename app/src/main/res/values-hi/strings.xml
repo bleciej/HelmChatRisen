@@ -25,7 +25,7 @@
     <string name="home_join">कॉल में शामिल हों</string>
     <string name="home_join_hint">केवल आवाज़ कनेक्शन — कोई वीडियो नहीं, कम डेटा और लंबी बैटरी लाइफ।</string>
     <string name="home_invite">आमंत्रित करें</string>
-    <string name="home_invite_message">मेरे HelmChat इंटरकॉम से जुड़ें!\nकमरा: %1$s\nलिंक: %2$s</string>
+    <string name="home_invite_message">HelmChat पर मेरी बातचीत में शामिल हों!\nकमरा: %1$s\nलिंक: %2$s</string>
 
     <!-- Call screen -->
     <string name="call_connecting">कनेक्ट हो रहा है…</string>

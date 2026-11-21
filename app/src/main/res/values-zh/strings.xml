@@ -25,7 +25,7 @@
     <string name="home_join">加入通话</string>
     <string name="home_join_hint">仅语音连接——无视频、流量更少、续航更长。</string>
     <string name="home_invite">邀请</string>
-    <string name="home_invite_message">加入我的 HelmChat 对讲！\n房间：%1$s\n链接：%2$s</string>
+    <string name="home_invite_message">加入我在 HelmChat 的对话！\n房间：%1$s\n链接：%2$s</string>
 
     <!-- Call screen -->
     <string name="call_connecting">正在连接…</string>
