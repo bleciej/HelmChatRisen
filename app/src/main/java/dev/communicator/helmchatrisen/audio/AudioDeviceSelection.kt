@@ -27,6 +27,26 @@ internal data class AudioDeviceCandidate(
     val name: String? = null,
 )
 
+/** Sample rate of the silent voice-communication keep-alive track. */
+internal const val SILENT_COMMUNICATION_SAMPLE_RATE_HZ: Int = 16_000
+
+/** Duration of the streamed silent buffer, in milliseconds. */
+private const val SILENT_COMMUNICATION_BUFFER_MS = 50
+
+/** Bytes in one mono 16-bit PCM sample used by the silent keep-alive track. */
+internal const val BYTES_PER_SILENCE_SAMPLE: Int = 2
+
+/**
+ * Returns the byte size of the streamed silence buffer used by the voice-communication keep-alive.
+ *
+ * @return a positive, even byte count holding at least one complete PCM frame.
+ */
+internal fun silentCommunicationBufferSize(): Int {
+    val frames = (SILENT_COMMUNICATION_SAMPLE_RATE_HZ * SILENT_COMMUNICATION_BUFFER_MS / 1_000)
+        .coerceAtLeast(minimumValue = 1)
+    return frames * BYTES_PER_SILENCE_SAMPLE
+}
+
 /**
  * Translates the sticky wired-headset plug broadcast into a headset family. Only a plug event is
  * used directly: an unplug must fall back to re-detection because a Bluetooth headset may still be

@@ -877,4 +877,14 @@ class AudioDeviceSelectionTest {
         assertFalse(shouldRestoreNormalAudioMode(AudioManager.MODE_IN_CALL))
         assertFalse(shouldRestoreNormalAudioMode(AudioManager.MODE_RINGTONE))
     }
+
+    /** The silent communication keep-alive buffer must contain whole PCM frames only. */
+    @Test
+    fun silentCommunicationBufferSize_containsWholePcmFrames() {
+        val size = silentCommunicationBufferSize()
+
+        assertEquals(1_600, size)
+        assertEquals(0, size % 2)
+        assertTrue(size > 0)
+    }
 }

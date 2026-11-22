@@ -724,3 +724,13 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - Local SCO-stop side effects cannot clear rider or timeout route state; telephony-owned routes survive teardown/reset unchanged
   - Background-media limitation is documented and physical verification with a radio/player and real helmet remains a manual release step
   - JVM tests, debug build, lint, release APK build and AAB build pass after the fix
+
+### Task_82_MoveMediaWithCallRouteForSingleRider: Keep route parity with multi-rider calls.
+- **Status:** COMPLETED
+- **Updates:** The rider confirmed that the speaker toggle moves both intercom and player/radio audio when two or more people are in the room, but with only the initiating rider it moves only the call audio. Jitsi opens a `USAGE_VOICE_COMMUNICATION` playback track only after another participant joins, and OEM policies use that active track to move `STREAM_MUSIC` with the call route. Added a silent, streaming voice-communication `AudioTrack` that starts with routing and is released on teardown/new-call reset, including when telephony owns the platform mode. It carries only zero samples, takes no audio focus and does not duck other apps. Added `silentCommunicationBufferSize()` plus a JVM test for whole PCM frames. Updated `BluetoothAudioRouter` and release-note KDocs/docs to describe the new route-parity behavior. Verification: `git diff --check` clean; `testDebugUnitTest assembleDebug lintDebug` passed with 182 JVM tests (0 failures/errors/skips) and lint 0 errors / 25 warnings; `bundleRelease` and `assembleRelease` passed in separate invocations; `connectedAndroidTest` passed on `R5CX9339VAJ` with 1 test after stale incompatible test packages were removed. Release outputs are unsigned because the four signing properties were not supplied. Physical S25 retest with a real helmet intercom and running player/radio remains a manual release step.
+- **Acceptance Criteria:**
+  - A lone rider's speaker toggle uses the same platform call-route policy as a multi-rider call
+  - The silent keep-alive starts once per call, releases on teardown/reset, and never takes audio focus
+  - Telephony-owned audio mode/route handling remains unchanged
+  - JVM tests, debug build, lint, release APK build and AAB build pass after the change
+  - Instrumented test passes on the connected S25; physical route-parity retest with a real helmet intercom and running player/radio remains manual

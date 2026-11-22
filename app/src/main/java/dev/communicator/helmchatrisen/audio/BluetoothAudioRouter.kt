@@ -10,9 +10,12 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.media.AudioAttributes
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
+import android.media.AudioFormat
 import android.media.AudioManager
+import android.media.AudioTrack
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -124,11 +127,14 @@ internal fun queryConnectedBluetoothHeadset(
  * Jitsi's own `AudioModeModule` audio focus handling is disabled (`audio-focus.disabled`), so
  * this router owns the in-call audio mode and the helmet route. It deliberately does not request
  * audio focus and does not explicitly duck other apps: radio/music keeps its own focus and is not
- * paused by this intercom. `MODE_IN_COMMUNICATION` remains required for WebRTC voice processing
- * and communication-device priority, but Android/OEM policies may independently attenuate
- * `STREAM_MUSIC` in this mode. Background-media level must therefore be verified on target devices
- * rather than assumed from the absence of a focus request. The route toggle changes only this
- * call's communication output; another app's media stream stays with the platform/player.
+ * paused by this intercom. Jitsi opens a `USAGE_VOICE_COMMUNICATION` playback track only when a
+ * remote participant is present; some OEM audio policies use that track to move `STREAM_MUSIC`
+ * with the call route. To keep the toggle identical with one rider, this router holds a silent
+ * voice-communication track for the whole call. It carries no audible samples and takes no focus.
+ * `MODE_IN_COMMUNICATION` remains required for WebRTC voice processing and communication-device
+ * priority, but Android/OEM policies may independently attenuate `STREAM_MUSIC` in this mode.
+ * Background-media level must therefore be verified on target devices rather than assumed from
+ * the absence of a focus request.
  */
 class BluetoothAudioRouter private constructor(private val context: Context) {
 
@@ -207,6 +213,15 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
      */
     private var lastConnectedHeadsetName: String? = null
     private var bluetoothScoStartRequested = false
+
+    /**
+     * Silent voice-communication playback that keeps OEM call-route policy active even when the
+     * rider is alone in the Jitsi room and no remote audio track exists.
+     */
+    private var silentCommunicationTrack: AudioTrack? = null
+
+    /** Daemon thread that keeps the silent voice-communication track supplied with zero samples. */
+    private var silentCommunicationWriter: Thread? = null
 
     /**
      * Set immediately before this router stops SCO itself so the resulting DISCONNECTED broadcast is
@@ -552,12 +567,13 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
     }
 
     /**
-     * Starts audio routing and enters communication mode once. This app takes no audio focus and
-     * therefore does not explicitly duck or pause background radio/music; platform call policies
-     * may still attenuate `STREAM_MUSIC` in communication mode. The mode is not reasserted while the
-     * call runs, because repeated transitions keep OEM audio policies ducking or pausing the media
-     * stream. The initial device family is detected here so a headset connected before the call is
-     * routed without waiting for another broadcast.
+     * Starts audio routing, enters communication mode once and starts the silent voice-communication
+     * keep-alive. This app takes no audio focus and therefore does not explicitly duck or pause
+     * background radio/music; platform call policies may still attenuate `STREAM_MUSIC` in
+     * communication mode. The mode is not reasserted while the call runs, because repeated
+     * transitions keep OEM audio policies ducking or pausing the media stream. The initial device
+     * family is detected here so a headset connected before the call is routed without waiting for
+     * another broadcast.
      */
     fun startAudioRouting() {
         if (isRoutingActive) {
@@ -574,6 +590,9 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
         registerAudioDeviceCallback()
 
         enterCommunicationMode()
+        if (shouldRestoreNormalAudioMode(audioManager.mode)) {
+            startSilentCommunicationTrack()
+        }
         currentHeadsetKind = detectHeadsetKind()
 
         refreshBluetoothHeadsetCache()
@@ -598,6 +617,92 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
     }
 
     /**
+     * Starts a silent `USAGE_VOICE_COMMUNICATION` playback track for the call. Jitsi only creates
+     * that kind of playback track after another rider joins. Without it, OEM policies keep
+     * `STREAM_MUSIC` on A2DP when the rider switches this call to the phone speaker. A daemon thread
+     * streams only zero samples into the track, so it is inaudible and takes no audio focus.
+     */
+    private fun startSilentCommunicationTrack() {
+        if (silentCommunicationTrack != null) return
+        val track = try {
+            val format = AudioFormat.Builder()
+                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                .setSampleRate(SILENT_COMMUNICATION_SAMPLE_RATE_HZ)
+                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                .build()
+            val attributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                .build()
+            val minBufferSize = AudioTrack.getMinBufferSize(
+                SILENT_COMMUNICATION_SAMPLE_RATE_HZ,
+                AudioFormat.CHANNEL_OUT_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
+            )
+            AudioTrack.Builder()
+                .setAudioAttributes(attributes)
+                .setAudioFormat(format)
+                .setBufferSizeInBytes(maxOf(silentCommunicationBufferSize(), minBufferSize))
+                .setTransferMode(AudioTrack.MODE_STREAM)
+                .build()
+        } catch (e: Exception) {
+            Timber.w(e, "Could not create the silent voice-communication keep-alive")
+            return
+        }
+
+        silentCommunicationTrack = track
+        val silence = ByteArray(track.bufferSizeInFrames * BYTES_PER_SILENCE_SAMPLE)
+        try {
+            track.play()
+            silentCommunicationWriter = Thread(
+                {
+                    try {
+                        while (!Thread.currentThread().isInterrupted) {
+                            if (track.write(silence, 0, silence.size, AudioTrack.WRITE_BLOCKING) <= 0) {
+                                break
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Timber.w(e, "Silent voice-communication keep-alive stopped writing")
+                    }
+                },
+                "helm-silent-communication",
+            ).apply {
+                isDaemon = true
+                start()
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "Could not start the silent voice-communication keep-alive")
+            stopSilentCommunicationTrack()
+            return
+        }
+        Timber.i("Started silent voice-communication keep-alive for one-rider route parity")
+    }
+
+    /**
+     * Releases the silent voice-communication track and its writer. Teardown always releases this
+     * app-owned stream, even when a telephony call owns the platform's route and audio mode.
+     */
+    private fun stopSilentCommunicationTrack() {
+        silentCommunicationWriter?.interrupt()
+        silentCommunicationWriter = null
+        val track = silentCommunicationTrack ?: return
+        silentCommunicationTrack = null
+        try {
+            if (track.state != AudioTrack.STATE_UNINITIALIZED) {
+                track.stop()
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "Could not stop the silent voice-communication keep-alive")
+        }
+        try {
+            track.release()
+        } catch (e: Exception) {
+            Timber.w(e, "Could not release the silent voice-communication keep-alive")
+        }
+    }
+
+    /**
      * Stops audio routing, releases Bluetooth SCO and resets audio mode unless an active or ringing
      * GSM call owns them. No audio focus was taken by this router, so there is nothing to abandon.
      */
@@ -610,6 +715,8 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
         isRoutingActive = false
         cancelRouteRetry()
         isScoStopIntentional = false
+        // This stream belongs to the app, not to telephony, so always release it.
+        stopSilentCommunicationTrack()
         val restoreNormalRoute = shouldRestoreNormalAudioMode(audioManager.mode)
         if (restoreNormalRoute) {
             stopBluetoothSco()
@@ -643,6 +750,7 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
      */
     fun resetForNewCall() {
         cancelRouteRetry()
+        stopSilentCommunicationTrack()
         routePreference.setForced(enable = false)
         isScoStopIntentional = false
         ignoreStaleBluetoothSignals = false

@@ -260,6 +260,11 @@ management, and applies the latest invite-copy and PiP-position UI changes.
   transitions into call mode made OEM audio policies duck or pause the rider's
   player/radio; `MODE_IN_CALL` and `MODE_RINGTONE` remain telephony-owned,
   including during intercom teardown.
+- A silent, streaming `USAGE_VOICE_COMMUNICATION` playback track now stays active
+  for the whole call. Jitsi opens that kind of stream only after another rider
+  joins; without it, some OEM policies kept `STREAM_MUSIC` on A2DP when the lone
+  rider switched intercom audio to the phone speaker. The stream contains only
+  zero samples, takes no audio focus and does not duck other apps.
 
 #### Failed-call lifecycle
 
@@ -411,6 +416,12 @@ The following capabilities are carried forward into the current 1.6 build.
 - Signed-artifact check: `apksigner verify --print-certs <apk>` for each release
   APK; a missing signature means the signing properties were not supplied.
 - Static analysis/inspections in the IDE or CI are recommended as well.
+- Latest run (`2026-11-22`): 182 JVM tests pass with 0 failures/errors/skips;
+  lint reports 0 errors / 25 warnings; debug build, `bundleRelease`,
+  `assembleRelease` and `connectedAndroidTest` all pass. The single
+  instrumented test ran on `SM-S721B` / `R5CX9339VAJ` after stale incompatible
+  debug/test packages were removed from the device. All release outputs are
+  unsigned because the four signing properties were not supplied.
 
 ## Known limitations (current 1.6 build)
 
@@ -423,10 +434,13 @@ The following capabilities are carried forward into the current 1.6 build.
   media is still attenuated, the likely cause is platform/OEM communication-mode
   ducking rather than app audio focus; that finding must be recorded instead of
   claiming the symptom is fixed.
-- The in-call route button controls **intercom call audio only**. Closing SCO to
-  switch to the phone speaker lets Android restore A2DP, so background
-  radio/music may continue in the helmet; moving another app's media stream to
-  the phone speaker is intentionally not attempted. Logcat evidence from
+- The in-call route button is intended to move both the intercom call and the
+  rider's background radio/music. The silent voice-communication keep-alive
+  reproduces Jitsi's multi-rider playback state so OEM policies can apply the
+  same route to `STREAM_MUSIC` with one rider. Final confirmation on the
+  Samsung Galaxy S25 with a real helmet intercom and a running player is still
+  required; Android does not expose a public API to force another app's media
+  output, so this remains platform-policy dependent. Logcat evidence from
   `2026-11-22` shows A2DP suspension and `STREAM_MUSIC` suppression while SCO is
   active, with no focus/duck request from this app.
 - Real network-loss rejoin and multi-rider participant counting remain
