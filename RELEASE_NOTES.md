@@ -5,8 +5,8 @@
 | Version              | 1.6                              |
 | Version code         | 6                                |
 | Tag                  | `V1.6`                           |
-| Release date         | 2026-11-21                       |
-| Last updated         | 2026-11-21                       |
+| Release date         | 2026-11-22                       |
+| Last updated         | 2026-11-22                       |
 | Minimum Android      | 8.0 (API 26)                     |
 | Target / compile SDK | 37 / 37.2                        |
 | Application ID       | `dev.communicator.helmchatrisen` |
@@ -20,7 +20,7 @@ functionality and build/upgrade rules that apply to the current build.
 
 - [1.4 — 2026-11-14](#14--2026-11-14)
 - [1.5 — 2026-11-17](#15--2026-11-17)
-- [1.6 — 2026-11-21 (current)](#16--2026-11-21-current)
+- [1.6 — 2026-11-22 (current)](#16--2026-11-22-current)
 
 ## Release matrix
 
@@ -28,7 +28,7 @@ functionality and build/upgrade rules that apply to the current build.
 |---------|-------------:|--------|---------------------------------------|------------------------------------|-----------------|----------------------|
 | 1.4     | 4            | `V1.4` | 2026-11-14                            | `com.example.helmChatRisen`        | 7.0 (API 24)    | 37 / 37              |
 | 1.5     | 5            | `V1.5` | 2026-11-17 (tag commit 2026-11-19)    | `dev.communicator.helmchatrisen`   | 8.0 (API 26)    | 37 / 37              |
-| 1.6     | 6            | `V1.6` | 2026-11-21 (candidate 4b48505; tag pending) | `dev.communicator.helmchatrisen` | 8.0 (API 26) | 37 / 37.2 |
+| 1.6     | 6            | `V1.6` | 2026-11-22 (candidate 4b48505; tag pending) | `dev.communicator.helmchatrisen` | 8.0 (API 26) | 37 / 37.2 |
 
 ## 1.4 — 2026-11-14
 
@@ -188,7 +188,7 @@ in-app info dialog, and fixed Android App Bundle packaging.
 - Real-device verification was still needed for Bluetooth helmet routing, PiP
   continuity and multi-rider participant counting.
 
-## 1.6 — 2026-11-21 (current)
+## 1.6 — 2026-11-22 (current)
 
 > **Scope note:** branch HEAD `4b48505` contains the dependency bump,
 > routing/watchdog work and call-service cleanup. The follow-ups listed below
@@ -211,6 +211,9 @@ management, and applies the latest invite-copy and PiP-position UI changes.
 - **Audio focus removed:** neither HelmChat nor Jitsi requests or abandons
   audio focus, so background radio/music is not explicitly ducked or paused by
   the app.
+- **Background audio preserved:** communication mode is entered once at call
+  start; the mid-call watchdog and routing-callback reassertions were removed
+  after they caused player/radio audio to duck or disappear on some devices.
 - **Reconnect hardening:** failed OEM HFP lookups, last-SCO removal, noisy audio
   and reconnect events are handled without stale cache or latch state.
 - **UI updates:** invite text now uses "conversation/rozmowa" wording in all 30
@@ -252,9 +255,11 @@ management, and applies the latest invite-copy and PiP-position UI changes.
 - The app no longer requests or abandons audio focus, and Jitsi's own focus
   handling stays disabled. Platform communication-mode policies can still
   attenuate media on some devices.
-- Communication mode is reasserted from routing callbacks and by a bounded
-  watchdog while a call is active; `MODE_IN_CALL` and `MODE_RINGTONE` remain
-  owned by telephony, including during intercom teardown.
+- Communication mode is entered exactly once when routing starts. The review's
+  1 s recovery watchdog and callback reassertions were removed because repeated
+  transitions into call mode made OEM audio policies duck or pause the rider's
+  player/radio; `MODE_IN_CALL` and `MODE_RINGTONE` remain telephony-owned,
+  including during intercom teardown.
 
 #### Failed-call lifecycle
 
@@ -270,7 +275,16 @@ management, and applies the latest invite-copy and PiP-position UI changes.
 
 - Local SCO teardown for a speaker toggle or wired/USB handover is no longer
   mistaken for a physical headset disconnect, so toggling back restores the
-  helmet route.
+  helmet route. Device-removal and noisy-audio events emitted while the router
+  stops SCO are ignored; HFP/profile and plug events remain authoritative.
+- The local-stop token is now released only by the resulting SCO DISCONNECTED
+  broadcast (or a newly connected channel), not by intermediate CONNECTING
+  chatter. Only a genuine SCO disconnect can clear the rider's speaker choice,
+  and repeated headset re-enumeration can no longer bounce call audio back to
+  the helmet.
+- Switching back to the helmet re-checks headset availability instead of
+  trusting a remembered "no headset" state, and telephony-owned routes are left
+  untouched by both intercom teardown and the next-call reset.
 - A failed or unsupported HFP query is no longer treated as proof of a
   disconnect; enumerated SCO devices and real platform events decide the route.
 - Removing the last SCO output, or receiving noisy audio with no SCO output,
@@ -306,21 +320,28 @@ management, and applies the latest invite-copy and PiP-position UI changes.
 ### Verification
 
 - Final candidate tree: `./gradlew testDebugUnitTest assembleDebug lintDebug
-  --console=plain` passed with 178 JVM tests (0 failures, 0 errors, 0 skipped),
-  lint reported 0 errors / 25 warnings, and debug APKs were produced for
-  `arm64-v8a`, `armeabi-v7a` and universal.
+  --console=plain --no-daemon --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4096m
+  -Dfile.encoding=UTF-8"` passed with 181 JVM tests (0 failures, 0 errors,
+  0 skipped), lint reported 0 errors / 25 warnings, and debug APKs were produced
+  for `arm64-v8a`, `armeabi-v7a` and universal.
 - `./gradlew assembleRelease --console=plain` and, in a separate invocation,
   `./gradlew bundleRelease --console=plain` also passed, producing the three
   release APKs and the AAB named below. No signing properties were configured,
   so those current release outputs are unsigned and not publishable.
 - Coverage includes headset-family classification, tri-state HFP lookup,
-  stale-SCO suppression, local-stop detection, communication-mode guards and
-  watchdog, named-route retention during transient SCO errors, disconnect
+  stale-SCO suppression, local-stop token retirement, SCO-removal/noisy-event
+  suppression, one-shot communication-mode entry, named-route retention during
+  transient SCO errors, disconnect
   confirmation from device removal, speaker-latch release on reconnect,
   re-enumerated SCO suppression reset, telephony-owned teardown, terminal-state
   filtering and the bounded `Error` → `Idle` display window.
-- No device or emulator was attached for the final packaging pass, so
-  `connectedAndroidTest` and physical helmet/PiP checks were not repeated here.
+- A physical device (`R5CX9339VAJ`) was attached for the final packaging pass.
+  The first `connectedAndroidTest` attempt was blocked by the already-installed
+  app's different signature. After the user approved removing that install, a
+  second run completed successfully: 1 instrumented test passed with 0 failures
+  and 0 skipped. An `adb uninstall` attempt still reported
+  `DELETE_FAILED_INTERNAL_ERROR`, but the Gradle runner replaced the app and
+  executed the test. Physical helmet/PiP checks remain manual.
 
 ## Current feature baseline
 
@@ -397,9 +418,17 @@ The following capabilities are carried forward into the current 1.6 build.
   environment-dependent. The recent fixes still need a retest on the Samsung
   Galaxy S25 with the actual helmet intercom; available logs were captured with
   `Redmi Buds 5 Pro (Bartosz)`.
-- If background media is still attenuated during a call, the likely cause is
-  platform/OEM communication-mode ducking rather than app audio focus; that
-  finding must be recorded instead of claiming the symptom is fixed.
+- The one-shot communication-mode fix must be confirmed on the Samsung Galaxy
+  S25 with a player/radio already running before an intercom call. If background
+  media is still attenuated, the likely cause is platform/OEM communication-mode
+  ducking rather than app audio focus; that finding must be recorded instead of
+  claiming the symptom is fixed.
+- The in-call route button controls **intercom call audio only**. Closing SCO to
+  switch to the phone speaker lets Android restore A2DP, so background
+  radio/music may continue in the helmet; moving another app's media stream to
+  the phone speaker is intentionally not attempted. Logcat evidence from
+  `2026-11-22` shows A2DP suspension and `STREAM_MUSIC` suppression while SCO is
+  active, with no focus/duck request from this app.
 - Real network-loss rejoin and multi-rider participant counting remain
   unverified on device.
 - `meet.jit.si` may require moderator sign-in via the browser before joining

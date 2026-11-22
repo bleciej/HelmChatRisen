@@ -108,4 +108,29 @@ class RoutePreferenceTest {
         assertFalse(cleared)
         assertTrue(preference.isSpeakerForced)
     }
+
+    /**
+     * A speaker toggle causes SCO/device broadcasts while the helmet stays connected. Repeated
+     * re-enumeration must leave the rider's explicit route in force until another toggle or a real
+     * full disconnect.
+     */
+    @Test
+    fun explicitSpeakerChoice_survivesRepeatedBluetoothReenumeration() {
+        val preference = RoutePreference()
+
+        preference.setForced(enable = true)
+        repeat(3) {
+            assertFalse(preference.clearTimeoutLatchOnHeadsetConnected(HeadsetKind.BLUETOOTH))
+            assertFalse(
+                preference.clearOnDisconnect(
+                    headsetDisconnected = true,
+                    kind = HeadsetKind.BLUETOOTH,
+                ),
+            )
+            assertEquals(
+                RouteTarget.SPEAKER,
+                resolveRouteTarget(HeadsetKind.BLUETOOTH, preference.isSpeakerForced),
+            )
+        }
+    }
 }

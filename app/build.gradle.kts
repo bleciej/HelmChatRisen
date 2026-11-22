@@ -14,7 +14,7 @@ val appVersionCode = 6
 val appReleaseTag = "V$appVersionName"
 
 /** Release date published for this build (kept in sync with RELEASE_NOTES.md). */
-val appReleaseDate = "2026-11-21"
+val appReleaseDate = "2026-11-22"
 
 /** Minimum supported API level, also shown in the Application info dialog. */
 val appMinSdk = 26

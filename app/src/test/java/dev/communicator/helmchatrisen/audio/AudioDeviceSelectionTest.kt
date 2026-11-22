@@ -196,20 +196,38 @@ class AudioDeviceSelectionTest {
 
     @Test
     fun forcedSpeaker_outRanksEveryConnectedHeadset() {
-        assertEquals(RouteTarget.SPEAKER, resolveRouteTarget(HeadsetKind.BLUETOOTH, true))
-        assertEquals(RouteTarget.SPEAKER, resolveRouteTarget(HeadsetKind.WIRED, true))
+        assertEquals(
+            RouteTarget.SPEAKER,
+            resolveRouteTarget(HeadsetKind.BLUETOOTH, isSpeakerphoneForced = true),
+        )
+        assertEquals(
+            RouteTarget.SPEAKER,
+            resolveRouteTarget(HeadsetKind.WIRED, isSpeakerphoneForced = true),
+        )
     }
 
     @Test
     fun headsetIsUsedWhenTheRiderDidNotForceTheSpeaker() {
-        assertEquals(RouteTarget.HEADSET, resolveRouteTarget(HeadsetKind.BLUETOOTH, false))
-        assertEquals(RouteTarget.HEADSET, resolveRouteTarget(HeadsetKind.WIRED, false))
+        assertEquals(
+            RouteTarget.HEADSET,
+            resolveRouteTarget(HeadsetKind.BLUETOOTH, isSpeakerphoneForced = false),
+        )
+        assertEquals(
+            RouteTarget.HEADSET,
+            resolveRouteTarget(HeadsetKind.WIRED, isSpeakerphoneForced = false),
+        )
     }
 
     @Test
     fun noHeadset_alwaysUsesTheSpeaker() {
-        assertEquals(RouteTarget.SPEAKER, resolveRouteTarget(HeadsetKind.NONE, false))
-        assertEquals(RouteTarget.SPEAKER, resolveRouteTarget(HeadsetKind.NONE, true))
+        assertEquals(
+            RouteTarget.SPEAKER,
+            resolveRouteTarget(HeadsetKind.NONE, isSpeakerphoneForced = false),
+        )
+        assertEquals(
+            RouteTarget.SPEAKER,
+            resolveRouteTarget(HeadsetKind.NONE, isSpeakerphoneForced = true),
+        )
     }
 
     /**
@@ -433,44 +451,45 @@ class AudioDeviceSelectionTest {
     }
 
     /**
-     * Mode recovery must be limited to an active call that has lost communication mode, so teardown
-     * and callbacks from a finished call cannot put the device back into call audio.
+     * Communication mode is entered once when a call starts from normal mode. Telephony-owned modes
+     * and an already-correct mode are not written again, so OEM audio policies are not repeatedly
+     * told to duck or pause background media.
      */
     @Test
-    fun communicationMode_isReassertedOnlyForAnActiveCall() {
+    fun communicationMode_isEnteredOnlyOnceFromNormalMode() {
         assertTrue(
-            shouldReassertCommunicationMode(
+            shouldEnterCommunicationMode(
                 isRoutingActive = true,
                 currentMode = AudioManager.MODE_NORMAL,
             ),
         )
         // MODE_RINGTONE is telephony-owned: an incoming GSM call keeps its own audio path.
         assertFalse(
-            shouldReassertCommunicationMode(
+            shouldEnterCommunicationMode(
                 isRoutingActive = true,
                 currentMode = AudioManager.MODE_RINGTONE,
             ),
         )
         assertFalse(
-            shouldReassertCommunicationMode(
+            shouldEnterCommunicationMode(
                 isRoutingActive = true,
                 currentMode = AudioManager.MODE_IN_COMMUNICATION,
             ),
         )
         assertFalse(
-            shouldReassertCommunicationMode(
+            shouldEnterCommunicationMode(
                 isRoutingActive = true,
                 currentMode = AudioManager.MODE_IN_CALL,
             ),
         )
         assertFalse(
-            shouldReassertCommunicationMode(
+            shouldEnterCommunicationMode(
                 isRoutingActive = false,
                 currentMode = AudioManager.MODE_NORMAL,
             ),
         )
         assertFalse(
-            shouldReassertCommunicationMode(
+            shouldEnterCommunicationMode(
                 isRoutingActive = false,
                 currentMode = AudioManager.MODE_IN_COMMUNICATION,
             ),
@@ -556,6 +575,103 @@ class AudioDeviceSelectionTest {
             isExpectedScoDisconnect(
                 state = AudioManager.SCO_AUDIO_STATE_CONNECTED,
                 scoStopRequestedLocally = true,
+            ),
+        )
+    }
+
+    /**
+     * The local-stop token belongs to the DISCONNECTED event caused by stopBluetoothSco(). An
+     * intermediate CONNECTING broadcast must not consume it, or the real disconnect that follows
+     * would be treated as a physical helmet removal and clear the rider's speaker choice.
+     */
+    @Test
+    @Suppress("DEPRECATION")
+    fun scoStopToken_survivesIntermediateStatesUntilDisconnect() {
+        assertFalse(isScoDisconnectState(AudioManager.SCO_AUDIO_STATE_CONNECTING))
+        assertFalse(shouldRetireScoStopToken(AudioManager.SCO_AUDIO_STATE_CONNECTING))
+        assertFalse(
+            isExpectedScoDisconnect(
+                state = AudioManager.SCO_AUDIO_STATE_CONNECTING,
+                scoStopRequestedLocally = true,
+            ),
+        )
+        assertTrue(
+            isExpectedScoDisconnect(
+                state = AudioManager.SCO_AUDIO_STATE_DISCONNECTED,
+                scoStopRequestedLocally = true,
+            ),
+        )
+        assertTrue(shouldRetireScoStopToken(AudioManager.SCO_AUDIO_STATE_DISCONNECTED))
+        // A confirmed new channel supersedes an older stop request.
+        assertTrue(shouldRetireScoStopToken(AudioManager.SCO_AUDIO_STATE_CONNECTED))
+    }
+
+    /**
+     * Removing the SCO output while this router stops it for the speaker must not latch a false
+     * helmet disconnect. A simultaneous wired removal or a still-present SCO output is real state
+     * change and must still be processed.
+     */
+    @Test
+    fun localScoStopRemoval_isIgnoredOnlyForTheScoOutput() {
+        val removedSco = listOf(
+            AudioDeviceCandidate(AudioDeviceInfo.TYPE_BLUETOOTH_SCO, "Helmet"),
+        )
+        val remainingSpeaker = listOf(
+            AudioDeviceCandidate(AudioDeviceInfo.TYPE_BUILTIN_SPEAKER, "Phone"),
+        )
+
+        assertTrue(
+            isExpectedLocalScoStopRemoval(
+                removedDevices = removedSco,
+                remainingDevices = remainingSpeaker,
+                scoStopRequestedLocally = true,
+            ),
+        )
+        assertFalse(
+            isExpectedLocalScoStopRemoval(
+                removedDevices = removedSco,
+                remainingDevices = remainingSpeaker,
+                scoStopRequestedLocally = false,
+            ),
+        )
+        assertFalse(
+            isExpectedLocalScoStopRemoval(
+                removedDevices = removedSco,
+                remainingDevices = removedSco,
+                scoStopRequestedLocally = true,
+            ),
+        )
+        assertFalse(
+            isExpectedLocalScoStopRemoval(
+                removedDevices = removedSco + AudioDeviceCandidate(
+                    AudioDeviceInfo.TYPE_WIRED_HEADSET,
+                    "Wired headset",
+                ),
+                remainingDevices = remainingSpeaker,
+                scoStopRequestedLocally = true,
+            ),
+        )
+    }
+
+    /** A noisy event from a locally stopped SCO channel must not clear a real HFP connection. */
+    @Test
+    fun noisyAudioFromLocalScoStop_isIgnoredOnlyWithoutScoOutput() {
+        assertTrue(
+            shouldIgnoreNoisyAudioAfterLocalScoStop(
+                scoStopRequestedLocally = true,
+                hasScoOutput = false,
+            ),
+        )
+        assertFalse(
+            shouldIgnoreNoisyAudioAfterLocalScoStop(
+                scoStopRequestedLocally = true,
+                hasScoOutput = true,
+            ),
+        )
+        assertFalse(
+            shouldIgnoreNoisyAudioAfterLocalScoStop(
+                scoStopRequestedLocally = false,
+                hasScoOutput = false,
             ),
         )
     }
@@ -665,32 +781,6 @@ class AudioDeviceSelectionTest {
                 hasBluetoothHeadsetProfile = true,
                 isWiredHeadsetOn = false,
                 includeBluetooth = !ignoringStaleBluetoothSignals,
-            ),
-        )
-    }
-
-    /**
-     * With no headset broadcast at all, the watchdog must keep checking while the call is active
-     * and must never re-arm itself after teardown clears the active flag.
-     */
-    @Test
-    fun communicationModeRecovery_keepsRunningOnlyWhileRoutingIsActive() {
-        val isRoutingActive = true
-        repeat(3) {
-            assertTrue(shouldContinueModeRecovery(isRoutingActive))
-            assertTrue(
-                shouldReassertCommunicationMode(
-                    isRoutingActive = isRoutingActive,
-                    currentMode = AudioManager.MODE_NORMAL,
-                ),
-            )
-        }
-
-        assertFalse(shouldContinueModeRecovery(isRoutingActive = false))
-        assertFalse(
-            shouldReassertCommunicationMode(
-                isRoutingActive = false,
-                currentMode = AudioManager.MODE_NORMAL,
             ),
         )
     }

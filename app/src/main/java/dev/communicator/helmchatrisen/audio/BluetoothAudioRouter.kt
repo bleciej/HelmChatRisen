@@ -68,9 +68,6 @@ private const val EXTRA_HEADSET_PLUG_STATE = "state"
  */
 private val ROUTE_RETRY_DELAYS_MS = longArrayOf(250L, 500L, 1_000L, 1_500L, 2_000L, 3_000L)
 
-/** Interval between communication-mode recovery checks while an intercom call is active. */
-private const val MODE_RECOVERY_INTERVAL_MS = 1_000L
-
 /**
  * Translates the wired headset plug broadcast into a connection flag. Audio-device enumeration can
  * lag behind the plug broadcast, so the extra is used directly instead of re-querying the router.
@@ -130,7 +127,8 @@ internal fun queryConnectedBluetoothHeadset(
  * paused by this intercom. `MODE_IN_COMMUNICATION` remains required for WebRTC voice processing
  * and communication-device priority, but Android/OEM policies may independently attenuate
  * `STREAM_MUSIC` in this mode. Background-media level must therefore be verified on target devices
- * rather than assumed from the absence of a focus request.
+ * rather than assumed from the absence of a focus request. The route toggle changes only this
+ * call's communication output; another app's media stream stays with the platform/player.
  */
 class BluetoothAudioRouter private constructor(private val context: Context) {
 
@@ -219,9 +217,6 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
     private var routeRetryRunnable: Runnable? = null
     private var routeRetryAttempt = 0
 
-    /** Pending communication-mode recovery check, cancelled as soon as routing stops. */
-    private var modeRecoveryRunnable: Runnable? = null
-
     /** Invalidates retry callbacks belonging to an earlier headset event or call. */
     private var routingGeneration = 0L
 
@@ -239,6 +234,10 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
             if (!isRoutingActive) return
             Timber.d("Audio devices added: ${addedDevices.map { it.type }}")
             val addedKind = headsetKindFromAudioDevices(addedDevices.map(AudioDeviceInfo::toCandidate))
+            if (addedKind == HeadsetKind.BLUETOOTH) {
+                // A published SCO device is a new channel; an older local-stop token is obsolete.
+                isScoStopIntentional = false
+            }
             if (!shouldReevaluateAfterDevicesAdded(
                     currentKind = currentHeadsetKind,
                     addedKind = addedKind,
@@ -261,16 +260,25 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
          * @param removedDevices the devices that are no longer available.
          */
         override fun onAudioDevicesRemoved(removedDevices: Array<AudioDeviceInfo>) {
-            if (isRoutingActive) {
-                Timber.d("Audio devices removed: ${removedDevices.map { it.type }}")
-                val removed = removedDevices.map(AudioDeviceInfo::toCandidate)
-                if (shouldConfirmBluetoothDisconnectFromDevices(removed, currentOutputDevices())) {
-                    confirmBluetoothDisconnectFromDevices()
-                }
-                updateAudioRouting(
-                    headsetDisconnected = headsetKindFromAudioDevices(removed) != null,
+            if (!isRoutingActive) return
+            Timber.d("Audio devices removed: ${removedDevices.map { it.type }}")
+            val removed = removedDevices.map(AudioDeviceInfo::toCandidate)
+            val remaining = currentOutputDevices()
+            if (isExpectedLocalScoStopRemoval(
+                    removedDevices = removed,
+                    remainingDevices = remaining,
+                    scoStopRequestedLocally = isScoStopIntentional,
                 )
+            ) {
+                Timber.d("Ignoring the SCO device removal caused by the local speaker switch")
+                return
             }
+            if (shouldConfirmBluetoothDisconnectFromDevices(removed, remaining)) {
+                confirmBluetoothDisconnectFromDevices()
+            }
+            updateAudioRouting(
+                headsetDisconnected = headsetKindFromAudioDevices(removed) != null,
+            )
         }
     }
 
@@ -291,12 +299,22 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
                 AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED -> handleScoStateChanged(intent)
                 AudioManager.ACTION_AUDIO_BECOMING_NOISY -> {
                     // Keep the disconnect hint for route detection: this broadcast can report a real
-                    // headset removal. Transient label stability is handled by
-                    // resolveScoErrorRoutingState(), not by weakening this signal.
-                    Timber.w("Audio becoming noisy (headset disconnected)")
-                    if (currentHeadsetKind == HeadsetKind.BLUETOOTH &&
-                        !hasBluetoothScoDevice(currentOutputDevices())
+                    // headset removal. The exception is the noisy event emitted when this router
+                    // stops SCO for a speaker switch; the still-connected HFP profile is the route
+                    // authority in that case.
+                    val hasScoOutput = hasBluetoothScoDevice(currentOutputDevices())
+                    if (shouldIgnoreNoisyAudioAfterLocalScoStop(
+                            scoStopRequestedLocally = isScoStopIntentional,
+                            hasScoOutput = hasScoOutput,
+                        )
                     ) {
+                        Timber.d("Ignoring noisy audio caused by the local SCO stop")
+                        return
+                    }
+                    Timber.w("Audio becoming noisy (headset disconnected)")
+                    val bluetoothHeadsetLost = ((currentHeadsetKind == HeadsetKind.BLUETOOTH) &&
+                        !hasScoOutput)
+                    if (bluetoothHeadsetLost) {
                         confirmBluetoothDisconnectFromDevices()
                     }
                     updateAudioRouting(headsetDisconnected = true)
@@ -304,6 +322,8 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
                 Intent.ACTION_HEADSET_PLUG -> {
                     val state = intent.getIntExtra(EXTRA_HEADSET_PLUG_STATE, -1)
                     Timber.d("Wired headset plug state changed: $state")
+                    // A plug event is an authoritative physical change, not a SCO stop side effect.
+                    isScoStopIntentional = false
                     updateAudioRouting(
                         forcedHeadsetKind = headsetKindFromWiredPlug(state),
                         headsetDisconnected = wiredHeadsetConnectionState(state) == false,
@@ -315,6 +335,9 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
                         BluetoothProfile.STATE_DISCONNECTED,
                     )
                     Timber.d("Bluetooth headset profile state changed: $state")
+                    // HFP profile changes are authoritative physical events. They must not be
+                    // absorbed as side effects of an earlier local SCO stop.
+                    isScoStopIntentional = false
                     if (shouldRefreshBluetoothProfileAfterEvent(state)) {
                         // A disconnect may leave another HFP headset attached. Refresh off the main
                         // thread and apply the disconnect only when the new lookup confirms it.
@@ -354,9 +377,12 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
             state = state,
             scoStopRequestedLocally = isScoStopIntentional,
         )
-        isScoStopIntentional = false
+        // Intermediate SCO states must not consume the local-stop token: the DISCONNECTED broadcast
+        // generated by stopBluetoothSco() can arrive after CONNECTING/CONNECTED chatter.
+        if (shouldRetireScoStopToken(state)) {
+            isScoStopIntentional = false
+        }
         Timber.d("SCO audio state updated: $state (appInitiated=$expectedDisconnect)")
-        ensureCommunicationMode()
         routingGeneration += 1
         cancelRouteRetry()
         if (!expectedDisconnect) {
@@ -365,19 +391,16 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
         // Keep the last known family when this router closed SCO on purpose. A fresh detection can
         // legitimately return NONE at that instant even though the headset is still paired, which
         // would otherwise hide the route button until the rider restarts Bluetooth.
-        val detectedKind = if (expectedDisconnect && currentHeadsetKind != HeadsetKind.NONE) {
+        val detectedKind = if (expectedDisconnect && (currentHeadsetKind != HeadsetKind.NONE)) {
             currentHeadsetKind
         } else {
             detectKindForScoState(state)
         }
         if (!expectedDisconnect) {
-            clearSpeakerOverrideAfterScoDisconnect(detectedKind)
+            clearSpeakerOverrideAfterScoEvent(state, detectedKind)
         }
         publishDetectedHeadset(detectedKind)
         applyRouteForScoState(state, detectedKind)
-        // Handlers above may call stopBluetoothSco() again (speaker branch, disconnect cleanup).
-        // Do not let a second, redundant stop leak into the next broadcast.
-        isScoStopIntentional = false
     }
 
     /**
@@ -411,12 +434,15 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
     }
 
     /**
-     * Clears a latched speaker choice when an SCO disconnect leaves no headset attached. Without
-     * this reset a stale choice would suppress the next headset's active route.
+     * Clears a latched speaker choice only when an SCO disconnect leaves no headset attached. A
+     * CONNECTING, CONNECTED or ERROR broadcast must never reset the rider's route choice; it can be
+     * part of a channel still being negotiated while the phone speaker remains authoritative.
      *
+     * @param state the new SCO audio state.
      * @param kind the headset family still detected after the SCO event.
      */
-    private fun clearSpeakerOverrideAfterScoDisconnect(kind: HeadsetKind) {
+    private fun clearSpeakerOverrideAfterScoEvent(state: Int, kind: HeadsetKind) {
+        if (!isScoDisconnectState(state)) return
         if (routePreference.clearOnDisconnect(headsetDisconnected = true, kind = kind)) {
             stopBluetoothSco()
         }
@@ -526,12 +552,12 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
     }
 
     /**
-     * Starts audio routing in communication mode and listens for headset changes. This app takes no
-     * audio focus and therefore does not explicitly duck or pause background radio/music; platform
-     * call policies may still attenuate `STREAM_MUSIC` in communication mode. The initial device
-     * family is detected here so a headset connected before the call is routed without waiting for
-     * another broadcast. A bounded watchdog keeps communication mode intact even when no headset
-     * broadcast follows the mode change.
+     * Starts audio routing and enters communication mode once. This app takes no audio focus and
+     * therefore does not explicitly duck or pause background radio/music; platform call policies
+     * may still attenuate `STREAM_MUSIC` in communication mode. The mode is not reasserted while the
+     * call runs, because repeated transitions keep OEM audio policies ducking or pausing the media
+     * stream. The initial device family is detected here so a headset connected before the call is
+     * routed without waiting for another broadcast.
      */
     fun startAudioRouting() {
         if (isRoutingActive) {
@@ -547,8 +573,7 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
         registerReceivers()
         registerAudioDeviceCallback()
 
-        ensureCommunicationMode()
-        scheduleModeRecovery()
+        enterCommunicationMode()
         currentHeadsetKind = detectHeadsetKind()
 
         refreshBluetoothHeadsetCache()
@@ -556,45 +581,20 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
     }
 
     /**
-     * Restores [AudioManager.MODE_IN_COMMUNICATION] when a transient focus holder or an OEM policy
-     * resets the mode during an active call. Called by the recovery watchdog as well as by route
-     * updates. Teardown clears [isRoutingActive] before changing audio state, so broadcasts produced
-     * by cleanup cannot resurrect communication mode.
+     * Enters communication mode once at call start. Telephony-owned modes and an already-correct
+     * mode are left untouched, and no watchdog reasserts the mode later: repeated transitions make
+     * OEM audio policies duck or pause background media during the intercom call.
      */
-    private fun ensureCommunicationMode() {
-        if (!shouldReassertCommunicationMode(
+    private fun enterCommunicationMode() {
+        if (!shouldEnterCommunicationMode(
                 isRoutingActive = isRoutingActive,
                 currentMode = audioManager.mode,
             )
         ) {
             return
         }
-        Timber.i("Restoring communication audio mode after it changed during an active call")
+        Timber.i("Entering communication audio mode for the intercom call")
         audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-    }
-
-    /**
-     * Keeps a bounded watchdog alive while a call runs, so an OEM policy or transient focus holder
-     * that resets the audio mode is corrected even when no headset broadcast follows. Every tick
-     * re-arms itself only while routing is still active; [stopAudioRouting] cancels it explicitly.
-     */
-    private fun scheduleModeRecovery() {
-        cancelModeRecovery()
-        if (!shouldContinueModeRecovery(isRoutingActive)) return
-        val runnable = Runnable {
-            modeRecoveryRunnable = null
-            if (!shouldContinueModeRecovery(isRoutingActive)) return@Runnable
-            ensureCommunicationMode()
-            scheduleModeRecovery()
-        }
-        modeRecoveryRunnable = runnable
-        mainHandler.postDelayed(runnable, MODE_RECOVERY_INTERVAL_MS)
-    }
-
-    /** Removes a pending communication-mode recovery check, for example during call teardown. */
-    private fun cancelModeRecovery() {
-        modeRecoveryRunnable?.let(mainHandler::removeCallbacks)
-        modeRecoveryRunnable = null
     }
 
     /**
@@ -608,15 +608,17 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
         // Ignore broadcasts generated by the cleanup itself (notably the SCO disconnect) before
         // any AudioManager state is changed.
         isRoutingActive = false
-        cancelModeRecovery()
         cancelRouteRetry()
         isScoStopIntentional = false
-        if (shouldRestoreNormalAudioMode(audioManager.mode)) {
+        val restoreNormalRoute = shouldRestoreNormalAudioMode(audioManager.mode)
+        if (restoreNormalRoute) {
             stopBluetoothSco()
             clearPreferredDevice()
             setSpeakerphoneFlag(on = false)
             audioManager.mode = AudioManager.MODE_NORMAL
         } else {
+            // The modem owns the mode and the route. Keep both the platform route and the pending
+            // SCO flag untouched so the next call can still release a channel started by this app.
             Timber.i("Leaving telephony-owned audio mode and route untouched during teardown")
         }
 
@@ -628,7 +630,6 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
         ignoreStaleBluetoothSignals = false
         currentHeadsetKind = HeadsetKind.NONE
         lastConnectedHeadsetName = null
-        bluetoothScoStartRequested = false
         routePreference.setForced(enable = false)
         _routingState.value = AudioRoutingState.EarpieceConnected
         _isHeadsetConnected.value = false
@@ -643,11 +644,17 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
     fun resetForNewCall() {
         cancelRouteRetry()
         routePreference.setForced(enable = false)
-        bluetoothScoStartRequested = false
         isScoStopIntentional = false
         ignoreStaleBluetoothSignals = false
-        setSpeakerphoneFlag(on = false)
-        clearPreferredDevice()
+        if (shouldRestoreNormalAudioMode(audioManager.mode)) {
+            bluetoothScoStartRequested = false
+            setSpeakerphoneFlag(on = false)
+            clearPreferredDevice()
+        } else {
+            // Match stopAudioRouting(): a ringing or active GSM call must keep its own speaker and
+            // communication device. Only the app's internal route preference is reset here.
+            Timber.i("Leaving telephony-owned audio route untouched before the new call")
+        }
         _routingState.value = AudioRoutingState.EarpieceConnected
         if (isRoutingActive) {
             currentHeadsetKind = detectHeadsetKind()
@@ -671,28 +678,45 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
     fun setSpeakerphone(enable: Boolean) {
         routingGeneration += 1
         cancelRouteRetry()
-        if (currentHeadsetKind == HeadsetKind.NONE) {
+        val headsetKind = headsetKindForSpeakerToggle(enableSpeaker = enable)
+        if (headsetKind == HeadsetKind.NONE) {
             routePreference.setForced(enable = false)
             routeToBuiltInSpeakerOutput()
             return
         }
         routePreference.setForced(enable = enable)
-        applySpeakerphoneRouting(enable)
+        applySpeakerphoneRouting(enable, headsetKind)
+    }
+
+    /**
+     * Resolves the route to act on for a rider toggle. Switching back to the helmet re-checks a
+     * remembered [HeadsetKind.NONE], so a stale disconnect state cannot leave the rider stuck on the
+     * speaker with the route button disabled.
+     *
+     * @param enableSpeaker whether the rider is switching to the built-in speaker.
+     * @return the headset family the toggle must apply.
+     */
+    private fun headsetKindForSpeakerToggle(enableSpeaker: Boolean): HeadsetKind {
+        if (enableSpeaker || (currentHeadsetKind != HeadsetKind.NONE)) return currentHeadsetKind
+        val detected = detectHeadsetKind()
+        publishDetectedHeadset(detected)
+        return detected
     }
 
     /**
      * Routes to the built-in speaker or back to the connected headset after a rider toggle.
      *
      * @param enable `true` to force the built-in speaker, `false` to restore the headset route.
+     * @param kind the headset family that must be restored when switching back to the helmet.
      */
-    private fun applySpeakerphoneRouting(enable: Boolean) {
+    private fun applySpeakerphoneRouting(enable: Boolean, kind: HeadsetKind) {
         if (enable) {
             cancelRouteRetry()
             stopBluetoothSco()
             bluetoothScoStartRequested = false
             routeToBuiltInSpeakerOutput()
         } else {
-            routeToHeadset(currentHeadsetKind)
+            routeToHeadset(kind)
         }
     }
 
@@ -706,7 +730,7 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
         val speaker = audioManager.availableCommunicationDevices
             .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
         val selected = try {
-            speaker != null && audioManager.setCommunicationDevice(speaker)
+            (speaker != null) && audioManager.setCommunicationDevice(speaker)
         } catch (e: Exception) {
             Timber.w(e, "Could not select the built-in speaker as communication device")
             false
@@ -737,10 +761,12 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
         headsetDisconnected: Boolean = false,
         resetRouteRetryAttempt: Boolean = true,
     ) {
-        ensureCommunicationMode()
         routingGeneration += 1
         cancelRouteRetry(resetAttempt = resetRouteRetryAttempt)
-        if (shouldClearBluetoothSuppressionOnReconnect(
+        // Events generated by the router's own SCO stop are not headset activity: they must not
+        // release a timeout latch, clear stale-signal suppression or reset the rider's choice.
+        if (!isScoStopIntentional &&
+            shouldClearBluetoothSuppressionOnReconnect(
                 forcedKind = forcedHeadsetKind,
                 hasScoDevice = hasBluetoothScoDevice(currentOutputDevices()),
             )
@@ -754,13 +780,15 @@ class BluetoothAudioRouter private constructor(private val context: Context) {
         )
         // A timeout latch is not a rider choice: a real headset connection restores automatic
         // routing. A rider who deliberately chose the speaker keeps that choice.
-        if (routePreference.clearTimeoutLatchOnHeadsetConnected(forcedHeadsetKind)) {
+        if (!isScoStopIntentional &&
+            routePreference.clearTimeoutLatchOnHeadsetConnected(forcedHeadsetKind)
+        ) {
             Timber.i("Headset reconnected after speaker fallback; restoring automatic route")
         }
         // Only a confirmed full disconnect clears rider state. A plug or profile event from one
         // of several connected headsets must not tear down the active SCO route or the rider's
         // speaker choice while another headset is still available.
-        if (routePreference.clearOnDisconnect(headsetDisconnected, kind)) {
+        if (!isScoStopIntentional && routePreference.clearOnDisconnect(headsetDisconnected, kind)) {
             stopBluetoothSco()
         }
         currentHeadsetKind = kind
