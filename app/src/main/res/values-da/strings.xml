@@ -25,7 +25,7 @@
     <string name="home_join">Deltag i opkald</string>
     <string name="home_join_hint">Kun tale — ingen video, mindre data og længere batteritid.</string>
     <string name="home_invite">Inviter</string>
-    <string name="home_invite_message">Deltag i min HelmChat-intercom!\nRum: %1$s\nLink: %2$s</string>
+    <string name="home_invite_message">Deltag i min HelmChat-samtale!\nRum: %1$s\nLink: %2$s</string>
 
     <!-- Call screen -->
     <string name="call_connecting">Forbinder…</string>

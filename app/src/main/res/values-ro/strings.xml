@@ -25,7 +25,7 @@
     <string name="home_join">Alătură-te apelului</string>
     <string name="home_join_hint">Conexiune doar vocală — fără video, mai puține date și baterie mai durabilă.</string>
     <string name="home_invite">Invită</string>
-    <string name="home_invite_message">Alătură-te interfonului meu HelmChat!\nCameră: %1$s\nLink: %2$s</string>
+    <string name="home_invite_message">Alătură-te conversației mele din HelmChat!\nCameră: %1$s\nLink: %2$s</string>
 
     <!-- Call screen -->
     <string name="call_connecting">Se conectează…</string>

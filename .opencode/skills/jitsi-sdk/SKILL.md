@@ -8,6 +8,7 @@ description: Working with the Jitsi Meet Android SDK in Kotlin apps - audio-only
 ## Documentation
 
 - Android SDK developer guide: https://jitsi.github.io/handbook/docs/dev-guide/dev-guide-android-sdk
+- React Native SDK developer guide: https://jitsi.github.io/handbook/docs/dev-guide/dev-guide-react-native-sdk
 - Configuration reference: https://jitsi.github.io/handbook/docs/dev-guide/dev-guide-configuration
 
 Always use the latest stable SDK version available. Verify the currently used

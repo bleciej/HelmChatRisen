@@ -49,6 +49,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavKey
@@ -58,6 +59,7 @@ import androidx.navigation3.ui.NavDisplay
 import timber.log.Timber
 import dev.communicator.helmchatrisen.R
 import dev.communicator.helmchatrisen.audio.AudioRoutingState
+import dev.communicator.helmchatrisen.audio.resolveAudioRouteControl
 import dev.communicator.helmchatrisen.data.AppLanguage
 import dev.communicator.helmchatrisen.data.RecentRoom
 import dev.communicator.helmchatrisen.data.RecentRoomsRepository
@@ -75,6 +77,120 @@ import dev.communicator.helmchatrisen.ui.home.HomeViewModel
 import dev.communicator.helmchatrisen.ui.navigation.CallRoute
 import dev.communicator.helmchatrisen.ui.navigation.HomeRoute
 import kotlinx.coroutines.launch
+
+/**
+ * Immutable inputs for the call detail pane.
+ *
+ * @param screenState the state consumed by the custom call overlay.
+ * @param route the Navigation 3 call destination being rendered.
+ * @param routingState the current audio route reported by the router.
+ * @param isHeadsetConnected whether a headset is available for call audio.
+ * @param isInPictureInPicture whether the compact Picture-in-Picture layout is active.
+ */
+private data class CallRouteUiState(
+    val screenState: CallScreenState,
+    val route: CallRoute,
+    val routingState: AudioRoutingState,
+    val isHeadsetConnected: Boolean,
+    val isInPictureInPicture: Boolean,
+)
+
+/**
+ * Callbacks used by the call detail pane.
+ *
+ * @param onToggleMute flips the local microphone state.
+ * @param onToggleSpeaker switches the audio route based on the current routing state.
+ * @param onLeaveCall ends the conference through the normal hang-up flow.
+ * @param onInvite shares the invitation for the supplied route.
+ * @param onEnterPictureInPicture minimizes the call into Picture-in-Picture.
+ */
+private data class CallRouteUiActions(
+    val onToggleMute: () -> Unit,
+    val onToggleSpeaker: (AudioRoutingState) -> Unit,
+    val onLeaveCall: () -> Unit,
+    val onInvite: (CallRoute) -> Unit,
+    val onEnterPictureInPicture: () -> Unit,
+)
+
+/**
+ * Renders the detail pane for an active call, keeping Jitsi's native view behind the custom overlay.
+ *
+ * @param state the call state and route information to display.
+ * @param actions callbacks for rider interactions.
+ */
+@Composable
+private fun CallRouteEntry(
+    state: CallRouteUiState,
+    actions: CallRouteUiActions,
+) {
+    var hostSetupActive by remember(state.route) {
+        mutableStateOf(state.route.hostSetup)
+    }
+
+    CallScreen(
+        state = state.screenState.copy(
+            audioRouteLabel = audioRouteLabel(
+                isHeadsetConnected = state.isHeadsetConnected,
+                routingState = state.routingState,
+            ),
+        ),
+        onToggleMute = actions.onToggleMute,
+        onToggleSpeaker = { actions.onToggleSpeaker(state.routingState) },
+        onLeaveCall = actions.onLeaveCall,
+        onInvite = { actions.onInvite(state.route) },
+        isInPictureInPicture = state.isInPictureInPicture,
+        onEnterPictureInPicture = actions.onEnterPictureInPicture,
+        hostSetup = hostSetupActive,
+        onHostSetupDone = { hostSetupActive = false },
+        conferenceContent = {
+            JitsiConferenceView(
+                roomName = state.route.roomName,
+                serverUrl = state.route.serverUrl,
+                displayName = state.route.displayName,
+                isMuted = state.screenState.isMuted,
+                modifier = Modifier.fillMaxSize(),
+                token = state.route.token,
+                interactive = hostSetupActive,
+            )
+        },
+    )
+}
+
+/**
+ * Builds the localized label shown on the audio-route control.
+ *
+ * @param isHeadsetConnected whether a headset is available for call audio.
+ * @param routingState the current audio route reported by the router.
+ * @return the label describing the active output.
+ */
+@Composable
+private fun audioRouteLabel(
+    isHeadsetConnected: Boolean,
+    routingState: AudioRoutingState,
+): String {
+    if (!isHeadsetConnected) return stringResource(R.string.call_speaker_on)
+    return when (routingState) {
+        is AudioRoutingState.SpeakerConnected -> stringResource(R.string.call_speaker_on)
+        is AudioRoutingState.HeadsetConnected ->
+            routingState.deviceName?.let { deviceName ->
+                stringResource(R.string.call_route_bluetooth, deviceName)
+            } ?: stringResource(R.string.call_speaker_off)
+        is AudioRoutingState.ConnectingBluetooth -> stringResource(R.string.call_route_connecting)
+        else -> stringResource(R.string.call_speaker_off)
+    }
+}
+
+/**
+ * Resolves a Jitsi error into a localized message.
+ *
+ * @param callState the current call state.
+ * @return the error message, or `null` when the state is not an error.
+ */
+@Composable
+private fun callErrorMessage(callState: CallState): String? =
+    (callState as? CallState.Error)?.let { (message, messageResId) ->
+        message ?: messageResId?.let { id -> stringResource(id) }
+    }
 
 /**
  * Root of the HelmChatRisen Compose UI.
@@ -107,10 +223,10 @@ fun HelmChatApp(
     val participantCount by callManager.participantCount.collectAsStateWithLifecycle()
     val isNetworkAvailable by callManager.isNetworkAvailable.collectAsStateWithLifecycle()
     val routingState by audioRouter.routingState.collectAsStateWithLifecycle()
+    val isHeadsetConnected by audioRouter.isHeadsetConnected.collectAsStateWithLifecycle()
 
     var pendingCall by remember { mutableStateOf<CallRequest?>(null) }
-    var showPermissionDialog by remember { mutableStateOf(false) }
-    var isSpeakerOn by remember { mutableStateOf(false) }
+    var showPermissionDialog by remember { mutableStateOf(value = false) }
     var languageTag by remember { mutableStateOf(AppLanguage.currentTag(context)) }
 
     /**
@@ -122,11 +238,9 @@ fun HelmChatApp(
      */
     fun startCall(request: CallRequest) {
         if (!callManager.canStartNewCall) {
-            Timber.w("Ignoring join request for '${request.roomName}' during ${callState}")
+            Timber.w("Ignoring join request for '${request.roomName}' during $callState")
             return
         }
-        isSpeakerOn = false
-        audioRouter.resetForNewCall()
         AudioCallService.startCall(context, request.roomName, request.serverUrl)
         coroutineScope.launch {
             recentRoomsRepository.record(
@@ -145,7 +259,7 @@ fun HelmChatApp(
                 displayName = request.displayName,
                 token = request.token,
                 hostSetup = request.hostSetup,
-            )
+            ),
         )
     }
 
@@ -165,7 +279,7 @@ fun HelmChatApp(
 
     val currentRoute = backStack.lastOrNull()
     var joinedRouteKey by remember { mutableStateOf<CallRoute?>(null) }
-    val hasJoinedCall = currentRoute is CallRoute && joinedRouteKey == currentRoute
+    val hasJoinedCall = ((currentRoute is CallRoute) && (joinedRouteKey == currentRoute))
 
     /**
      * Removes the call destination after a terminal state, keeping at least one back-stack entry.
@@ -182,21 +296,18 @@ fun HelmChatApp(
     }
 
     LaunchedEffect(callState, currentRoute) {
-        if (currentRoute is CallRoute) {
-            when (callState) {
-                is CallState.Connecting,
-                is CallState.Connected,
-                is CallState.Ending,
-                is CallState.Reconnecting -> joinedRouteKey = currentRoute
-                is CallState.Idle -> if (hasJoinedCall) {
-                    // The service observes the same Idle state and stops its own foreground
-                    // notification and audio route, so no direct stopCall() is needed here.
-                    joinedRouteKey = null
-                    dismissCallRoute()
-                }
-                is CallState.Error -> Unit
-            }
-        } else {
+        syncCallRouteState(
+            callState = callState,
+            currentRoute = currentRoute,
+            hasJoinedCall = hasJoinedCall,
+            onJoined = { route -> joinedRouteKey = route },
+            onIdle = {
+                // The service observes the same Idle state and stops its own foreground
+                // notification and audio route, so no extra service command is needed here.
+                joinedRouteKey = null
+                dismissCallRoute()
+            },
+        ) {
             joinedRouteKey = null
         }
     }
@@ -213,7 +324,7 @@ fun HelmChatApp(
      * @return `true` when the call screen will be removed by the [CallState.Idle] observer.
      */
     fun leaveCall(): Boolean {
-        if (currentRoute is CallRoute) joinedRouteKey = currentRoute
+        (currentRoute as? CallRoute)?.let { route -> joinedRouteKey = route }
         val teardownPending = callManager.hangUp()
         if (!teardownPending) dismissCallRoute()
         return teardownPending
@@ -235,15 +346,7 @@ fun HelmChatApp(
         NavDisplay(
             backStack = backStack,
             modifier = Modifier.fillMaxSize(),
-            onBack = {
-                if (backStack.lastOrNull() is CallRoute) {
-                    leaveCall()
-                } else if (backStack.size > 1) {
-                    backStack.removeLastOrNull()
-                } else {
-                    (context as? Activity)?.finish()
-                }
-            },
+            onBack = { handleBackNavigation(backStack, context) { leaveCall() } },
             sceneStrategies = listOf(listDetailStrategy),
             entryProvider = entryProvider {
                 entry<HomeRoute>(
@@ -272,22 +375,28 @@ fun HelmChatApp(
                         },
                         onHostSetup = {
                             homeViewModel.createCallRequest(hostSetup = true)?.let { request ->
-                                if (areRequiredPermissionsGranted(context)) {
-                                    startCall(request)
-                                } else {
-                                    pendingCall = request
-                                    permissionLauncher.launch(requestedPermissions())
-                                }
+                                startCallWithPermissionCheck(
+                                    request = request,
+                                    context = context,
+                                    onGranted = ::startCall,
+                                    onPermissionNeeded = { request ->
+                                        pendingCall = request
+                                        permissionLauncher.launch(requestedPermissions())
+                                    },
+                                )
                             }
                         },
                         onJoinCall = {
                             homeViewModel.createCallRequest()?.let { request ->
-                                if (areRequiredPermissionsGranted(context)) {
-                                    startCall(request)
-                                } else {
-                                    pendingCall = request
-                                    permissionLauncher.launch(requestedPermissions())
-                                }
+                                startCallWithPermissionCheck(
+                                    request = request,
+                                    context = context,
+                                    onGranted = ::startCall,
+                                    onPermissionNeeded = { request ->
+                                        pendingCall = request
+                                        permissionLauncher.launch(requestedPermissions())
+                                    },
+                                )
                             }
                         },
                         onInvite = {
@@ -311,67 +420,47 @@ fun HelmChatApp(
                 entry<CallRoute>(
                     metadata = ListDetailSceneStrategy.detailPane(),
                 ) { route ->
-                    val isConnected = callState is CallState.Connected
-                    val isReconnecting = callState is CallState.Reconnecting
-                    val errorMessage = (callState as? CallState.Error)?.let { it.message ?: it.messageResId?.let { id -> stringResource(id) } }
-                    var hostSetupActive by remember(route) {
-                        mutableStateOf(route.hostSetup)
-                    }
-                    val audioRouteLabel = when (val routing = routingState) {
-                        is AudioRoutingState.SpeakerConnected ->
-                            stringResource(R.string.call_speaker_on)
-                        is AudioRoutingState.BluetoothConnected ->
-                            routing.deviceName?.let {
-                                stringResource(R.string.call_route_bluetooth, it)
-                            } ?: stringResource(R.string.call_speaker_off)
-                        is AudioRoutingState.ConnectingBluetooth ->
-                            stringResource(R.string.call_route_connecting)
-                        else -> stringResource(R.string.call_speaker_off)
-                    }
-
-                    CallScreen(
-                        state = CallScreenState(
-                            roomName = route.roomName,
-                            serverUrl = route.serverUrl,
-                            isConnected = isConnected,
-                            isReconnecting = isReconnecting,
-                            isOffline = !isNetworkAvailable,
-                            isMuted = isMuted,
-                            isSpeakerOn = isSpeakerOn,
-                            audioRouteLabel = audioRouteLabel,
-                            participantCount = participantCount,
-                            errorMessage = errorMessage,
-                            isEnding = callState is CallState.Ending,
-                        ),
-                        onToggleMute = { callManager.toggleMute() },
-                        onToggleSpeaker = {
-                            val newSpeaker = !isSpeakerOn
-                            isSpeakerOn = newSpeaker
-                            audioRouter.setSpeakerphone(newSpeaker)
-                        },
-                        onLeaveCall = { leaveCall() },
-                        onInvite = {
-                            shareRoomInvite(
-                                context = context,
+                    val audioRouteControl = resolveAudioRouteControl(
+                        isHeadsetConnected = isHeadsetConnected,
+                        routingState = routingState,
+                    )
+                    CallRouteEntry(
+                        state = CallRouteUiState(
+                            screenState = CallScreenState(
                                 roomName = route.roomName,
                                 serverUrl = route.serverUrl,
-                            )
-                        },
-                        isInPictureInPicture = isInPictureInPicture,
-                        onEnterPictureInPicture = onEnterPictureInPicture,
-                        hostSetup = hostSetupActive,
-                        onHostSetupDone = { hostSetupActive = false },
-                        conferenceContent = {
-                            JitsiConferenceView(
-                                roomName = route.roomName,
-                                serverUrl = route.serverUrl,
-                                displayName = route.displayName,
+                                isConnected = callState is CallState.Connected,
+                                isReconnecting = callState is CallState.Reconnecting,
+                                isOffline = !isNetworkAvailable,
                                 isMuted = isMuted,
-                                modifier = Modifier.fillMaxSize(),
-                                token = route.token,
-                                interactive = hostSetupActive,
-                            )
-                        },
+                                isSpeakerOn = audioRouteControl.isSpeaker,
+                                canSwitchAudioRoute = audioRouteControl.canSwitch,
+                                participantCount = participantCount,
+                                errorMessage = callErrorMessage(callState),
+                                isEnding = callState is CallState.Ending,
+                            ),
+                            route = route,
+                            routingState = routingState,
+                            isHeadsetConnected = isHeadsetConnected,
+                            isInPictureInPicture = isInPictureInPicture,
+                        ),
+                        actions = CallRouteUiActions(
+                            onToggleMute = { callManager.toggleMute() },
+                            onToggleSpeaker = { currentRouting ->
+                                audioRouter.setSpeakerphone(
+                                    currentRouting !is AudioRoutingState.SpeakerConnected,
+                                )
+                            },
+                            onLeaveCall = { leaveCall() },
+                            onInvite = { invitedRoute ->
+                                shareRoomInvite(
+                                    context = context,
+                                    roomName = invitedRoute.roomName,
+                                    serverUrl = invitedRoute.serverUrl,
+                                )
+                            },
+                            onEnterPictureInPicture = onEnterPictureInPicture,
+                        ),
                     )
                 }
             },
@@ -389,6 +478,81 @@ fun HelmChatApp(
                 pendingCall = null
             },
         )
+    }
+}
+
+/**
+ * Handles back navigation without disposing an active conference before Jitsi confirms hang-up.
+ *
+ * @param backStack the current Navigation 3 back stack.
+ * @param context the activity context used to finish the app when the stack has one entry.
+ * @param onLeaveCall asks Jitsi to tear down the active call.
+ */
+private fun handleBackNavigation(
+    backStack: MutableList<NavKey>,
+    context: Context,
+    onLeaveCall: () -> Unit,
+) {
+    if (backStack.lastOrNull() is CallRoute) {
+        onLeaveCall()
+    } else if (backStack.size > 1) {
+        backStack.removeLastOrNull()
+    } else {
+        (context as? Activity)?.finish()
+    }
+}
+
+/**
+ * Starts a call immediately when all permissions are granted, otherwise defers the request.
+ *
+ * @param request the call request produced by the home screen.
+ * @param context the context used to check runtime permissions.
+ * @param onGranted starts the call with the granted request.
+ * @param onPermissionNeeded stores the request so the permission launcher can resume it.
+ */
+private fun startCallWithPermissionCheck(
+    request: CallRequest,
+    context: Context,
+    onGranted: (CallRequest) -> Unit,
+    onPermissionNeeded: (CallRequest) -> Unit,
+) {
+    if (areRequiredPermissionsGranted(context)) {
+        onGranted(request)
+    } else {
+        onPermissionNeeded(request)
+    }
+}
+
+/**
+ * Keeps the joined destination mounted until Jitsi reaches a terminal call state.
+ *
+ * @param callState the current call state.
+ * @param currentRoute the top of the Navigation 3 back stack.
+ * @param hasJoinedCall whether the current route was previously marked as joined.
+ * @param onJoined records the route as the active call destination.
+ * @param onIdle clears the route after Jitsi confirms the conference ended.
+ * @param onReset clears join tracking when no call destination is present.
+ */
+private fun syncCallRouteState(
+    callState: CallState,
+    currentRoute: NavKey?,
+    hasJoinedCall: Boolean,
+    onJoined: (CallRoute) -> Unit,
+    onIdle: () -> Unit,
+    onReset: () -> Unit,
+) {
+    if (currentRoute !is CallRoute) {
+        onReset()
+        return
+    }
+    when (callState) {
+        is CallState.Connecting,
+        is CallState.Connected,
+        is CallState.Ending,
+        is CallState.Reconnecting,
+        -> onJoined(currentRoute)
+        is CallState.Idle -> if (hasJoinedCall) onIdle()
+        is CallState.Error -> Unit
     }
 }
 
@@ -466,7 +630,7 @@ private fun openMeetJitSiInBrowser(context: Context, roomName: String) {
     } else {
         "https://meet.jit.si/${Uri.encode(room)}"
     }
-    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+    val intent = Intent(Intent.ACTION_VIEW, url.toUri()).apply {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     context.startActivity(intent)

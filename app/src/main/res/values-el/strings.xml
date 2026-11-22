@@ -25,7 +25,7 @@
     <string name="home_join">Σύνδεση στην κλήση</string>
     <string name="home_join_hint">Σύνδεση μόνο φωνής — χωρίς βίντεο, λιγότερα δεδομένα και μεγαλύτερη διάρκεια μπαταρίας.</string>
     <string name="home_invite">Πρόσκληση</string>
-    <string name="home_invite_message">Έλα στο intercom μου HelmChat!\nΔωμάτιο: %1$s\nΣύνδεσμος: %2$s</string>
+    <string name="home_invite_message">Έλα στη συζήτησή μου στο HelmChat!\nΔωμάτιο: %1$s\nΣύνδεσμος: %2$s</string>
 
     <!-- Call screen -->
     <string name="call_connecting">Σύνδεση…</string>

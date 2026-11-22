@@ -25,7 +25,7 @@
     <string name="home_join">Liitu kõnega</string>
     <string name="home_join_hint">Ainult häälühendus — videot pole, vähem andmeid ja pikem aku kestvus.</string>
     <string name="home_invite">Kutsu</string>
-    <string name="home_invite_message">Liitu minu HelmChati interkomiga!\nRuum: %1$s\nLink: %2$s</string>
+    <string name="home_invite_message">Liitu minu HelmChati vestlusega!\nRuum: %1$s\nLink: %2$s</string>
 
     <!-- Call screen -->
     <string name="call_connecting">Ühendamine…</string>

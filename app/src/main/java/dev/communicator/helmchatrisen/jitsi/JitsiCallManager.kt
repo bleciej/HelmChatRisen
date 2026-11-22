@@ -8,6 +8,7 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import timber.log.Timber
 import dev.communicator.helmchatrisen.R
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -87,6 +88,13 @@ class JitsiCallManager {
         private const val CONNECT_TIMEOUT_MS = 30_000L
 
         /**
+         * How long a failed call stays on screen before the manager publishes [CallState.Idle] and
+         * the call route is dismissed. Native cleanup happens immediately; only the error message
+         * is kept visible for this short window.
+         */
+        internal const val ERROR_DISPLAY_TIMEOUT_MS = 4_000L
+
+        /**
          * How long the app waits for Jitsi to acknowledge a hang-up before it falls back to
          * resetting the embedded view. Jitsi's external API is asynchronous, so disposing the view
          * immediately would drop the HANG_UP event and leave the microphone capture alive.
@@ -100,11 +108,18 @@ class JitsiCallManager {
         private const val HANG_UP_ABORT_TIMEOUT_MS = 2_000L
 
         /**
-         * How long Jitsi may spend trying to restore a dropped conference before the app gives
-         * up and shows an error. The Jitsi reload dialog is patched to retry after 5 seconds,
-         * so this is only a safety net for unrecoverable failures.
+         * How long Jitsi may spend showing its reload dialog before the app shows an error. The
+         * bundled countdown is patched to about six seconds, so this is only a safety net for a
+         * conference that never reloads at all.
          */
-        private const val RECONNECT_TIMEOUT_MS = 45_000L
+        internal const val RECONNECT_RELOAD_TIMEOUT_MS = 60_000L
+
+        /**
+         * How long Jitsi may spend joining a room after a reload. Its conference-request backoff
+         * can reach 120 seconds ("Not ready yet, will retry in ... ms"), so the watchdog must outlast
+         * that instead of reporting a false failure while Jitsi is still retrying.
+         */
+        internal const val REJOIN_COMPLETION_TIMEOUT_MS = 150_000L
 
         /**
          * Used when the rider leaves the optional name field empty. Supplying a name avoids
@@ -132,7 +147,7 @@ class JitsiCallManager {
     /** Current call status, observed by the Compose UI. */
     val callState: StateFlow<CallState> = _callState.asStateFlow()
 
-    private val _isMuted = MutableStateFlow(false)
+    private val _isMuted = MutableStateFlow(value = false)
     /** Whether the local microphone is currently muted. */
     val isMuted: StateFlow<Boolean> = _isMuted.asStateFlow()
 
@@ -141,7 +156,7 @@ class JitsiCallManager {
      * call cannot be launched while the previous conference is still tearing down.
      */
     val canStartNewCall: Boolean
-        get() = _callState.value is CallState.Idle || _callState.value is CallState.Error
+        get() = (_callState.value is CallState.Idle) || (_callState.value is CallState.Error)
 
     /**
      * `ParticipantsService` holds its callbacks through [java.lang.ref.WeakReference], so the
@@ -159,13 +174,12 @@ class JitsiCallManager {
             mainHandler.postDelayed(runnable, delayMs)
             ScheduledTimeout { mainHandler.removeCallbacks(runnable) }
         },
-        onSnapshotSettled = { timedOut ->
-            participantsInfoCallback = null
-            if (timedOut) {
-                Timber.w("Participant snapshot timed out, using broadcast events instead")
-            }
-        },
-    )
+    ) { timedOut ->
+        participantsInfoCallback = null
+        if (timedOut) {
+            Timber.w("Participant snapshot timed out, using broadcast events instead")
+        }
+    }
 
     /** Number of riders in the current call, including the local rider. */
     val participantCount: StateFlow<Int> = participantTracker.count
@@ -175,7 +189,7 @@ class JitsiCallManager {
      * an outage and resumes its XMPP connection on its own; the UI uses this flow to tell the
      * rider why the intercom went quiet instead of silently appearing connected.
      */
-    private val _isNetworkAvailable = MutableStateFlow(true)
+    private val _isNetworkAvailable = MutableStateFlow(value = true)
     /** Whether the device currently has a default network. */
     val isNetworkAvailable: StateFlow<Boolean> = _isNetworkAvailable.asStateFlow()
 
@@ -187,7 +201,14 @@ class JitsiCallManager {
 
     private var connectTimeout: Runnable? = null
     private var reconnectTimeout: Runnable? = null
+    private var errorIdleTimeout: Runnable? = null
     private var reconnectPaused = false
+
+    /** Remaining watchdog time is measured from elapsed realtime so offline time is not counted. */
+    private val reconnectDeadline = ReconnectDeadline(SystemClock::elapsedRealtime)
+
+    /** Room whose reconnect watchdog is active or paused while the device is offline. */
+    private var pendingReconnectRoom: String? = null
     private var isLeaving = false
     private val mainHandler: Handler by lazy { Handler(Looper.getMainLooper()) }
 
@@ -207,27 +228,36 @@ class JitsiCallManager {
     /** Whether the SDK has confirmed that the current conference actually joined at least once. */
     private var hasConferenceConfirmation = false
 
+    /**
+     * Whether [BroadcastEvent.Type.CONFERENCE_JOINED] was seen since the current [join]. Unlike
+     * [hasConferenceConfirmation], a transient termination does not clear it, so the watchdog can
+     * tell a first join from Jitsi's automatic rejoin.
+     */
+    private var hasConnectedConference = false
+
     private var hangUpConfirmationTimeout: Runnable? = null
     private var hangUpAbortTimeout: Runnable? = null
 
     private var connectivityManager: ConnectivityManager? = null
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         /**
-         * Marks the network as available and, when a reconnect was paused, restarts its timeout.
+         * Marks the network as available and, when a reconnect was paused, restarts its timeout
+         * with only the time that was left before the outage.
          *
          * @param network the network that became available.
          */
         override fun onAvailable(network: Network) {
             _isNetworkAvailable.value = true
-            if (reconnectPaused) {
-                reconnectPaused = false
-                currentRoomName?.let { room ->
-                    if (_callState.value is CallState.Reconnecting) {
-                        Timber.i("Network restored, restarting reconnect timeout for '$room'")
-                        scheduleReconnectTimeout(room)
-                    }
-                }
+            if (!reconnectPaused) return
+            reconnectPaused = false
+            val room = pendingReconnectRoom ?: return
+            if (!isReconnectWatchdogState(_callState.value)) {
+                Timber.d("Network restored for '$room' but the call is no longer reconnecting")
+                return
             }
+            val remainingMs = reconnectDeadline.resume()
+            Timber.i("Network restored, resuming reconnect watchdog for '$room' with $remainingMs ms left")
+            scheduleReconnectTimeout(room, remainingMs)
         }
 
         /**
@@ -239,10 +269,7 @@ class JitsiCallManager {
             _isNetworkAvailable.value = false
             // Do not count offline time against the reconnect timeout: Jitsi cannot restore the
             // conference until a network is back.
-            if (reconnectTimeout != null) {
-                cancelReconnectTimeout()
-                reconnectPaused = true
-            }
+            pauseReconnectTimeout()
             Timber.w("Default network lost")
         }
 
@@ -251,6 +278,8 @@ class JitsiCallManager {
          */
         override fun onUnavailable() {
             _isNetworkAvailable.value = false
+            pauseReconnectTimeout()
+            Timber.w("No default network available")
         }
     }
 
@@ -282,19 +311,23 @@ class JitsiCallManager {
         }
 
         val activeServerUrl = sanitizeServerUrl(serverUrl)
+        // Detach from the old conference before disposing its view: a stale termination from the
+        // previous call must not push this new join into Reconnecting.
+        unregisterBroadcastReceiver()
+        hasConferenceConfirmation = false
+        hasConnectedConference = false
         releaseActiveView()
         sessionGeneration += 1
         teardownGeneration = Long.MAX_VALUE
-        hasConferenceConfirmation = false
         currentServerUrl = activeServerUrl
         currentRoomName = roomName
         isLeaving = false
         activeView = view
         cancelHangUpTimeouts()
+        cancelErrorIdleTimeout()
         _isMuted.value = isMuted
         resetParticipantSession()
 
-        unregisterBroadcastReceiver()
         registerBroadcastReceiver(view.context.applicationContext)
         registerNetworkCallback(view.context.applicationContext)
 
@@ -316,8 +349,7 @@ class JitsiCallManager {
             scheduleConnectTimeout(roomName)
         } catch (e: Exception) {
             Timber.e(e, "Failed to join room '$roomName'")
-            cancelConnectTimeout()
-            _callState.value = CallState.Error(e.message ?: "Failed to join room")
+            failCall(CallState.Error(message = e.message ?: "Failed to join room"))
         }
     }
 
@@ -327,7 +359,7 @@ class JitsiCallManager {
      *
      * @return `true` when the manager is not currently tearing a call down.
      */
-    fun canJoinConference(): Boolean = !isLeaving && _callState.value !is CallState.Ending
+    fun canJoinConference(): Boolean = (!isLeaving) && (_callState.value !is CallState.Ending)
 
     /**
      * Called when the embedded view is released / removed from the UI hierarchy.
@@ -338,12 +370,12 @@ class JitsiCallManager {
      * @param view the view being released, or `null` to release the manager's current view.
      */
     fun onViewReleased(view: JitsiMeetView? = null) {
-        if (view != null && activeView != null && activeView !== view) {
+        if ((view != null) && (activeView != null) && (activeView !== view)) {
             Timber.d("Ignoring release for a view that is no longer owned by the manager")
             return
         }
         releaseActiveView()
-        if (isLeaving && _callState.value is CallState.Ending) {
+        if ((isLeaving) && (_callState.value is CallState.Ending)) {
             finishHangUp()
             return
         }
@@ -396,12 +428,14 @@ class JitsiCallManager {
      *   before removing the call screen, `false` when no call was active.
      */
     fun hangUp(immediate: Boolean = false): Boolean {
-        if (isLeaving && _callState.value is CallState.Ending) {
+        if ((isLeaving) && (_callState.value is CallState.Ending)) {
             Timber.d("Hang-up already in progress, ignoring duplicate request")
             return true
         }
         val room = currentRoomName
-        if (room == null && _callState.value is CallState.Idle) {
+        if (room == null &&
+            (_callState.value is CallState.Idle || _callState.value is CallState.Error)
+        ) {
             Timber.d("No active Jitsi call to leave")
             return false
         }
@@ -416,6 +450,7 @@ class JitsiCallManager {
         cancelConnectTimeout()
         cancelReconnectTimeout()
         cancelHangUpTimeouts()
+        cancelErrorIdleTimeout()
         reconnectPaused = false
         unregisterNetworkCallback()
         // Publish Ending before sending the external API events so a fast acknowledgement cannot
@@ -444,6 +479,56 @@ class JitsiCallManager {
         releaseActiveView()
         finalizeSession()
         _callState.value = CallState.Idle
+    }
+
+    /**
+     * Tears down a failed call while keeping its error message visible briefly.
+     *
+     * The Jitsi view, broadcast receiver and network callback are released immediately so a failed
+     * connection cannot keep the microphone, audio route or foreground service alive. The state
+     * changes to [CallState.Idle] after [ERROR_DISPLAY_TIMEOUT_MS] so the rider can read the error
+     * before Navigation 3 removes the call route.
+     *
+     * @param error the error state carrying the message for the rider.
+     */
+    private fun failCall(error: CallState.Error) {
+        if (_callState.value is CallState.Error) return
+        Timber.e("Call failed: ${error.message ?: error.messageResId}")
+        isLeaving = true
+        cancelConnectTimeout()
+        cancelReconnectTimeout()
+        cancelHangUpTimeouts()
+        cancelErrorIdleTimeout()
+        reconnectPaused = false
+        unregisterNetworkCallback()
+        sendBroadcast(BroadcastIntentHelper.buildSetAudioMutedIntent(true))
+        sendBroadcast(BroadcastIntentHelper.buildHangUpIntent())
+        releaseActiveView()
+        finalizeSession()
+        _callState.value = error
+        scheduleIdleAfterError()
+    }
+
+    /**
+     * Publishes [CallState.Idle] after a failed call so the call route is dismissed only once the
+     * error message has been shown.
+     */
+    private fun scheduleIdleAfterError() {
+        cancelErrorIdleTimeout()
+        val runnable = Runnable {
+            errorIdleTimeout = null
+            if (_callState.value is CallState.Error) {
+                _callState.value = CallState.Idle
+            }
+        }
+        errorIdleTimeout = runnable
+        mainHandler.postDelayed(runnable, ERROR_DISPLAY_TIMEOUT_MS)
+    }
+
+    /** Cancels a pending transition from a failed call back to [CallState.Idle]. */
+    private fun cancelErrorIdleTimeout() {
+        errorIdleTimeout?.let(mainHandler::removeCallbacks)
+        errorIdleTimeout = null
     }
 
     /**
@@ -476,10 +561,12 @@ class JitsiCallManager {
         cancelHangUpTimeouts()
         cancelConnectTimeout()
         cancelReconnectTimeout()
+        cancelErrorIdleTimeout()
         reconnectPaused = false
         isLeaving = false
         teardownGeneration = Long.MAX_VALUE
         hasConferenceConfirmation = false
+        hasConnectedConference = false
         resetMuteState()
         unregisterBroadcastReceiver()
         unregisterNetworkCallback()
@@ -592,9 +679,12 @@ class JitsiCallManager {
             .setFeatureFlag("notifications.enabled", false)
             .setFeatureFlag("call-integration.enabled", false)
             .setFeatureFlag("pip.enabled", false)
-            // HelmChat owns audio focus/mode/routing through BluetoothAudioRouter so music can
-            // keep playing (ducked) and navigation prompts do not end the call.
+            // HelmChat owns audio mode/routing through BluetoothAudioRouter and deliberately does
+            // not request audio focus, so background radio/music keeps its own focus and is not
+            // explicitly ducked by this app.
+            // Hiding Jitsi's audio-device picker prevents a route choice the native layer cannot apply.
             .setFeatureFlag("audio-focus.disabled", true)
+            .setFeatureFlag("audio-device-button.enabled", false)
 
         token?.trim()?.takeIf { it.isNotEmpty() }?.let { builder.setToken(it) }
 
@@ -632,6 +722,7 @@ class JitsiCallManager {
             .setFeatureFlag("welcomepage.enabled", false)
             .setFeatureFlag("prejoinpage.enabled", false)
             .setFeatureFlag("audio-focus.disabled", true)
+            .setFeatureFlag("audio-device-button.enabled", false)
             .build()
 
         JitsiMeet.setDefaultConferenceOptions(defaultOptions)
@@ -762,7 +853,7 @@ class JitsiCallManager {
         val runnable = Runnable {
             if (_callState.value is CallState.Connecting && currentRoomName == roomName) {
                 Timber.w("Connection to room '$roomName' timed out")
-                _callState.value = CallState.Error(messageResId = R.string.call_error_connect_timeout)
+                failCall(CallState.Error(messageResId = R.string.call_error_connect_timeout))
             }
         }
         connectTimeout = runnable
@@ -780,29 +871,74 @@ class JitsiCallManager {
     /**
      * Keeps the call screen alive while Jitsi restores a dropped conference. Without this the
      * app would navigate back home on the transient [BroadcastEvent.Type.CONFERENCE_TERMINATED]
-     * that Jitsi emits before its own automatic reload kicks in.
+     * that Jitsi emits before its own automatic reload kicks in. Offline time does not count
+     * against the deadline; the watchdog resumes when the network returns.
      *
      * @param roomName the room the timeout applies to; a stale timeout is ignored when the
      *   active room changed.
+     * @param timeoutMs the deadline, longer for a rejoin that is already in progress because
+     *   Jitsi's conference-request backoff can reach two minutes.
      */
-    private fun scheduleReconnectTimeout(roomName: String) {
+    private fun scheduleReconnectTimeout(
+        roomName: String,
+        timeoutMs: Long = RECONNECT_RELOAD_TIMEOUT_MS,
+    ) {
         cancelReconnectTimeout()
+        pendingReconnectRoom = roomName
+        reconnectDeadline.start(timeoutMs)
+        if (!_isNetworkAvailable.value) {
+            val remainingMs = reconnectDeadline.pause()
+            reconnectPaused = true
+            Timber.i("Reconnect timeout for '$roomName' paused while offline ($remainingMs ms left)")
+            return
+        }
+        reconnectPaused = false
         val runnable = Runnable {
-            if (_callState.value is CallState.Reconnecting && currentRoomName == roomName) {
+            reconnectTimeout = null
+            pendingReconnectRoom = null
+            reconnectDeadline.clear()
+            if (isReconnectWatchdogState(_callState.value) && currentRoomName == roomName) {
                 Timber.w("Reconnect to room '$roomName' timed out")
-                _callState.value = CallState.Error(messageResId = R.string.call_error_reconnect_timeout)
+                failCall(CallState.Error(messageResId = R.string.call_error_reconnect_timeout))
             }
         }
         reconnectTimeout = runnable
-        mainHandler.postDelayed(runnable, RECONNECT_TIMEOUT_MS)
+        mainHandler.postDelayed(runnable, timeoutMs)
     }
 
     /**
-     * Cancels a pending reconnect timeout, if any.
+     * Cancels a pending reconnect timeout, forgets its room and drops any paused remainder.
      */
     private fun cancelReconnectTimeout() {
-        reconnectTimeout?.let { mainHandler.removeCallbacks(it) }
+        removeReconnectTimeoutRunnable()
+        reconnectDeadline.clear()
+    }
+
+    /**
+     * Removes only the posted timeout runnable and its room, leaving the deadline object untouched.
+     * Used when pausing so the remaining time can be read after the runnable is removed.
+     */
+    private fun removeReconnectTimeoutRunnable() {
+        reconnectTimeout?.let(mainHandler::removeCallbacks)
         reconnectTimeout = null
+        pendingReconnectRoom = null
+    }
+
+    /**
+     * Stops the reconnect countdown without losing the room being tracked, so the deadline can
+     * restart for its remaining duration once connectivity is back.
+     */
+    private fun pauseReconnectTimeout() {
+        val room = pendingReconnectRoom
+        val remainingMs = reconnectDeadline.pause()
+        removeReconnectTimeoutRunnable()
+        if (room == null) {
+            reconnectDeadline.clear()
+            return
+        }
+        reconnectPaused = true
+        pendingReconnectRoom = room
+        Timber.i("Reconnect timeout paused with $remainingMs ms left while offline")
     }
 
     /**
@@ -849,89 +985,129 @@ class JitsiCallManager {
 
     /**
      * Translates a Jitsi broadcast event into call-state, mute-state and participant updates.
+     * Events arriving after a failed call are discarded so a late termination cannot revive it.
      *
      * @param event the event to apply.
      */
     private fun handleBroadcastEvent(event: BroadcastEvent) {
-        // Keep the receiver registered during hang-up so the confirmation can arrive, but ignore
-        // every other queued event from the conference that is being torn down.
-        if (isLeaving && !isHangUpConfirmation(event.type)) {
-            Timber.d("Ignoring ${event.type} while leaving the conference")
+        if (_callState.value is CallState.Error) {
+            Timber.d("Ignoring ${event.type} after the call failed")
             return
         }
-        if (shouldIgnoreTerminationBeforeJoin(isLeaving, hasConferenceConfirmation, event.type)) {
-            Timber.d("Ignoring stale ${event.type} before the new conference joined")
-            return
-        }
-
+        if (shouldIgnoreEventWhileLeaving(event)) return
         when (event.type) {
-            BroadcastEvent.Type.CONFERENCE_WILL_JOIN -> {
-                // A new join attempt (including Jitsi's own automatic reload) supersedes any
-                // pending reconnect timeout.
-                hasConferenceConfirmation = true
-                cancelReconnectTimeout()
-                currentRoomName?.let { room ->
-                    if (_callState.value !is CallState.Connected) {
-                        _callState.value = CallState.Connecting(room, currentServerUrl)
-                    }
-                }
-            }
-
-            BroadcastEvent.Type.CONFERENCE_JOINED -> {
-                cancelConnectTimeout()
-                cancelReconnectTimeout()
-                if (!isParticipantSessionLive(currentRoomName, isLeaving, _callState.value)) {
-                    Timber.i("Ignoring CONFERENCE_JOINED for a session that is no longer live")
-                    return
-                }
-                val room = currentRoomName ?: return
-                hasConferenceConfirmation = true
-                _callState.value = CallState.Connected(room, currentServerUrl)
-                participantTracker.onConferenceJoined()
-                refreshParticipantCount()
-            }
-
+            BroadcastEvent.Type.CONFERENCE_WILL_JOIN -> handleConferenceWillJoin()
+            BroadcastEvent.Type.CONFERENCE_JOINED -> handleConferenceJoined()
             BroadcastEvent.Type.CONFERENCE_TERMINATED,
-            BroadcastEvent.Type.READY_TO_CLOSE -> {
-                if (isLeaving) {
-                    Timber.i("Jitsi confirmed the hang-up")
-                    finishHangUp()
-                    return
-                }
-                cancelConnectTimeout()
-                resetParticipantSession()
-                hasConferenceConfirmation = false
-                val room = currentRoomName
-                if (room != null) {
-                    // Jitsi reloads the conference on its own after a transient drop; stay on
-                    // the call screen and show the reconnecting state instead of navigating home.
-                    Timber.i("Conference for room '$room' ended unexpectedly, waiting for reload")
-                    _callState.value = CallState.Reconnecting(room, currentServerUrl)
-                    scheduleReconnectTimeout(room)
-                } else {
-                    cancelReconnectTimeout()
-                    _callState.value = CallState.Idle
-                }
+            BroadcastEvent.Type.READY_TO_CLOSE,
+            -> {
+                handleConferenceTerminated()
             }
-
             BroadcastEvent.Type.AUDIO_MUTED_CHANGED -> {
                 event.booleanValue("muted")?.let { _isMuted.value = it }
             }
-
             BroadcastEvent.Type.PARTICIPANT_JOINED -> {
                 event.participantId()?.let { id ->
                     participantTracker.onJoined(id, isLocal = event.booleanValue("isLocal") == true)
                 }
             }
-
             BroadcastEvent.Type.PARTICIPANT_LEFT -> {
                 event.participantId()?.let { id ->
                     participantTracker.onLeft(id, isLocal = event.booleanValue("isLocal") == true)
                 }
             }
-
             else -> Unit
         }
+    }
+
+    /**
+     * Reports whether an event belongs to a teardown or to a stale pre-join conference and must be
+     * ignored. The confirmation event is still delivered so hang-up can finish.
+     *
+     * @param event the Jitsi event to classify.
+     * @return `true` when the event must be dropped.
+     */
+    private fun shouldIgnoreEventWhileLeaving(event: BroadcastEvent): Boolean {
+        // Keep the receiver registered during hang-up so the confirmation can arrive, but ignore
+        // every other queued event from the conference that is being torn down.
+        if (isLeaving && !isHangUpConfirmation(event.type)) {
+            Timber.d("Ignoring ${event.type} while leaving the conference")
+            return true
+        }
+        if (shouldIgnoreTerminationBeforeJoin(isLeaving, hasConferenceConfirmation, event.type)) {
+            Timber.d("Ignoring stale ${event.type} before the new conference joined")
+            return true
+        }
+        return false
+    }
+
+    /**
+     * Handles Jitsi's `WILL_JOIN` event, keeping the short connect timeout for a first join and
+     * handing over to the longer rejoin watchdog only after a confirmed conference reloads.
+     */
+    private fun handleConferenceWillJoin() {
+        val handsOverDeadline = handsOverJoinDeadlineToRejoin(
+            type = BroadcastEvent.Type.CONFERENCE_WILL_JOIN,
+            callState = _callState.value,
+            hasConnectedConference = hasConnectedConference,
+        )
+        if (handsOverDeadline) cancelConnectTimeout()
+        hasConferenceConfirmation = true
+        cancelReconnectTimeout()
+        val room = currentRoomName ?: return
+        if (_callState.value is CallState.Connected) return
+        _callState.value = CallState.Connecting(room, currentServerUrl)
+        if (handsOverDeadline) {
+            scheduleReconnectTimeout(room, REJOIN_COMPLETION_TIMEOUT_MS)
+        }
+    }
+
+    /**
+     * Applies a confirmed conference join and refreshes the authoritative participant snapshot.
+     */
+    private fun handleConferenceJoined() {
+        cancelConnectTimeout()
+        cancelReconnectTimeout()
+        if (!isParticipantSessionLive(currentRoomName, isLeaving, _callState.value)) {
+            Timber.i("Ignoring CONFERENCE_JOINED for a session that is no longer live")
+            return
+        }
+        val room = currentRoomName ?: return
+        hasConferenceConfirmation = true
+        hasConnectedConference = true
+        _callState.value = CallState.Connected(room, currentServerUrl)
+        participantTracker.onConferenceJoined()
+        refreshParticipantCount()
+    }
+
+    /**
+     * Handles an unexpected conference termination, either finishing a hang-up or arming the
+     * reload watchdog while Jitsi restores the conference on its own.
+     */
+    private fun handleConferenceTerminated() {
+        if (isLeaving) {
+            Timber.i("Jitsi confirmed the hang-up")
+            finishHangUp()
+            return
+        }
+        if (isTerminalCallState(_callState.value)) {
+            Timber.d("Ignoring termination in terminal call state ${_callState.value::class.simpleName}")
+            return
+        }
+        cancelConnectTimeout()
+        resetParticipantSession()
+        hasConferenceConfirmation = false
+        val room = currentRoomName
+        if (room == null) {
+            cancelReconnectTimeout()
+            _callState.value = CallState.Idle
+            return
+        }
+        // Jitsi reloads the conference on its own after a transient drop; stay on the call screen
+        // and show the reconnecting state instead of navigating home.
+        Timber.i("Conference for room '$room' ended unexpectedly, waiting for reload")
+        _callState.value = CallState.Reconnecting(room, currentServerUrl)
+        scheduleReconnectTimeout(room)
     }
 
     /**
@@ -1077,6 +1253,49 @@ internal fun shouldIgnoreTerminationBeforeJoin(
     hasConferenceConfirmation: Boolean,
     type: BroadcastEvent.Type,
 ): Boolean = !isLeaving && !hasConferenceConfirmation && isHangUpConfirmation(type)
+
+/**
+ * Reports whether a state still needs the reconnect watchdog to be armed.
+ *
+ * Jitsi reports `Connecting` when its own reload calls `CONFERENCE_WILL_JOIN`, so both transient
+ * states must be covered; otherwise a reload that stalls before `CONFERENCE_JOINED` could keep the
+ * rider on the call screen forever.
+ *
+ * @param callState the current call state.
+ * @return `true` for [CallState.Reconnecting] and [CallState.Connecting].
+ */
+internal fun isReconnectWatchdogState(callState: CallState): Boolean =
+    callState is CallState.Reconnecting || callState is CallState.Connecting
+
+/**
+ * Reports whether a call state is terminal and must not be revived by a late Jitsi event.
+ *
+ * [CallState.Ending] is terminal for ordinary events; only the explicit hang-up confirmation is
+ * allowed through by the manager while it is active.
+ *
+ * @param callState the state to classify.
+ * @return `true` for [CallState.Idle], [CallState.Ending] and [CallState.Error].
+ */
+internal fun isTerminalCallState(callState: CallState): Boolean =
+    callState is CallState.Idle || callState is CallState.Ending || callState is CallState.Error
+
+/**
+ * Reports whether a WILL_JOIN event transfers the join deadline from the short connect timeout to
+ * the longer rejoin watchdog. Jitsi emits WILL_JOIN on a plain first join as well, so only a reload
+ * after a conference has actually connected may cancel the 30-second connect timeout.
+ *
+ * @param type the Jitsi event type to classify.
+ * @param callState the state at the moment the event arrived.
+ * @param hasConnectedConference whether this join attempt has already reported CONFERENCE_JOINED.
+ * @return `true` when the connect timeout must be cancelled because the watchdog takes over.
+ */
+internal fun handsOverJoinDeadlineToRejoin(
+    type: BroadcastEvent.Type,
+    callState: CallState,
+    hasConnectedConference: Boolean,
+): Boolean = type == BroadcastEvent.Type.CONFERENCE_WILL_JOIN &&
+    (callState is CallState.Reconnecting ||
+        (callState is CallState.Connecting && hasConnectedConference))
 
 /**
  * Reports whether a hang-up timeout still belongs to the teardown in progress.

@@ -25,7 +25,7 @@
     <string name="home_join">Dołącz do rozmowy</string>
     <string name="home_join_hint">Połączenie wyłącznie głosowe — bez wideo, mniej danych i dłuższa bateria.</string>
     <string name="home_invite">Zaproś</string>
-    <string name="home_invite_message">Dołącz do mojego interkomu HelmChat!\nPokój: %1$s\nLink: %2$s</string>
+    <string name="home_invite_message">Dołącz do mojej rozmowy w HelmChat!\nPokój: %1$s\nLink: %2$s</string>
 
     <!-- Call screen -->
     <string name="call_connecting">Łączenie…</string>

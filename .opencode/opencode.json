@@ -1,0 +1,16 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "Android Dev",
+  "model": "opencode/big-pickle",
+  "small_model": "opencode/glm-5.3-flash-free",
+  "providers": {
+    "opencode": {
+      "models": {
+        "deepseek-v4.1-flash": { "disabled": true }
+      }
+    }
+  },
+  "policies": [
+    { "action": "provider.use", "resource": "opencode/deepseek-v4.1-flash", "effect": "deny" }
+  ]
+}

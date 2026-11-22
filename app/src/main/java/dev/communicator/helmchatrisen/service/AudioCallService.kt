@@ -80,20 +80,6 @@ class AudioCallService : Service() {
             }
             ContextCompat.startForegroundService(context, intent)
         }
-
-        /**
-         * Asks the running service to begin hanging up. The service keeps its foreground
-         * notification and audio route until Jitsi reaches a terminal state, so the ending status
-         * remains visible while conference teardown is in flight. Safe when no call is active.
-         *
-         * @param context the context used to deliver the end-call intent.
-         */
-        fun stopCall(context: Context) {
-            val intent = Intent(context, AudioCallService::class.java).apply {
-                action = ACTION_END_CALL
-            }
-            context.startService(intent)
-        }
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -126,7 +112,9 @@ class AudioCallService : Service() {
                 is CallState.Reconnecting -> applySessionState(state.roomName, state.serverUrl)
                 is CallState.Error -> {
                     Timber.e("Call error: ${state.message ?: state.messageResId}")
-                    updateNotification()
+                    // A failed call is terminal: release the microphone foreground service and
+                    // audio route immediately. The manager keeps the error message visible briefly.
+                    finishCall()
                 }
                 is CallState.Ending -> updateNotification()
                 is CallState.Idle -> finishCall()
@@ -211,8 +199,9 @@ class AudioCallService : Service() {
         activeServerUrl = serverUrl
         callActive = true
         bluetoothAudioRouter.resetForNewCall()
-        // Own the communication audio mode and helmet route for the whole call. Jitsi's own
-        // audio focus handling is disabled so music keeps playing (ducked).
+        // Own the communication audio mode and helmet route for the whole call. Jitsi's own audio
+        // focus handling is disabled and this router takes no focus either, so background music
+        // keeps its own focus and is not explicitly ducked by this app.
         bluetoothAudioRouter.startAudioRouting()
 
         val notification = buildNotification()
@@ -268,23 +257,22 @@ class AudioCallService : Service() {
     }
 
     /**
-     * Registers the low-importance call channel on Android 8.0+; a no-op on older releases,
-     * which have no notification channels.
+     * Registers the low-importance call channel used by the ongoing notification.
+     *
+     * Notification channels are available on every supported API level (minSdk 26).
      */
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                getString(R.string.notification_channel_name),
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = getString(R.string.notification_channel_description)
-                setShowBadge(false)
-            }
-            val notificationManager =
-                getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            getString(R.string.notification_channel_name),
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = getString(R.string.notification_channel_description)
+            setShowBadge(false)
         }
+        val notificationManager =
+            getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(channel)
     }
 
     /**

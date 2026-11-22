@@ -25,7 +25,7 @@
     <string name="home_join">Görüşmeye katıl</string>
     <string name="home_join_hint">Yalnızca sesli bağlantı — video yok, daha az veri ve daha uzun pil ömrü.</string>
     <string name="home_invite">Davet et</string>
-    <string name="home_invite_message">HelmChat interkomuma katıl!\nOda: %1$s\nBağlantı: %2$s</string>
+    <string name="home_invite_message">HelmChat sohbetimize katıl!\nOda: %1$s\nBağlantı: %2$s</string>
 
     <!-- Call screen -->
     <string name="call_connecting">Bağlanıyor…</string>
