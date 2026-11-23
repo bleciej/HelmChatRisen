@@ -5,16 +5,16 @@ plugins {
 }
 
 /** Version name shared by the artifact names and the in-app Application info dialog. */
-val appVersionName = "1.6"
+val appVersionName = "1.7"
 
-/** Version code for the 1.6 release line. */
-val appVersionCode = 6
+/** Version code for the 1.7 release line. */
+val appVersionCode = 7
 
 /** Release tag published for this build (kept in sync with RELEASE_NOTES.md). */
 val appReleaseTag = "V$appVersionName"
 
 /** Release date published for this build (kept in sync with RELEASE_NOTES.md). */
-val appReleaseDate = "2026-11-22"
+val appReleaseDate = "2026-11-29"
 
 /** Minimum supported API level, also shown in the Application info dialog. */
 val appMinSdk = 26
@@ -237,6 +237,8 @@ androidComponents {
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
+    // AppCompat theme parent is required by Jitsi 13.1.1's bridgeless ReactHost.
+    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.compose.adaptive)
     implementation(libs.androidx.compose.adaptive.layout)
     implementation(libs.androidx.compose.adaptive.navigation3)

@@ -18,11 +18,11 @@ plugins {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        // The libre Jitsi SDK is built from source by scripts/build-jitsi-libre-sdk.sh.
+        // Keep this first so a locally published 13.1.1 cannot be shadowed by a remote AAR.
+        mavenLocal()
         google()
         mavenCentral()
-        maven {
-            url = uri("https://github.com/jitsi/jitsi-maven-repository/raw/master/releases")
-        }
     }
 }
 

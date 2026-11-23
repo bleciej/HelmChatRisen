@@ -1,24 +1,31 @@
 package dev.communicator.helmchatrisen
 
-import androidx.test.platform.app.InstrumentationRegistry
+import androidx.appcompat.widget.AppCompatTextView
 import androidx.test.ext.junit.runners.AndroidJUnit4
-
+import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 
-import org.junit.Assert.*
-
 /**
- * Instrumented test, which will execute on an Android device.
- *
- * See [testing documentation](http://d.android.com/tools/testing).
+ * Instrumented smoke checks for the application context and its host theme.
  */
 @RunWith(AndroidJUnit4::class)
 class ExampleInstrumentedTest {
     @Test
     fun useAppContext() {
-        // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
         assertEquals("dev.communicator.helmchatrisen", appContext.packageName)
+    }
+
+    /**
+     * Jitsi 13.1.1 starts its bridgeless ReactHost during Application startup. React Native creates
+     * AppCompat widgets and aborts the process if the host theme does not descend from
+     * Theme.AppCompat, so constructing one with the application context guards the launch path.
+     */
+    @Test
+    fun appTheme_supportsJitsiReactHost() {
+        val appContext = InstrumentationRegistry.getInstrumentation().targetContext
+        AppCompatTextView(appContext)
     }
 }

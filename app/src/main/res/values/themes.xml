@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- The app is always dark, so there are no values-night variants. -->
-    <style name="Base.Theme.HelmChatRisen" parent="android:Theme.Material">
+    <!--
+        The app is always dark, so there are no values-night variants. Jitsi Meet SDK 13.1.1
+        initializes React Native's bridgeless ReactHost at startup, which requires an AppCompat
+        theme; a platform Theme.Material parent crashes with "requires your app theme to be
+        Theme.AppCompat" as soon as the embedded Jitsi view is prepared.
+    -->
+    <style name="Base.Theme.HelmChatRisen" parent="Theme.AppCompat.NoActionBar">
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
     </style>

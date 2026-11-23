@@ -734,3 +734,107 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - Telephony-owned audio mode/route handling remains unchanged
   - JVM tests, debug build, lint, release APK build and AAB build pass after the change
   - Instrumented test passes on the connected S25; physical route-parity retest with a real helmet intercom and running player/radio remains manual
+
+### Task_83_BuildLibreJitsiSdkFromSource: Use a locally built FLOSS Jitsi 13.1.1.
+- **Status:** COMPLETED
+- **Updates:** Switching from the prebuilt Jitsi Maven AAR to a source-built `mobile-sdk-13.1.1` with `LIBRE_BUILD=true`. Added `scripts/build-jitsi-libre-sdk.sh` (pins the tag, requires Node.js 24+, patches `react-native-device-info`'s install-attribution/GMS hooks, publishes all artifacts to `mavenLocal()`, verifies the published POMs). `settings.gradle.kts` now uses `mavenLocal()` and no longer declares the untrusted remote Jitsi Maven; `gradle/libs.versions.toml` pins `13.1.1`. README build instructions document the prerequisite. The Node 24/JDK 17 toolchain and the source checkout were moved from `~/.cache` into the gitignored project `build/helmchat-jitsi-build` and `build/helmchat-jitsi-sdk`; the script regenerates the autolinking manifest and clears CMake `.cxx` caches (both store absolute paths) so a relocated checkout still builds. 13.1.1 is the first tag containing Jitsi PR #17682 and keeps the `setAudioOnly()` API HelmChat uses; 13.2.0+ renamed it to `setLowBandwidthMode()`. Verified: SDK publish from the relocated checkout succeeds with clean POM metadata; `releaseRuntimeClasspath` has no forbidden groups; `testDebugUnitTest` (182 tests), `lintDebug` (0 errors / 25 warnings), `assembleDebug`, `assembleRelease` (all three APKs) and `bundleRelease` pass; the reconnect regex matches the fresh 13.1.1 bundle and patches debug/release assets. Updated README and RELEASE_NOTES F-Droid/verification sections. Device call and intercom routing with 13.1.1 remain unverified (no adb/device available).
+- **Acceptance Criteria:**
+  - `releaseRuntimeClasspath` contains no Play Services, Firebase, GMS, install-referrer, Amplitude, Giphy or Google Sign-In dependencies
+  - `assembleDebug`, `testDebugUnitTest`, `lintDebug`, `assembleRelease` and `bundleRelease` pass with the local SDK
+  - The reconnect JS patch still applies to the 13.1.1 bundle and audio-only behavior is unchanged
+  - F-Droid notes and verification commands describe the source-built dependency
+
+### Task_84_PrepareFdroidRecipe: Prepare an fdroiddata recipe for the source-built SDK.
+- **Status:** COMPLETED
+- **Updates:** Added a candidate `fdroiddata` metadata file (`fdroid/dev.communicator.helmchatrisen.yml`) with two per-ABI build blocks (601/602 via `VercodeOperation`), version scraping from `app/build.gradle.kts` via `UpdateCheckData`, and a manual build phase. Added `scripts/fdroid-install-deps.sh` (JDK 17 + 21 and build tools via apt) and `scripts/fdroid-build.sh` (pinned Node.js 24.22.3 with SHA-256 verification, SDK source build, app assemble). Pinned the Jitsi tag to commit `1a308a6873098c038cf264f3d8f5378bb975601b` in `scripts/build-jitsi-libre-sdk.sh`. Added upstream fastlane descriptions/changelogs and `fdroid/README.md` with validation commands and open risks (node_modules size, npm registry access, pending `V1.6` tag). Updated README and RELEASE_NOTES links. YAML parses and all shell scripts pass `bash -n`; an actual `fdroid build` was not run (fdroidserver unavailable locally).
+- **Acceptance Criteria:**
+  - Candidate metadata describes the source-built SDK bootstrap and per-ABI outputs
+  - Upstream fastlane description/changelogs exist
+  - Metadata is validated with `fdroid lint`/`fdroid build` after the `V1.7` tag is pushed (superseded by Task_85 code 701/702)
+
+### Task_85_ReleaseV17Metadata: Publish version 1.7 / code 7 under tag V1.7 with the local SDK.
+- **Status:** COMPLETED
+- **Updates:** Set `appVersionName = "1.7"`, `appVersionCode = 7`, `appReleaseTag = "V$appVersionName"` (evaluates to `V1.7`) and `appReleaseDate = "2026-11-29"` in `app/build.gradle.kts`. Restored the `releaseTag_tracksVersionName` JVM assertion now that the tag again matches the version name. Rewrote RELEASE_NOTES: restored the historical 1.6 section (2026-11-22, code 6, V1.6), added a new current 1.7 section with the FLOSS SDK migration and verification results, and updated the header table, history, matrix, build/package names, F-Droid notes, upgrade notes and tag instructions. Updated the F-Droid recipe to `versionName: '1.7'` with per-ABI codes 701/702 and `CurrentVersionCode: 702`, rewrote fastlane changelogs `7/701/702.txt`, and refreshed `fdroid/README.md` plus README artifact names. Verified: generated debug/release BuildConfig contains `VERSION_CODE=7`, `VERSION_NAME=1.7`, `RELEASE_TAG=V1.7`, `RELEASE_DATE=2026-11-29`; 182 JVM tests pass (0 failures/errors/skips), lint 0 errors / 25 warnings, `assembleDebug`, `assembleRelease` (3 APKs named 1.7) and `bundleRelease` pass against the locally published Jitsi 13.1.1 AAR; the reconnect JS patch applies; `releaseRuntimeClasspath` still contains no forbidden GMS/Firebase/analytics groups. The release tag is not pushed and release outputs remain unsigned (no signing properties).
+- **Acceptance Criteria:**
+  - Build metadata and documentation consistently show version 1.7, code 7, tag V1.7 and 2026-11-29
+  - App builds and tests pass with the local FLOSS Jitsi SDK 13.1.1
+  - F-Droid metadata and changelogs use 701/702 codes and await the pushed V1.7 tag commit
+
+### Task_86_FixJitsi1311StartupTheme: Stop the launch crash from the bridged ReactHost.
+- **Status:** COMPLETED
+- **Updates:** Reproduced the user-reported immediate launch crash on the attached x86_64 emulator. Logcat showed `java.lang.IllegalArgumentException: The style on this component requires your app theme to be Theme.AppCompat (or a descendant)` from React Native's bridgeless `ReactHost` started by Jitsi 13.1.1's `JitsiInitializer` before `MainActivity`. The app theme parent was `android:Theme.Material`, which is not AppCompat. Changed `Base.Theme.HelmChatRisen` to `Theme.AppCompat.NoActionBar` in `values/themes.xml`, added explicit `androidx.appcompat:appcompat:1.7.0` to the version catalog and app dependencies, and updated the stale React-laziness comment in `JitsiConferenceView.kt`. Added an instrumented smoke test that constructs `AppCompatTextView` with the app context so a future non-AppCompat theme fails in CI. Reinstalled the rebuilt debug APK on the emulator: process stayed alive, home screen rendered via UI dump, and logcat had no Theme.AppCompat/fatal errors. Verification: 182 JVM tests pass, lint 0 errors / 26 warnings (new GradleDependency hint for AppCompat), `connectedAndroidTest` 2/2 pass on the emulator, `assembleDebug`, `assembleRelease` and `bundleRelease` pass. RELEASE_NOTES 1.7 section and verification summary updated.
+- **Acceptance Criteria:**
+  - App launches and stays alive with Jitsi 13.1.1's startup ReactHost
+  - Host theme descends from Theme.AppCompat and an instrumented test guards it
+  - JVM tests, lint, debug/release builds and emulator instrumented tests pass
+
+### Task_87_AuditJitsi1311FdroidReadiness: Re-audit SDK 13.1.1 dependencies and F-Droid requirements.
+- **Status:** COMPLETED
+- **Updates:** Re-checked `releaseRuntimeClasspath` with and without
+  `--refresh-dependencies --info`: no Play Services, Firebase, GMS,
+  install-referrer, Amplitude, Giphy, analytics or Google Sign-In groups are
+  present, and local POMs under `~/.m2/repository/{com/facebook/react,org/jitsi/react}`
+  are clean. Confirmed `org.jitsi:webrtc:124.0.0` and
+  `com.facebook.react:react-android:0.85.2` resolve from Maven Central (not an
+  untrusted Jitsi/JitPack repo); Jitsi's `publish` task supplies the `-jitsi-*`
+  React Native forks to `mavenLocal()`. Verified the Jitsi build uses Gradle
+  8.14 with toolchain 17, while the app uses Gradle 9.6/AGP 9.5.2 with JDK 21.
+  Reviewed the current F-Droid Build Metadata Reference: the candidate recipe's
+  `UpdateCheckData`, `VercodeOperation` 701/702, per-ABI `output` globs, `sudo`
+  and `build` fields are valid, and `Summary`/`Description` must stay in fastlane
+  rather than being duplicated in the `.yml`. Replaced the stale 12.1.5
+  "Blocking" notes in `.opencode/skills/f-droid/SKILL.md` with the current
+  13.1.1 source-build state, and added 13.1.1-specific ReactHost/AppCompat and
+  `setAudioOnly()` notes to `.opencode/skills/jitsi-sdk/SKILL.md`. Refreshed
+  `fdroid/README.md` and the 1.7 F-Droid section in `RELEASE_NOTES.md` to reflect
+  that descriptions and per-ABI blocks already exist. `fdroidserver` cannot be
+  installed here (no `pip`/`ensurepip`), so `fdroid lint`/`build` remain external.
+- **Acceptance Criteria:**
+  - Runtime dependency graph and published POMs contain no forbidden groups
+  - All Jitsi-specific artifacts resolve from trusted Maven Central or the source-built local repo
+  - Skills and F-Droid docs no longer claim SDK 12.1.5 blockers or missing metadata
+  - Remaining blockers are only the pushed tag hash, fdroidserver validation and signing
+
+### Task_88_SignReleaseV17: Sign the 1.7 artifacts with the developer keystore.
+- **Status:** COMPLETED
+- **Updates:** The developer already had a PKCS#12 keystore at the repository
+  root (`keystore.jks`, gitignored). The first `assembleRelease` attempt failed
+  because `releaseStoreFile=~/AndroidStudioProjects/...` was resolved relative
+  to the `app/` module as `app/~/AndroidStudioProjects/...`; replaced it with
+  the absolute path `/home/burt/AndroidStudioProjects/HelmChatRisen/keystore.jks`
+  in `~/.gradle/gradle.properties` (chmod 600) without touching passwords.
+  The user then ran `assembleRelease` and `bundleRelease`. Verified all three
+  APKs with `apksigner verify --verbose --print-certs`: v2 signature valid,
+  signer `CN=Bartosz Leciejewski, L=Warsaw`, SHA-256
+  `dbce6bc9199558ae86ed0774d300adc2ecdd97b6438ae60c8af9e871876254c2`, and
+  `aapt2 dump badging` reports `dev.communicator.helmchatrisen` versionCode 7 /
+  versionName 1.7 for every APK. The AAB passes `jarsigner -verify` (self-signed
+  and no timestamp warnings are expected). Updated RELEASE_NOTES and the F-Droid
+  skill to stop describing the artifacts as unsigned.
+- **Acceptance Criteria:**
+  - All three release APKs and the AAB are signed with one consistent certificate
+  - APK version code/name and package match the 1.7 release metadata
+  - Signing material stays outside version control
+
+### Task_89_ReviewDeviceLogcatV17: Audit the phone logcat from the local 1.7 run.
+- **Status:** COMPLETED
+- **Updates:** Analysed `.agent/helmchat-logcat.txt` (44,546 lines, PID 28806 =
+  `dev.communicator.helmchatrisen`). No `FATAL EXCEPTION`, `AndroidRuntime`
+  crash, ANR, `Theme.AppCompat` failure, `NoSuchMethodError`,
+  `NoClassDefFoundError` or `UnsatisfiedLinkError` for the app. The log shows a
+  complete successful cycle: `AudioCallService created` → `CONFERENCE_WILL_JOIN`
+  → `CONFERENCE_JOINED` on `https://meet.ffmuc.net/Burts-Easy-Ride` → several
+  mute/unmute transitions → `Jitsi confirmed the hang-up` →
+  `CONFERENCE_TERMINATED` → `AudioCallService destroyed` and audio routing
+  reset. `startAudioOnly=true`, `Audio-only enabled`, `opusMaxAverageBitrate=24000`
+  and `startWithVideoMuted=true` confirm the audio-only configuration. The 521
+  `E` lines are one repeated bridgeless RN `ReactNoCrashSoftException`
+  (`getNativeModule(UIManagerModule.class)` from safe-area-context/rnscreens),
+  plus Jitsi dynamic-branding network errors and SoLoader recovery notices; all
+  are non-fatal. Two WebRTC warnings are environmental (no cellular permission,
+  codegen setter for the hidden video view). Documented the soft exception and
+  branding error in RELEASE_NOTES known limitations.
+- **Acceptance Criteria:**
+  - No crash, ANR or fatal exception attributable to the app
+  - Full join/mute/hang-up cycle visible with audio-only enabled
+  - Non-fatal warnings captured in release notes instead of being ignored
