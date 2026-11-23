@@ -199,9 +199,8 @@ class AudioCallService : Service() {
         activeServerUrl = serverUrl
         callActive = true
         bluetoothAudioRouter.resetForNewCall()
-        // Own the communication audio mode and helmet route for the whole call. Jitsi's own audio
-        // focus handling is disabled and this router takes no focus either, so background music
-        // keeps its own focus and is not explicitly ducked by this app.
+        // Own the communication audio mode, helmet route and ducking audio focus for the whole
+        // call. Jitsi's own focus handling stays disabled so the router is the sole focus owner.
         bluetoothAudioRouter.startAudioRouting()
 
         val notification = buildNotification()

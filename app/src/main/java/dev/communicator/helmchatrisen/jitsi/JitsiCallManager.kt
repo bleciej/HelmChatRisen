@@ -679,9 +679,8 @@ class JitsiCallManager {
             .setFeatureFlag("notifications.enabled", false)
             .setFeatureFlag("call-integration.enabled", false)
             .setFeatureFlag("pip.enabled", false)
-            // HelmChat owns audio mode/routing through BluetoothAudioRouter and deliberately does
-            // not request audio focus, so background radio/music keeps its own focus and is not
-            // explicitly ducked by this app.
+            // HelmChat owns audio mode, routing and the ducking focus request through
+            // BluetoothAudioRouter. Jitsi must not take a second, conflicting focus.
             // Hiding Jitsi's audio-device picker prevents a route choice the native layer cannot apply.
             .setFeatureFlag("audio-focus.disabled", true)
             .setFeatureFlag("audio-device-button.enabled", false)

@@ -838,3 +838,60 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - No crash, ANR or fatal exception attributable to the app
   - Full join/mute/hang-up cycle visible with audio-only enabled
   - Non-fatal warnings captured in release notes instead of being ignored
+
+### Task_90_ReviewBluetoothLogcatV17: Audit the Samsung/Bluetooth phone logcat.
+- **Status:** COMPLETED
+- **Updates:** Analysed the replacement `.agent/helmchat-logcat.txt` (62,623
+  lines, 14:04:57–14:06:35, app PID 8564). No crashes, ANR, fatal exception or
+  app-attributable `Theme.AppCompat` error (the two ThemeUtils lines belong to
+  PID 9919 / LottieAnimationView). Full call cycle succeeded: `AudioCallService
+  created` → communication mode → `CONFERENCE_JOINED` → mute changes →
+  `Jitsi confirmed the hang-up` → `CONFERENCE_TERMINATED` → routing reset.
+  Bluetooth: SCO connected at 14:05:22 (`SCO audio state updated: 1`,
+  `Bluetooth SCO connected to helmet intercom`, preferred device `Redmi Buds 5
+  Pro`). At 14:05:54 SCO dropped (`state 0`), HFP/A2DP lookups were unavailable,
+  the SCO output was removed; the router confirmed the disconnect, ignored the
+  resulting noisy/removal broadcasts as local-stop side effects, tried to
+  restart SCO once and then stopped it, leaving `[EARPIECE, SPEAKER]` until
+  hang-up. Recorded as expected disconnect handling; physical cause unknown.
+  Background media: `tunein.player` (TOK FM) never received a focus/duck request
+  from this app (no `requestAudioFocus` from PID 8564 in the log); it kept
+  `PlaybackState.state=3` and advanced its position through the call, abandoning
+  focus only 14:05:54–14:06:05. Documented that OEM ducking — not this app —
+  accounted for any attenuation, so the earlier "speaker fix" claim is qualified.
+- **Acceptance Criteria:**
+  - No crash or fatal exception attributable to the app
+  - Bluetooth SCO connect and disconnect path explained from logcat
+  - Background-media focus behaviour recorded without claiming an unverified fix
+
+### Task_91_ExperimentalAudioFocus: Try a ducking focus request in source builds.
+- **Status:** COMPLETED (implementation, local checks and S25 log audit; helmet run pending)
+- **Updates:** Added `AudioFocusController` (JVM-testable wrapper over the API
+  26 `AudioFocusRequest`) and wired it into `BluetoothAudioRouter`: request
+  `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK` at `startAudioRouting()` with
+  `USAGE_VOICE_COMMUNICATION` / `CONTENT_TYPE_SPEECH`, abandon at
+  `stopAudioRouting()`. Used `abandonAudioFocusRequest()` (the matching API) and
+  kept Jitsi's `audio-focus.disabled=true` so the app is the only owner. Denied,
+  delayed or lost focus never tears down the call; `AUDIOFOCUS_LOSS` only clears
+  the held flag, transient losses are logged. Updated router/service/Jitsi
+  comments, added five `AudioFocusControllerTest` cases and recorded the
+  experiment as unreleased in `RELEASE_NOTES.md`. Release APK/AAB and F-Droid
+  metadata intentionally left unchanged.
+- **Verification:** focused `AudioFocusControllerTest` passed; full
+  `testDebugUnitTest` 187/187, `lintDebug` 0 errors / 26 warnings,
+  `assembleDebug` and `connectedAndroidTest` 2/2 on `Medium_Phone_API_37.0`.
+  Device audit of `.agent/helmchat-logcat.txt` (`2026-11-23`, 16:44:11–16:45:37,
+  app PID 27456): one focus request at 16:44:17.786 with `req=3`, granted; TuneIn
+  PID 6920 got `AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK`, set `AudioTrack` volume to
+  0.25 and logged `Audio focus lost and audio ducked`. Bluetooth ACL drop at
+  16:45:06 caused TuneIn's own pause (not an app focus action). User tapped play
+  at 16:45:11, TuneIn requested `AUDIOFOCUS_GAIN`, the system removed the app's
+  focus entry and dispatched `AUDIOFOCUS_LOSS`; the controller kept the call and
+  route, SCO reconnected at 16:45:23 and hang-up completed at 16:45:29. No
+  FATAL/ANR/am_crash; only the known non-fatal React Native soft exception.
+  No stale focus entry remained at teardown.
+- **Acceptance Criteria:**
+  - Intercom survives denied/lost focus (unit-tested and confirmed on device)
+  - Radio ducking observed on the rider's Samsung S25 with TuneIn in background
+  - Decision taken to keep, tune or revert the experiment before any new release
+  - Helmet-intercom audible check and teardown-with-focus still pending

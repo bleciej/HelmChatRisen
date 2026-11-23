@@ -533,17 +533,58 @@ Remaining work before official inclusion:
   need a device check. All release outputs are now signed with the developer's
   self-signed certificate; F-Droid re-signs its own source builds.
 
+### Post-1.7 experiment: transient audio focus (unreleased)
+
+Implemented **after** the 1.7 release commit and **not included** in the signed
+1.7 APKs/AAB or in the F-Droid candidate recipe:
+
+- `AudioFocusController` requests `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK` once per
+  intercom call with `USAGE_VOICE_COMMUNICATION` / `CONTENT_TYPE_SPEECH`, then
+  abandons it at teardown. Jitsi keeps `audio-focus.disabled=true`, so the app
+  is the only focus owner.
+- A denied, delayed or lost focus never ends the call or changes the helmet
+  route. `AUDIOFOCUS_LOSS` only clears the held flag; transient losses are
+  logged. The intent is to make the rider's radio duck rather than stop.
+- Verified in source: 187 JVM tests (0 failures/errors/skips, including five
+  `AudioFocusControllerTest` cases), lint 0 errors / 26 warnings,
+  `assembleDebug`, and `connectedAndroidTest` 2/2 on
+  `Medium_Phone_API_37.0`. Release/AAB artifacts and F-Droid metadata were not
+  rebuilt for this experiment.
+- **Device audit (`2026-11-23`, 16:44:11–16:45:37, app PID 27456, TuneIn PID
+  6920):** the app issued exactly one `requestAudioFocus()` at 16:44:17.786
+  (`req=3` / `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK`, voice-communication
+  attributes), received `AUDIOFOCUS_REQUEST_GRANTED`, and TuneIn immediately got
+  `AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK` (`-3`), set its `AudioTrack` volume to
+  0.25 and logged `Audio focus lost and audio ducked`. The radio was **ducked,
+  not paused**. At 16:45:06 the Bluetooth ACL to `Redmi Buds 5 Pro` dropped;
+  TuneIn's own `Audio output disconnect` handler paused it and restored volume —
+  this was not a focus action by this app. At 16:45:11 the user tapped play in
+  TuneIn, which requested `AUDIOFOCUS_GAIN` (`req=1`); the system removed the
+  app's focus entry and dispatched `AUDIOFOCUS_LOSS` (`-1`). The controller
+  logged `Intercom audio focus lost; keeping the call and route unchanged`; the
+  call, SCO route and hang-up proceeded normally (SCO reconnected at 16:45:23,
+  `Jitsi confirmed the hang-up` at 16:45:29, service destroyed at 16:45:29).
+  No `FATAL EXCEPTION`, ANR or `am_crash` occurred; the known non-fatal React
+  Native soft exception was logged again. Because focus had already been lost,
+  teardown correctly skipped the abandon call and no stale focus entry remained.
+- Result: the experiment **works for its stated goal at call start**. A manual
+  resume of the radio mid-call legitimately takes focus back and undoes the
+  ducking; the app deliberately does not fight that user action. Still pending:
+  a run with the actual helmet intercom, and a normal teardown without a prior
+  focus loss to observe `abandonAudioFocusRequest()` on device. The 1.7
+  statements above still describe the published artifacts.
+
 ## Known limitations (current 1.7 build)
 
 - Physical verification of Bluetooth helmet intercom routing remains
   environment-dependent. The recent fixes still need a retest on the Samsung
   Galaxy S25 with the actual helmet intercom; available logs were captured with
   `Redmi Buds 5 Pro (Bartosz)`.
-- The one-shot communication-mode fix must be confirmed on the Samsung Galaxy
-  S25 with a player/radio already running before an intercom call. If background
-  media is still attenuated, the likely cause is platform/OEM communication-mode
-  ducking rather than app audio focus; that finding must be recorded instead of
-  claiming the symptom is fixed.
+- The one-shot communication-mode fix has now been exercised on the Samsung
+  Galaxy S25 with TuneIn already running: the post-1.7 focus request made the
+  radio duck to 25 % volume on `2026-11-23` rather than pause it. Audible
+  confirmation with the actual helmet intercom is still needed; OEM
+  communication-mode attenuation can occur independently of audio focus.
 - The in-call route button is intended to move both the intercom call and the
   rider's background radio/music. The silent voice-communication keep-alive
   reproduces Jitsi's multi-rider playback state so OEM policies can apply the
@@ -552,7 +593,9 @@ Remaining work before official inclusion:
   required; Android does not expose a public API to force another app's media
   output, so this remains platform-policy dependent. Logcat evidence from
   `2026-11-22` shows A2DP suspension and `STREAM_MUSIC` suppression while SCO is
-  active, with no focus/duck request from this app.
+  active, with no focus/duck request from this app. The post-1.7 focus
+  experiment is source-only; its `2026-11-23` device run ducked TuneIn but still
+  needs a helmet-intercom run.
 - Real network-loss rejoin and multi-rider participant counting remain
   unverified on device.
 - A `2026-11-23` device run with SDK 13.1.1 logged React Native 0.85.2's
