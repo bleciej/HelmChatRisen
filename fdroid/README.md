@@ -30,8 +30,11 @@ repository list.
 
 ## Before opening the fdroiddata merge request
 
-- [ ] Push the annotated `V1.7` tag. Both `commit:` fields already pin its
-      commit (`03572db`); no placeholder remains.
+- [ ] Merge `V1.7-rc` into `master`, set the annotated `V1.7` tag on the final
+      `master` commit and push both. Both `commit:` fields currently pin the
+      provisional candidate `03572db` and **must be updated** to that final
+      hash before submitting — the `AppInfoDialog` metadata change landed after
+      the candidate commit.
 - [ ] Review the upstream short/full descriptions already present under
       `fastlane/metadata/android/en-US/` (they supply F-Droid's Summary and
       Description, so do not duplicate those fields in the `.yml`), add

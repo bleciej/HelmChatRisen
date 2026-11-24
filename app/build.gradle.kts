@@ -31,6 +31,9 @@ val appCompileSdkMinor = 2
 /** Human-readable Android version for [appMinSdk]. */
 val minAndroidDisplay = "8.0 (API $appMinSdk)"
 
+/** Jitsi Meet SDK version from the version catalog, shown in the Application info dialog. */
+val jitsiSdkVersion = libs.versions.jitsiMeetSdk.get()
+
 /** Human-readable compile SDK including the extension/minor revision when present. */
 val compileSdkDisplay = if (appCompileSdkMinor > 0) {
     "$appCompileSdk.$appCompileSdkMinor"
@@ -82,6 +85,7 @@ android {
         buildConfigField("int", "COMPILE_SDK_MINOR", "$appCompileSdkMinor")
         buildConfigField("String", "MIN_ANDROID", "\"$minAndroidDisplay\"")
         buildConfigField("String", "SDK_LEVELS", "\"$sdkDisplay\"")
+        buildConfigField("String", "JITSI_SDK_VERSION", "\"$jitsiSdkVersion\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

@@ -61,4 +61,12 @@ class AppInfoMetadataTest {
         assertTrue(BuildConfig.VERSION_NAME.isNotBlank())
         assertTrue(BuildConfig.VERSION_CODE > 0)
     }
+
+    /** The Jitsi SDK line must expose a semantic version from the version catalog. */
+    @Test
+    fun jitsiSdkVersion_isPresent() {
+        assertTrue(
+            Regex("\\d+\\.\\d+\\.\\d+").containsMatchIn(BuildConfig.JITSI_SDK_VERSION),
+        )
+    }
 }

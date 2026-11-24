@@ -368,7 +368,9 @@ source and advances the release metadata to version 1.7, code 7 and tag `V1.7`.
   unchanged.
 - **Release metadata:** `appVersionName = "1.7"`, `appVersionCode = 7`,
   `appReleaseTag = "V1.7"` and `appReleaseDate = "2026-11-29"`; the in-app
-  Application info dialog and artifact names use the new version.
+  Application info dialog and artifact names use the new version. The dialog
+  now shows the bundled Jitsi SDK version (from the version catalog) instead of
+  the internal version code and tag, which are not useful to riders.
 - **F-Droid recipe:** candidate metadata in `fdroid/` and upstream descriptions
   in `fastlane/metadata/android/` target ABI-specific codes 701 and 702.
 - **Reconnect patch:** verified against the 13.1.1 JS bundle and applied to both
@@ -396,10 +398,10 @@ source and advances the release metadata to version 1.7, code 7 and tag `V1.7`.
 
 - `./gradlew testDebugUnitTest assembleDebug lintDebug --console=plain
   --no-daemon --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4096m
-  -Dfile.encoding=UTF-8"` passed: 198 JVM tests (0 failures/errors/skips),
+  -Dfile.encoding=UTF-8"` passed: 199 JVM tests (0 failures/errors/skips),
   lint 0 errors / 26 warnings (the extra warning suggests updating AppCompat),
   three debug APKs.
-- `./gradlew connectedAndroidTest` passed on `Medium_Phone_API_37.0`: 2 tests,
+- `./gradlew connectedAndroidTest` passed on `Medium_Phone_API_37.0`: 3 tests,
   including the AppCompat theme smoke test and the call timer accessibility
   test. The rebuilt debug APK was installed
   on the emulator, launched, stayed alive and rendered the home screen; no
@@ -535,7 +537,7 @@ Remaining work before official inclusion:
   `dbce6bc9199558ae86ed0774d300adc2ecdd97b6438ae60c8af9e871876254c2` and the
   AAB passes `jarsigner -verify`.
 - Static analysis/inspections in the IDE or CI are recommended as well.
-- Latest run (`2026-11-24`, tag metadata `V1.7`, source-built SDK 13.1.1): 198 JVM tests pass with
+- Latest run (`2026-11-24`, tag metadata `V1.7`, source-built SDK 13.1.1): 199 JVM tests pass with
   0 failures/errors/skips; lint reports 0 errors / 26 warnings; `assembleDebug`,
   `assembleRelease`, `bundleRelease` and `connectedAndroidTest` (3 tests on the
   x86_64 emulator) all pass, and the reconnect JS patch is applied to both debug
@@ -559,7 +561,7 @@ recipe:
   route. `AUDIOFOCUS_LOSS` only clears the held flag; transient losses are
   logged. The intent is to make the rider's radio duck rather than stop.
 - Verified in the final 1.7 build: five `AudioFocusControllerTest` cases pass
-  within 198 JVM tests (0 failures/errors/skips), lint 0 errors / 26 warnings,
+  within 199 JVM tests (0 failures/errors/skips), lint 0 errors / 26 warnings,
   and `connectedAndroidTest` runs 3/3 on `Medium_Phone_API_37.0`. The release
   APKs and AAB were rebuilt with this code and re-signed.
 - **Device audit (`2026-11-23`, 16:44:11–16:45:37, app PID 27456, TuneIn PID
@@ -605,7 +607,7 @@ recipe:
   and teardown. The label and value are merged into one accessibility node. The
   label is translated in all 29 app locales and the base English entry no longer
   suppresses `MissingTranslation`.
-- Verified in the final 1.7 build: 198 JVM tests (0 failures/errors/skips,
+- Verified in the final 1.7 build: 199 JVM tests (0 failures/errors/skips,
   including formatter, ticker and timestamp-lifecycle cases), lint 0 errors /
   26 warnings, `assembleDebug` with per-ABI outputs, and `connectedAndroidTest`
   3/3 on `Medium_Phone_API_37.0`, including the timer semantics test. Release

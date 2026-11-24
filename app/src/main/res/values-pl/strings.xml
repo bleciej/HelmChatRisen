@@ -90,8 +90,7 @@
     <string name="app_info_title">Informacje o aplikacji</string>
     <string name="app_info_name">Nazwa aplikacji: %1$s</string>
     <string name="app_info_version">Wersja: %1$s</string>
-    <string name="app_info_version_code">Kod wersji: %1$s</string>
-    <string name="app_info_tag">Tag: %1$s</string>
+    <string name="app_info_jitsi_sdk">SDK Jitsi: %1$s</string>
     <string name="app_info_release_date">Data wydania: %1$s</string>
     <string name="app_info_min_android">Minimalny Android: %1$s</string>
     <string name="app_info_sdk">SDK docelowy / kompilacji: %1$s</string>

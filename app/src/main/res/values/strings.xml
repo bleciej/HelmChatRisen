@@ -92,8 +92,7 @@
     <string name="app_info_title" tools:ignore="MissingTranslation">Application info</string>
     <string name="app_info_name" tools:ignore="MissingTranslation">Application name: %1$s</string>
     <string name="app_info_version" tools:ignore="MissingTranslation">Version: %1$s</string>
-    <string name="app_info_version_code" tools:ignore="MissingTranslation">Version code: %1$s</string>
-    <string name="app_info_tag" tools:ignore="MissingTranslation">Tag: %1$s</string>
+    <string name="app_info_jitsi_sdk" tools:ignore="MissingTranslation">Jitsi SDK: %1$s</string>
     <string name="app_info_release_date" tools:ignore="MissingTranslation">Release date: %1$s</string>
     <string name="app_info_min_android" tools:ignore="MissingTranslation">Minimum Android: %1$s</string>
     <string name="app_info_sdk" tools:ignore="MissingTranslation">Target / compile SDK: %1$s</string>

@@ -1,2 +1,3 @@
 1.7: audio-only group calls with Bluetooth helmet intercom routing, 30 languages, adaptive layout, reconnect watchdog and a 5 s conference reload countdown. Jitsi Meet SDK 13.1.1 is now built from source with LIBRE_BUILD=true; no proprietary GMS, Firebase, analytics or install-referrer dependencies remain.
 Background radio now ducks during intercom calls, and an in-call duration timer shows the elapsed time above the route button.
+The Application info dialog now shows the bundled Jitsi SDK version instead of the internal version code and tag.

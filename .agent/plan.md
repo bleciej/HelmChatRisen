@@ -877,7 +877,7 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   comments and added five `AudioFocusControllerTest` cases. The feature is now
   part of 1.7: `RELEASE_NOTES.md` documents it as shipped, and the release
   APKs/AAB and F-Droid recipe were rebuilt with it.
-- **Verification:** final 1.7 run: `testDebugUnitTest` 198/198, `lintDebug` 0
+- **Verification:** final 1.7 run: `testDebugUnitTest` 199/199, `lintDebug` 0
   errors / 26 warnings, `assembleDebug`, `assembleRelease`, `bundleRelease` and
   `connectedAndroidTest` 3/3 on `Medium_Phone_API_37.0`.
   Device audit of `.agent/helmchat-logcat.txt` (`2026-11-23`, 16:44:11–16:45:37,
@@ -915,7 +915,7 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   locales, and the base entry no longer uses `tools:ignore`. Previews cover
   short, hour-long, reconnecting, connecting and ending states. Included in
   the rebuilt, signed 1.7 APKs/AAB and in the F-Droid recipe.
-- **Verification:** `testDebugUnitTest` 198/198 (formatter, ticker and timestamp
+- **Verification:** `testDebugUnitTest` 199/199 (formatter, ticker and timestamp
   lifecycle cases), `lintDebug` 0 errors / 26 warnings, `assembleDebug` with
   per-ABI outputs, and `connectedAndroidTest` 3/3 on `Medium_Phone_API_37.0`,
   including the new Compose accessibility test.
@@ -938,7 +938,7 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   `V1.7` release commit `03572db62c644d943c309778895fbaba18a2534b` and refreshed the maintainer notes
   and submission checklist. Created the `V1.7` tag locally; pushing it to the
   remotes remains a manual step.
-- **Verification:** `testDebugUnitTest` 198/198, `lintDebug` 0 errors / 26
+- **Verification:** `testDebugUnitTest` 199/199, `lintDebug` 0 errors / 26
   warnings, `assembleDebug`, `connectedAndroidTest` 3/3 on
   `Medium_Phone_API_37.0`, `assembleRelease` and `bundleRelease` all passed.
   The three APKs verify with `apksigner` (signer SHA-256
@@ -949,3 +949,27 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - F-Droid recipe pins the release commit instead of placeholders
   - `V1.7` tag pushed and `fdroid readmeta`/`lint`/`build` run in an
     `fdroidserver` environment (manual, pending)
+
+### Task_94_AppInfoMetadata: Show the Jitsi SDK version instead of internal build codes.
+- **Status:** COMPLETED (verified and rebuilt; final tag/pin update pending merge)
+- **Updates:** Removed the "version code" and "tag" lines from `AppInfoDialog`
+  and their `app_info_version_code`/`app_info_tag` strings in the default and
+  Polish catalogs. Added a `JITSI_SDK_VERSION` `BuildConfig` field sourced from
+  `libs.versions.jitsiMeetSdk` (no hard-coded value) and a localized
+  `app_info_jitsi_sdk` line. Added `AppInfoMetadataTest.jitsiSdkVersion_isPresent`
+  and refreshed `RELEASE_NOTES.md`, the 7/701/702 changelogs and the F-Droid
+  submission checklist. The `V1.7` tag and both `commit:` fields in the recipe
+  remain provisional until `V1.7-rc` is merged to `master`, as requested by the
+  maintainer.
+- **Verification:** `testDebugUnitTest` 199/199, `lintDebug` 0 errors / 26
+  warnings, `assembleDebug`, `connectedAndroidTest` 3/3 on
+  `Medium_Phone_API_37.0`, `assembleRelease` and `bundleRelease` all passed.
+  Generated release `BuildConfig` contains `JITSI_SDK_VERSION = "13.1.1"`, no
+  stale string references remain, all three APKs verify with `apksigner`
+  (SHA-256 `dbce6bc9199558ae86ed0774d300adc2ecdd97b6438ae60c8af9e871876254c2`)
+  and the AAB verifies with `jarsigner -verify`.
+- **Acceptance Criteria:**
+  - Dialog shows version, release date, Jitsi SDK version, min Android and SDK levels
+  - Jitsi SDK value comes from the version catalog and is covered by a test
+  - Documentation reflects the new dialog and the provisional tag/pin state
+  - Final tag and recipe pin updated after merge to `master` (manual, pending)
