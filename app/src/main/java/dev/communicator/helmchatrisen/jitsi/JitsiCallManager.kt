@@ -71,6 +71,35 @@ sealed class CallState {
     data class Error(val message: String? = null, val messageResId: Int? = null) : CallState()
 }
 
+/** Sentinel used when no conference has produced a start timestamp yet. */
+internal const val NO_CALL_STARTED_MILLIS = 0L
+
+/**
+ * Holds the monotonic start timestamp of the current call.
+ *
+ * @param nowMillis supplies the current elapsed-realtime value.
+ */
+internal class CallStartTracker(
+    private val nowMillis: () -> Long,
+) {
+    private val _startedAtMillis = MutableStateFlow(NO_CALL_STARTED_MILLIS)
+
+    /** Start timestamp of the current call, or [NO_CALL_STARTED_MILLIS] before the first join. */
+    val startedAtMillis: StateFlow<Long> = _startedAtMillis.asStateFlow()
+
+    /** Records the first confirmed join; later joins and reconnects keep the original timestamp. */
+    fun onConferenceJoined() {
+        if (_startedAtMillis.value == NO_CALL_STARTED_MILLIS) {
+            _startedAtMillis.value = nowMillis()
+        }
+    }
+
+    /** Clears the timestamp so the next call starts a fresh timer. */
+    fun reset() {
+        _startedAtMillis.value = NO_CALL_STARTED_MILLIS
+    }
+}
+
 /**
  * Controls an embedded [JitsiMeetView] in strictly audio-only, low-bandwidth mode.
  *
@@ -146,6 +175,14 @@ class JitsiCallManager {
     private val _callState = MutableStateFlow<CallState>(CallState.Idle)
     /** Current call status, observed by the Compose UI. */
     val callState: StateFlow<CallState> = _callState.asStateFlow()
+
+    private val callStartTracker = CallStartTracker(nowMillis = SystemClock::elapsedRealtime)
+    /**
+     * Elapsed-realtime timestamp of the first confirmed join in the current call, or `0` before the
+     * conference has joined. The UI derives the visible call duration from this value so a
+     * reconnect or activity recreation does not restart the timer.
+     */
+    val callStartedAtMillis: StateFlow<Long> = callStartTracker.startedAtMillis
 
     private val _isMuted = MutableStateFlow(value = false)
     /** Whether the local microphone is currently muted. */
@@ -316,6 +353,7 @@ class JitsiCallManager {
         unregisterBroadcastReceiver()
         hasConferenceConfirmation = false
         hasConnectedConference = false
+        callStartTracker.reset()
         releaseActiveView()
         sessionGeneration += 1
         teardownGeneration = Long.MAX_VALUE
@@ -567,6 +605,7 @@ class JitsiCallManager {
         teardownGeneration = Long.MAX_VALUE
         hasConferenceConfirmation = false
         hasConnectedConference = false
+        callStartTracker.reset()
         resetMuteState()
         unregisterBroadcastReceiver()
         unregisterNetworkCallback()
@@ -1074,6 +1113,7 @@ class JitsiCallManager {
         val room = currentRoomName ?: return
         hasConferenceConfirmation = true
         hasConnectedConference = true
+        callStartTracker.onConferenceJoined()
         _callState.value = CallState.Connected(room, currentServerUrl)
         participantTracker.onConferenceJoined()
         refreshParticipantCount()
@@ -1099,6 +1139,7 @@ class JitsiCallManager {
         val room = currentRoomName
         if (room == null) {
             cancelReconnectTimeout()
+            callStartTracker.reset()
             _callState.value = CallState.Idle
             return
         }

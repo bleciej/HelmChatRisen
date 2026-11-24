@@ -38,6 +38,7 @@
     <string name="call_route_bluetooth">对讲机：%1$s</string>
     <string name="call_route_connecting">正在连接对讲机…</string>
     <string name="call_participants">参与者：%1$d</string>
+    <string name="call_duration">通话时长</string>
     <string name="call_error">连接错误：%1$s</string>
     <string name="call_reconnecting">正在重新连接…</string>
     <string name="call_reconnecting_hint">连接中断——正在自动重新连接…</string>

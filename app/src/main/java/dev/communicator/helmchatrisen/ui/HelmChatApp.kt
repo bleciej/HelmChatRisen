@@ -219,6 +219,7 @@ fun HelmChatApp(
     val audioRouter = remember(context) { BluetoothAudioRouter.getInstance(context) }
 
     val callState by callManager.callState.collectAsStateWithLifecycle()
+    val callStartedAtMillis by callManager.callStartedAtMillis.collectAsStateWithLifecycle()
     val isMuted by callManager.isMuted.collectAsStateWithLifecycle()
     val participantCount by callManager.participantCount.collectAsStateWithLifecycle()
     val isNetworkAvailable by callManager.isNetworkAvailable.collectAsStateWithLifecycle()
@@ -438,6 +439,7 @@ fun HelmChatApp(
                                 participantCount = participantCount,
                                 errorMessage = callErrorMessage(callState),
                                 isEnding = callState is CallState.Ending,
+                                callStartedAtMillis = callStartedAtMillis,
                             ),
                             route = route,
                             routingState = routingState,

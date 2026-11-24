@@ -39,6 +39,7 @@
     <string name="call_route_bluetooth">Interkom: %1$s</string>
     <string name="call_route_connecting">Łączenie z interkomem…</string>
     <string name="call_participants">Uczestnicy: %1$d</string>
+    <string name="call_duration">Czas rozmowy</string>
     <string name="call_error">Błąd połączenia: %1$s</string>
     <string name="call_reconnecting">Ponowne łączenie…</string>
     <string name="call_reconnecting_hint">Utracono połączenie — łączę ponownie automatycznie…</string>

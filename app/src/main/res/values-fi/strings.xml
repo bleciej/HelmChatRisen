@@ -38,6 +38,7 @@
     <string name="call_route_bluetooth">Intercom: %1$s</string>
     <string name="call_route_connecting">Yhdistetään intercomiin…</string>
     <string name="call_participants">Osallistujat: %1$d</string>
+    <string name="call_duration">Puhelun kesto</string>
     <string name="call_error">Yhteysvirhe: %1$s</string>
     <string name="call_reconnecting">Yhdistetään uudelleen…</string>
     <string name="call_reconnecting_hint">Yhteys katkesi — yhdistetään automaattisesti uudelleen…</string>

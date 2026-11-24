@@ -895,3 +895,36 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - Radio ducking observed on the rider's Samsung S25 with TuneIn in background
   - Decision taken to keep, tune or revert the experiment before any new release
   - Helmet-intercom audible check and teardown-with-focus still pending
+
+### Task_92_InCallDurationTimer: Show elapsed call time above the route control.
+- **Status:** COMPLETED (implementation, local verification and device smoke tests;
+  live-timer observation still pending)
+- **Updates:** Added `JitsiCallManager.callStartedAtMillis`, backed by an
+  internal `CallStartTracker`, set once on the first confirmed
+  `CONFERENCE_JOINED` from `SystemClock.elapsedRealtime()` and cleared on
+  join/teardown/error so reconnects do not restart the count. Added
+  `CallDuration.kt` with `formatCallDuration` (`MM:SS` / `H:MM:SS`) and a cold
+  `callElapsedFlow` collected with `collectAsStateWithLifecycle` inside a
+  call-route-only `CallTimer`; `HelmChatApp` collects only the low-frequency
+  timestamp, so per-second invalidation is confined to the timer text and stops
+  while the host is stopped. `CallScreenState.callStartedAtMillis` gates the
+  large tabular-number timer above `AudioRouteButton`: hidden before the first
+  join and during ending/error, visible through reconnect/offline. The localized
+  `call_duration` label (no `%1$s` placeholder) and value are merged into one
+  semantics node by `CallDurationDisplay`. The label is translated in all 29 app
+  locales, and the base entry no longer uses `tools:ignore`. Previews cover
+  short, hour-long, reconnecting, connecting and ending states. Kept the
+  experiment unreleased alongside the audio-focus work: signed 1.7 APKs/AAB and
+  F-Droid metadata are untouched.
+- **Verification:** `testDebugUnitTest` 198/198 (formatter, ticker and timestamp
+  lifecycle cases), `lintDebug` 0 errors / 26 warnings, `assembleDebug` with
+  per-ABI outputs, and `connectedAndroidTest` 3/3 on `Medium_Phone_API_37.0`,
+  including the new Compose accessibility test.
+- **Acceptance Criteria:**
+  - Timer starts at the first confirmed join and survives reconnects
+  - Tick collection is lifecycle-aware and scoped to the call route
+  - Timer hidden before join and after teardown/error
+  - Label and value exposed as one accessibility node
+  - Formatting and timestamp/ticker behavior covered by automated tests
+  - Keep/revert decision taken before any new release
+  - On-device observation of the advancing label during a live call still pending

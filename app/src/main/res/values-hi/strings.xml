@@ -38,6 +38,7 @@
     <string name="call_route_bluetooth">इंटरकॉम: %1$s</string>
     <string name="call_route_connecting">इंटरकॉम से कनेक्ट हो रहा है…</string>
     <string name="call_participants">प्रतिभागी: %1$d</string>
+    <string name="call_duration">कॉल की अवधि</string>
     <string name="call_error">कनेक्शन त्रुटि: %1$s</string>
     <string name="call_reconnecting">फिर से कनेक्ट हो रहा है…</string>
     <string name="call_reconnecting_hint">कनेक्शन टूट गया — स्वचालित रूप से फिर से कनेक्ट हो रहा है…</string>

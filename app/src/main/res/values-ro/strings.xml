@@ -38,6 +38,7 @@
     <string name="call_route_bluetooth">Interfon: %1$s</string>
     <string name="call_route_connecting">Se conectează la interfon…</string>
     <string name="call_participants">Participanți: %1$d</string>
+    <string name="call_duration">Durata apelului</string>
     <string name="call_error">Eroare de conexiune: %1$s</string>
     <string name="call_reconnecting">Se reconectează…</string>
     <string name="call_reconnecting_hint">Conexiune pierdută — reconectare automată…</string>

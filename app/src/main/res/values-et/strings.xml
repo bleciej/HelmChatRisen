@@ -38,6 +38,7 @@
     <string name="call_route_bluetooth">Interkom: %1$s</string>
     <string name="call_route_connecting">Ühendamine interkomiga…</string>
     <string name="call_participants">Osalejad: %1$d</string>
+    <string name="call_duration">Kõne kestus</string>
     <string name="call_error">Ühenduse viga: %1$s</string>
     <string name="call_reconnecting">Ühendan uuesti…</string>
     <string name="call_reconnecting_hint">Ühendus katkes — ühendan automaatselt uuesti…</string>

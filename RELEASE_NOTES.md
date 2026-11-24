@@ -574,6 +574,36 @@ Implemented **after** the 1.7 release commit and **not included** in the signed
   focus loss to observe `abandonAudioFocusRequest()` on device. The 1.7
   statements above still describe the published artifacts.
 
+### Post-1.7 experiment: in-call duration timer (unreleased)
+
+Implemented **after** the 1.7 release commit and **not included** in the signed
+1.7 APKs/AAB or in the F-Droid candidate recipe:
+
+- `JitsiCallManager.callStartedAtMillis` records `SystemClock.elapsedRealtime()`
+  at the first confirmed `CONFERENCE_JOINED` and is cleared when a new join or a
+  teardown starts. Reconnects and activity recreation therefore keep one
+  continuous timer.
+- `CallDuration.kt` formats elapsed time as `MM:SS`, switching to `H:MM:SS` from
+  one hour onward, and exposes a cold ticker collected with the host lifecycle.
+  The collector lives in a call-route-only composable, so only the timer text
+  recomposes each second and no one-second updates are posted while the host is
+  stopped.
+- `CallScreen` shows the localized `call_duration` label above the timer, which
+  sits directly above the intercom/speaker button. The timer is hidden until the
+  first confirmed join, stays visible through reconnects, and is hidden on error
+  and teardown. The label and value are merged into one accessibility node. The
+  label is translated in all 29 app locales and the base English entry no longer
+  suppresses `MissingTranslation`.
+- Verified in source: 198 JVM tests (0 failures/errors/skips, including formatter,
+  ticker and timestamp-lifecycle cases), lint 0 errors / 26 warnings,
+  `assembleDebug` including the per-ABI APKs, and `connectedAndroidTest` 3/3 on
+  `Medium_Phone_API_37.0`, including the new timer semantics test. Release
+  artifacts and F-Droid metadata were not rebuilt for this experiment.
+- The compact Picture-in-Picture layout has no route button and therefore no
+  timer; it stays unchanged.
+- **Manual verification pending:** watch the label advance during a live call,
+  including across a reconnect.
+
 ## Known limitations (current 1.7 build)
 
 - Physical verification of Bluetooth helmet intercom routing remains

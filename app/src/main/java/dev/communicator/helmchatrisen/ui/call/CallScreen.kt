@@ -1,5 +1,6 @@
 package dev.communicator.helmchatrisen.ui.call
 
+import android.os.SystemClock
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -37,12 +38,14 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -75,6 +78,8 @@ import dev.communicator.helmchatrisen.ui.theme.SpeakerYellow
  * @param participantCount the number of riders in the room, including the local rider.
  * @param errorMessage an error to show below the header, or `null` when there is none.
  * @param isEnding whether the app is waiting for Jitsi to finish a requested hang-up.
+ * @param callStartedAtMillis monotonic timestamp of the first confirmed join, or `0` before the
+ *   timer should be shown.
  */
 data class CallScreenState(
     val roomName: String,
@@ -89,6 +94,7 @@ data class CallScreenState(
     val participantCount: Int = 0,
     val errorMessage: String? = null,
     val isEnding: Boolean = false,
+    val callStartedAtMillis: Long = 0L,
 )
 
 /**
@@ -169,8 +175,9 @@ fun CallScreen(
 
 /**
  * Portrait call layout: status header, Picture-in-Picture and invite actions in opposite top
- * corners, large microphone control, audio-route selector and the prominent end-call button. Short
- * windows use reduced control sizes while keeping every target large enough for gloved operation.
+ * corners, large microphone control, the call timer above the audio-route selector once the
+ * conference has joined, and the prominent end-call button. Short windows use reduced control
+ * sizes while keeping every target large enough for gloved operation.
  *
  * @param state the call status, mute state and audio route displayed to the rider.
  * @param onToggleMute invoked when the rider taps the microphone control.
@@ -296,6 +303,11 @@ private fun CallContent(
 
             CallSpacer()
 
+            if (state.callStartedAtMillis > 0L) {
+                CallTimer(startedAtMillis = state.callStartedAtMillis)
+                Spacer(Modifier.height(12.dp))
+            }
+
             AudioRouteButton(
                 isSpeakerOn = state.isSpeakerOn,
                 audioRouteLabel = state.audioRouteLabel,
@@ -364,6 +376,44 @@ private fun CallContent(
                 )
             }
         }
+    }
+}
+
+/**
+ * Hosts the lifecycle-aware elapsed-time collector for the call timer.
+ *
+ * @param startedAtMillis monotonic timestamp of the first confirmed join.
+ */
+@Composable
+private fun CallTimer(startedAtMillis: Long) {
+    val elapsedMillis by rememberCallElapsedMillis(startedAtMillis)
+    CallDurationDisplay(elapsedMillis = elapsedMillis)
+}
+
+/**
+ * Renders the localized duration label and formatted value as one accessibility node.
+ *
+ * @param elapsedMillis time since the first confirmed join, in milliseconds.
+ */
+@Composable
+internal fun CallDurationDisplay(elapsedMillis: Long) {
+    Column(
+        modifier = Modifier.semantics(mergeDescendants = true) {},
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = stringResource(R.string.call_duration),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = formatCallDuration(elapsedMillis),
+            style = MaterialTheme.typography.headlineMedium.copy(fontFeatureSettings = "tnum"),
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
     }
 }
 
@@ -712,6 +762,7 @@ private fun AudioRouteButton(
     }
 }
 
+/** Preview of the connected call layout with a short elapsed duration. */
 @Preview(showBackground = true, backgroundColor = 0xFF090B0E, heightDp = 800)
 @Composable
 private fun CallScreenPreview() {
@@ -722,6 +773,7 @@ private fun CallScreenPreview() {
                 serverUrl = "https://meet.ffmuc.net",
                 isConnected = true,
                 isMuted = false,
+                callStartedAtMillis = SystemClock.elapsedRealtime() - 83_000L,
             ),
             onToggleMute = {},
             onToggleSpeaker = {},
@@ -731,6 +783,7 @@ private fun CallScreenPreview() {
     }
 }
 
+/** Preview of the connecting call layout, where the timer is hidden until the first join. */
 @Preview(showBackground = true, backgroundColor = 0xFF090B0E, heightDp = 800)
 @Composable
 private fun CallScreenMutedPreview() {
@@ -765,6 +818,7 @@ private fun CallScreenNoHeadsetPreview() {
                 canSwitchAudioRoute = false,
                 audioRouteLabel = stringResource(R.string.call_speaker_on),
                 participantCount = 2,
+                callStartedAtMillis = SystemClock.elapsedRealtime() - 3_723_000L,
             ),
             onToggleMute = {},
             onToggleSpeaker = {},
@@ -774,6 +828,7 @@ private fun CallScreenNoHeadsetPreview() {
     }
 }
 
+/** Preview of the reconnecting call layout, where the existing timer must stay visible. */
 @Preview(showBackground = true, backgroundColor = 0xFF090B0E, heightDp = 800)
 @Composable
 private fun CallScreenReconnectingPreview() {
@@ -784,6 +839,7 @@ private fun CallScreenReconnectingPreview() {
                 serverUrl = "https://meet.ffmuc.net",
                 isConnected = false,
                 isReconnecting = true,
+                callStartedAtMillis = SystemClock.elapsedRealtime() - 42_000L,
             ),
             onToggleMute = {},
             onToggleSpeaker = {},
@@ -793,6 +849,7 @@ private fun CallScreenReconnectingPreview() {
     }
 }
 
+/** Preview of an offline but joined call, where the timer continues from the original join. */
 @Preview(showBackground = true, backgroundColor = 0xFF090B0E, heightDp = 800)
 @Composable
 private fun CallScreenOfflinePreview() {
@@ -804,6 +861,7 @@ private fun CallScreenOfflinePreview() {
                 isConnected = true,
                 isOffline = true,
                 participantCount = 3,
+                callStartedAtMillis = SystemClock.elapsedRealtime() - 12_000L,
             ),
             onToggleMute = {},
             onToggleSpeaker = {},
@@ -813,7 +871,7 @@ private fun CallScreenOfflinePreview() {
     }
 }
 
-/** Preview of the full-screen call layout while the conference is ending. */
+/** Preview of the full-screen call layout while the conference is ending and the timer is hidden. */
 @Preview(showBackground = true, backgroundColor = 0xFF090B0E, heightDp = 800)
 @Composable
 private fun CallScreenEndingPreview() {
