@@ -380,16 +380,28 @@ source and advances the release metadata to version 1.7, code 7 and tag `V1.7`.
   `Theme.AppCompat.NoActionBar`, with AppCompat declared explicitly. An
   instrumented smoke test constructs an AppCompat widget with the app context to
   guard the launch path.
+- **Ducking audio focus:** `AudioFocusController` requests
+  `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK` with voice-communication attributes once
+  per intercom call and abandons it at teardown. Jitsi keeps
+  `audio-focus.disabled=true`, so the app is the only focus owner. Denied,
+  delayed or lost focus never ends the call or changes the helmet route. A
+  `2026-11-23` device run confirmed TuneIn ducked to 25 % rather than pausing.
+- **In-call duration timer:** `JitsiCallManager` records the first confirmed
+  join through `CallStartTracker`; a lifecycle-scoped ticker drives a large
+  timer above the route button, with a localized label translated in all 29 app
+  locales. Reconnects keep one continuous count; the compact PiP layout is
+  unchanged.
 
 ### Verification
 
 - `./gradlew testDebugUnitTest assembleDebug lintDebug --console=plain
   --no-daemon --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4096m
-  -Dfile.encoding=UTF-8"` passed: 182 JVM tests (0 failures/errors/skips),
+  -Dfile.encoding=UTF-8"` passed: 198 JVM tests (0 failures/errors/skips),
   lint 0 errors / 26 warnings (the extra warning suggests updating AppCompat),
   three debug APKs.
 - `./gradlew connectedAndroidTest` passed on `Medium_Phone_API_37.0`: 2 tests,
-  including the AppCompat theme smoke test. The rebuilt debug APK was installed
+  including the AppCompat theme smoke test and the call timer accessibility
+  test. The rebuilt debug APK was installed
   on the emulator, launched, stayed alive and rendered the home screen; no
   `Theme.AppCompat` or fatal Jitsi/React Native error appeared in logcat.
 - `./gradlew assembleRelease` and, in a separate invocation,
@@ -479,8 +491,8 @@ Jitsi Maven repository is no longer configured, and built AARs are never
 committed — an F-Droid recipe must run the source build itself.
 
 Already compliant: MIT license with `LICENSE` at the repository root, public
-source on GitHub with a consistent `V*` tag scheme (the `V1.7` tag is still
-pending for this candidate), static `versionName`/`versionCode`, committed
+source on GitHub with a consistent `V*` tag scheme (the `V1.7` tag is prepared
+locally and still needs pushing), static `versionName`/`versionCode`, committed
 Gradle wrapper and jar, no ads and no application-level Firebase, Play
 Services or analytics, user-selectable/self-hostable Jitsi servers (no
 `TetheredNet` dependence), and no forbidden group in `releaseRuntimeClasspath`.
@@ -498,7 +510,8 @@ Remaining work before official inclusion:
   `app/build.gradle.kts`) and `UpdateCheckMode: Tags V*`.
 - `assembleRelease` emits three APKs; the recipe handles this with two per-ABI
   build blocks (701/702) and explicit `output` globs.
-- Both `commit:` values are placeholders until the `V1.7` tag is pushed.
+- Both `commit:` values now pin the 1.7 release commit; the `V1.7` tag still
+  needs pushing before the inclusion MR.
   `fdroid readmeta`/`rewritemeta`/`lint`/`build` have not been run locally
   because `fdroidserver` is not installed in this environment.
 - The locally generated toolchain and checkout live in the gitignored
@@ -522,9 +535,9 @@ Remaining work before official inclusion:
   `dbce6bc9199558ae86ed0774d300adc2ecdd97b6438ae60c8af9e871876254c2` and the
   AAB passes `jarsigner -verify`.
 - Static analysis/inspections in the IDE or CI are recommended as well.
-- Latest run (`2026-11-29`, tag metadata `V1.7`, source-built SDK 13.1.1): 182 JVM tests pass with
+- Latest run (`2026-11-24`, tag metadata `V1.7`, source-built SDK 13.1.1): 198 JVM tests pass with
   0 failures/errors/skips; lint reports 0 errors / 26 warnings; `assembleDebug`,
-  `assembleRelease`, `bundleRelease` and `connectedAndroidTest` (2 tests on the
+  `assembleRelease`, `bundleRelease` and `connectedAndroidTest` (3 tests on the
   x86_64 emulator) all pass, and the reconnect JS patch is applied to both debug
   and release bundles. The launch crash caused by the non-AppCompat theme was
   reproduced and fixed; the app now stays alive and displays the home screen.
@@ -533,10 +546,10 @@ Remaining work before official inclusion:
   need a device check. All release outputs are now signed with the developer's
   self-signed certificate; F-Droid re-signs its own source builds.
 
-### Post-1.7 experiment: transient audio focus (unreleased)
+### Feature detail: transient audio focus (included in 1.7)
 
-Implemented **after** the 1.7 release commit and **not included** in the signed
-1.7 APKs/AAB or in the F-Droid candidate recipe:
+Included in the rebuilt and signed 1.7 APKs/AAB and in the F-Droid candidate
+recipe:
 
 - `AudioFocusController` requests `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK` once per
   intercom call with `USAGE_VOICE_COMMUNICATION` / `CONTENT_TYPE_SPEECH`, then
@@ -545,11 +558,10 @@ Implemented **after** the 1.7 release commit and **not included** in the signed
 - A denied, delayed or lost focus never ends the call or changes the helmet
   route. `AUDIOFOCUS_LOSS` only clears the held flag; transient losses are
   logged. The intent is to make the rider's radio duck rather than stop.
-- Verified in source: 187 JVM tests (0 failures/errors/skips, including five
-  `AudioFocusControllerTest` cases), lint 0 errors / 26 warnings,
-  `assembleDebug`, and `connectedAndroidTest` 2/2 on
-  `Medium_Phone_API_37.0`. Release/AAB artifacts and F-Droid metadata were not
-  rebuilt for this experiment.
+- Verified in the final 1.7 build: five `AudioFocusControllerTest` cases pass
+  within 198 JVM tests (0 failures/errors/skips), lint 0 errors / 26 warnings,
+  and `connectedAndroidTest` runs 3/3 on `Medium_Phone_API_37.0`. The release
+  APKs and AAB were rebuilt with this code and re-signed.
 - **Device audit (`2026-11-23`, 16:44:11–16:45:37, app PID 27456, TuneIn PID
   6920):** the app issued exactly one `requestAudioFocus()` at 16:44:17.786
   (`req=3` / `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK`, voice-communication
@@ -567,17 +579,16 @@ Implemented **after** the 1.7 release commit and **not included** in the signed
   No `FATAL EXCEPTION`, ANR or `am_crash` occurred; the known non-fatal React
   Native soft exception was logged again. Because focus had already been lost,
   teardown correctly skipped the abandon call and no stale focus entry remained.
-- Result: the experiment **works for its stated goal at call start**. A manual
+- Result: the feature **works for its stated goal at call start**. A manual
   resume of the radio mid-call legitimately takes focus back and undoes the
   ducking; the app deliberately does not fight that user action. Still pending:
   a run with the actual helmet intercom, and a normal teardown without a prior
-  focus loss to observe `abandonAudioFocusRequest()` on device. The 1.7
-  statements above still describe the published artifacts.
+  focus loss to observe `abandonAudioFocusRequest()` on device.
 
-### Post-1.7 experiment: in-call duration timer (unreleased)
+### Feature detail: in-call duration timer (included in 1.7)
 
-Implemented **after** the 1.7 release commit and **not included** in the signed
-1.7 APKs/AAB or in the F-Droid candidate recipe:
+Included in the rebuilt and signed 1.7 APKs/AAB and in the F-Droid candidate
+recipe:
 
 - `JitsiCallManager.callStartedAtMillis` records `SystemClock.elapsedRealtime()`
   at the first confirmed `CONFERENCE_JOINED` and is cleared when a new join or a
@@ -594,11 +605,11 @@ Implemented **after** the 1.7 release commit and **not included** in the signed
   and teardown. The label and value are merged into one accessibility node. The
   label is translated in all 29 app locales and the base English entry no longer
   suppresses `MissingTranslation`.
-- Verified in source: 198 JVM tests (0 failures/errors/skips, including formatter,
-  ticker and timestamp-lifecycle cases), lint 0 errors / 26 warnings,
-  `assembleDebug` including the per-ABI APKs, and `connectedAndroidTest` 3/3 on
-  `Medium_Phone_API_37.0`, including the new timer semantics test. Release
-  artifacts and F-Droid metadata were not rebuilt for this experiment.
+- Verified in the final 1.7 build: 198 JVM tests (0 failures/errors/skips,
+  including formatter, ticker and timestamp-lifecycle cases), lint 0 errors /
+  26 warnings, `assembleDebug` with per-ABI outputs, and `connectedAndroidTest`
+  3/3 on `Medium_Phone_API_37.0`, including the timer semantics test. Release
+  APKs and AAB were rebuilt with this code and re-signed.
 - The compact Picture-in-Picture layout has no route button and therefore no
   timer; it stays unchanged.
 - **Manual verification pending:** watch the label advance during a live call,
@@ -611,8 +622,8 @@ Implemented **after** the 1.7 release commit and **not included** in the signed
   Galaxy S25 with the actual helmet intercom; available logs were captured with
   `Redmi Buds 5 Pro (Bartosz)`.
 - The one-shot communication-mode fix has now been exercised on the Samsung
-  Galaxy S25 with TuneIn already running: the post-1.7 focus request made the
-  radio duck to 25 % volume on `2026-11-23` rather than pause it. Audible
+  Galaxy S25 with TuneIn already running: the 1.7 focus request made the radio
+  duck to 25 % volume on `2026-11-23` rather than pause it. Audible
   confirmation with the actual helmet intercom is still needed; OEM
   communication-mode attenuation can occur independently of audio focus.
 - The in-call route button is intended to move both the intercom call and the
@@ -623,9 +634,9 @@ Implemented **after** the 1.7 release commit and **not included** in the signed
   required; Android does not expose a public API to force another app's media
   output, so this remains platform-policy dependent. Logcat evidence from
   `2026-11-22` shows A2DP suspension and `STREAM_MUSIC` suppression while SCO is
-  active, with no focus/duck request from this app. The post-1.7 focus
-  experiment is source-only; its `2026-11-23` device run ducked TuneIn but still
-  needs a helmet-intercom run.
+  active, with no focus/duck request from this app. The 1.7 focus feature is
+  included in the rebuilt artifacts; its `2026-11-23` device run ducked TuneIn
+  but still needs a helmet-intercom run.
 - Real network-loss rejoin and multi-rider participant counting remain
   unverified on device.
 - A `2026-11-23` device run with SDK 13.1.1 logged React Native 0.85.2's
@@ -681,5 +692,5 @@ apksigner verify --print-certs \
 
 APKs are written under `app/build/outputs/apk/release/` and bundles under
 `app/build/outputs/bundle/release/`. Any manual copy under `app/release/` is
-local-only and ignored by Git. Until the tag exists, `git checkout V1.7`
-selects the same-named branch rather than a release tag.
+local-only and ignored by Git. The `V1.7` tag exists locally but has not been
+pushed yet; push it before building the published binaries from a clean tag.

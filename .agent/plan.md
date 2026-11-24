@@ -864,8 +864,8 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - Bluetooth SCO connect and disconnect path explained from logcat
   - Background-media focus behaviour recorded without claiming an unverified fix
 
-### Task_91_ExperimentalAudioFocus: Try a ducking focus request in source builds.
-- **Status:** COMPLETED (implementation, local checks and S25 log audit; helmet run pending)
+### Task_91_ExperimentalAudioFocus: Duck the rider's radio during intercom calls.
+- **Status:** COMPLETED (included in 1.7; helmet run pending)
 - **Updates:** Added `AudioFocusController` (JVM-testable wrapper over the API
   26 `AudioFocusRequest`) and wired it into `BluetoothAudioRouter`: request
   `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK` at `startAudioRouting()` with
@@ -874,12 +874,12 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   kept Jitsi's `audio-focus.disabled=true` so the app is the only owner. Denied,
   delayed or lost focus never tears down the call; `AUDIOFOCUS_LOSS` only clears
   the held flag, transient losses are logged. Updated router/service/Jitsi
-  comments, added five `AudioFocusControllerTest` cases and recorded the
-  experiment as unreleased in `RELEASE_NOTES.md`. Release APK/AAB and F-Droid
-  metadata intentionally left unchanged.
-- **Verification:** focused `AudioFocusControllerTest` passed; full
-  `testDebugUnitTest` 187/187, `lintDebug` 0 errors / 26 warnings,
-  `assembleDebug` and `connectedAndroidTest` 2/2 on `Medium_Phone_API_37.0`.
+  comments and added five `AudioFocusControllerTest` cases. The feature is now
+  part of 1.7: `RELEASE_NOTES.md` documents it as shipped, and the release
+  APKs/AAB and F-Droid recipe were rebuilt with it.
+- **Verification:** final 1.7 run: `testDebugUnitTest` 198/198, `lintDebug` 0
+  errors / 26 warnings, `assembleDebug`, `assembleRelease`, `bundleRelease` and
+  `connectedAndroidTest` 3/3 on `Medium_Phone_API_37.0`.
   Device audit of `.agent/helmchat-logcat.txt` (`2026-11-23`, 16:44:11–16:45:37,
   app PID 27456): one focus request at 16:44:17.786 with `req=3`, granted; TuneIn
   PID 6920 got `AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK`, set `AudioTrack` volume to
@@ -893,7 +893,7 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
 - **Acceptance Criteria:**
   - Intercom survives denied/lost focus (unit-tested and confirmed on device)
   - Radio ducking observed on the rider's Samsung S25 with TuneIn in background
-  - Decision taken to keep, tune or revert the experiment before any new release
+  - Kept and shipped in 1.7 after the S25 ducking audit
   - Helmet-intercom audible check and teardown-with-focus still pending
 
 ### Task_92_InCallDurationTimer: Show elapsed call time above the route control.
@@ -913,9 +913,8 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   `call_duration` label (no `%1$s` placeholder) and value are merged into one
   semantics node by `CallDurationDisplay`. The label is translated in all 29 app
   locales, and the base entry no longer uses `tools:ignore`. Previews cover
-  short, hour-long, reconnecting, connecting and ending states. Kept the
-  experiment unreleased alongside the audio-focus work: signed 1.7 APKs/AAB and
-  F-Droid metadata are untouched.
+  short, hour-long, reconnecting, connecting and ending states. Included in
+  the rebuilt, signed 1.7 APKs/AAB and in the F-Droid recipe.
 - **Verification:** `testDebugUnitTest` 198/198 (formatter, ticker and timestamp
   lifecycle cases), `lintDebug` 0 errors / 26 warnings, `assembleDebug` with
   per-ABI outputs, and `connectedAndroidTest` 3/3 on `Medium_Phone_API_37.0`,
@@ -926,5 +925,5 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - Timer hidden before join and after teardown/error
   - Label and value exposed as one accessibility node
   - Formatting and timestamp/ticker behavior covered by automated tests
-  - Keep/revert decision taken before any new release
+  - Shipped in 1.7 with the audio-focus feature
   - On-device observation of the advancing label during a live call still pending
