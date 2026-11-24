@@ -927,3 +927,25 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - Formatting and timestamp/ticker behavior covered by automated tests
   - Shipped in 1.7 with the audio-focus feature
   - On-device observation of the advancing label during a live call still pending
+
+### Task_93_Release17Integration: Ship the experiments in 1.7 and pin the F-Droid recipe.
+- **Status:** COMPLETED (release artifacts rebuilt and recipe pinned; tag push pending)
+- **Updates:** Promoted the audio-focus and call-timer work from unreleased
+  experiments to shipped 1.7 features in `RELEASE_NOTES.md`, task notes and the
+  upstream changelogs for codes 7/701/702. Rebuilt and re-signed all three
+  release APKs and the AAB from the final source tree. Replaced both `commit:`
+  placeholders in `fdroid/dev.communicator.helmchatrisen.yml` with the annotated
+  `V1.7` release commit `03572db62c644d943c309778895fbaba18a2534b` and refreshed the maintainer notes
+  and submission checklist. Created the `V1.7` tag locally; pushing it to the
+  remotes remains a manual step.
+- **Verification:** `testDebugUnitTest` 198/198, `lintDebug` 0 errors / 26
+  warnings, `assembleDebug`, `connectedAndroidTest` 3/3 on
+  `Medium_Phone_API_37.0`, `assembleRelease` and `bundleRelease` all passed.
+  The three APKs verify with `apksigner` (signer SHA-256
+  `dbce6bc9199558ae86ed0774d300adc2ecdd97b6438ae60c8af9e871876254c2`) and the
+  AAB verifies with `jarsigner -verify`.
+- **Acceptance Criteria:**
+  - 1.7 artifacts contain both features and remain correctly signed
+  - F-Droid recipe pins the release commit instead of placeholders
+  - `V1.7` tag pushed and `fdroid readmeta`/`lint`/`build` run in an
+    `fdroidserver` environment (manual, pending)

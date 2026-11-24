@@ -30,8 +30,8 @@ repository list.
 
 ## Before opening the fdroiddata merge request
 
-- [ ] Push the `V1.7` tag and replace both `commit:` placeholders with the full
-      commit hash of that tag.
+- [ ] Push the annotated `V1.7` tag. Both `commit:` fields already pin its
+      commit (`03572db`); no placeholder remains.
 - [ ] Review the upstream short/full descriptions already present under
       `fastlane/metadata/android/en-US/` (they supply F-Droid's Summary and
       Description, so do not duplicate those fields in the `.yml`), add
