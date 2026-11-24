@@ -493,8 +493,9 @@ Jitsi Maven repository is no longer configured, and built AARs are never
 committed — an F-Droid recipe must run the source build itself.
 
 Already compliant: MIT license with `LICENSE` at the repository root, public
-source on GitHub with a consistent `V*` tag scheme (the `V1.7` tag is prepared
-locally and still needs pushing), static `versionName`/`versionCode`, committed
+source on GitHub with a consistent `V*` tag scheme (the `V1.7` tag was moved to
+the final master commit `3e2f332` and pushed to `origin`; the GitHub push is
+still pending), static `versionName`/`versionCode`, committed
 Gradle wrapper and jar, no ads and no application-level Firebase, Play
 Services or analytics, user-selectable/self-hostable Jitsi servers (no
 `TetheredNet` dependence), and no forbidden group in `releaseRuntimeClasspath`.
@@ -512,8 +513,10 @@ Remaining work before official inclusion:
   `app/build.gradle.kts`) and `UpdateCheckMode: Tags V*`.
 - `assembleRelease` emits three APKs; the recipe handles this with two per-ABI
   build blocks (701/702) and explicit `output` globs.
-- Both `commit:` values now pin the 1.7 release commit; the `V1.7` tag still
-  needs pushing before the inclusion MR.
+- Both `commit:` values pin the final 1.7 release commit
+  `3e2f332109e973e2a630472bf0595eae1ba642ac`; the published `V1.7` tag was
+  force-moved from `03572db` to that commit and pushed to `origin`. Push the
+  moved tag to GitHub before the inclusion MR.
   `fdroid readmeta`/`rewritemeta`/`lint`/`build` have not been run locally
   because `fdroidserver` is not installed in this environment.
 - The locally generated toolchain and checkout live in the gitignored

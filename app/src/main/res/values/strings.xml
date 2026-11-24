@@ -77,7 +77,8 @@
     <string name="server_ccc_description">Security and privacy — Chaos Computer Club München.</string>
     <string name="server_fairmeeting_description">Austrian Fairkom server — clean sound.</string>
     <string name="server_systemli_description">Anonymity — the Systemli network collective.</string>
-    <string name="server_jitsi_description">Stable and secure project by Jitsi.org.</string>
+    <!-- Kept for the next release, when meet.jit.si returns to the preset list. -->
+    <string name="server_jitsi_description" tools:ignore="UnusedResources">Stable and secure project by Jitsi.org.</string>
 
     <!-- Language selection -->
     <string name="language_button">Change language</string>

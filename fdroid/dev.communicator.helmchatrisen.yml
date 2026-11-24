@@ -23,14 +23,16 @@ MaintainerNotes: |
   Gradle 9.6/AGP 9.5.2 build; scripts/fdroid-install-deps.sh installs both.
   scripts/fdroid-build.sh performs the pinned Node bootstrap, SDK build and app
   build. The Jitsi npm install needs several GiB of disk.
-  The commit below is the annotated V1.7 release commit; push the tag before
-  submitting. Upstream appVersionCode is 7, so the per-ABI VercodeOperation
-  values are 701 (armeabi-v7a) and 702 (arm64-v8a).
+  Both commits below are the final V1.7 release commit on master
+  (3e2f332109e973e2a630472bf0595eae1ba642ac). The V1.7 tag was moved to it
+  locally and on `origin`; the GitHub push is still pending. Upstream
+  appVersionCode is 7, so the per-ABI VercodeOperation values are 701
+  (armeabi-v7a) and 702 (arm64-v8a).
 
 Builds:
   - versionName: '1.7'
     versionCode: 701
-    commit: 03572db62c644d943c309778895fbaba18a2534b
+    commit: 3e2f332109e973e2a630472bf0595eae1ba642ac
     timeout: 14400
     sudo: ./scripts/fdroid-install-deps.sh
     prebuild: |
@@ -40,7 +42,7 @@ Builds:
 
   - versionName: '1.7'
     versionCode: 702
-    commit: 03572db62c644d943c309778895fbaba18a2534b
+    commit: 3e2f332109e973e2a630472bf0595eae1ba642ac
     timeout: 14400
     sudo: ./scripts/fdroid-install-deps.sh
     prebuild: |

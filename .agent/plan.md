@@ -1015,3 +1015,28 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - Default server and all other presets remain unchanged
   - Translations for the hidden preset are retained for the next release
   - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+
+### Task_97_PrepareFdroidReleaseV17: Pin the final V1.7 tag and F-Droid recipe.
+- **Status:** COMPLETED (GitHub tag push and fdroiddata merge request still pending)
+- **Updates:** Moved the published annotated `V1.7` tag from `03572db` to the final
+  master merge commit `3e2f332109e973e2a630472bf0595eae1ba642ac` and pushed it to
+  `origin`. The push to the `github` remote failed because HTTPS credentials were
+  unavailable in this session, so it must be done manually with `git push --force
+  github refs/tags/V1.7`. Updated both `commit:` fields in
+  `fdroid/dev.communicator.helmchatrisen.yml` to the final commit, refreshed the
+  candidate README checklist and the F-Droid-readiness section of
+  `RELEASE_NOTES.md`, and added the temporary `meet.jit.si` hide note to the
+  `7.txt`, `701.txt` and `702.txt` changelogs.
+- **Verification:** `./gradlew testDebugUnitTest lintDebug assembleRelease --no-daemon
+  --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8"` passed:
+  199 JVM tests (0 failures/errors), lint 0 errors / 25 warnings, `assembleRelease`
+  produced the three 1.7 APKs. `releaseRuntimeClasspath` resolves with no Play
+  Services, Firebase, GMS, install-referrer, Amplitude, Giphy or Google Sign-In
+  dependency, and all three APKs verify with v2. `fdroidserver` is not installed
+  locally, so `fdroid readmeta/rewritemeta/lint/build` still has to run in an
+  fdroiddata checkout.
+- **Acceptance Criteria:**
+  - The `V1.7` tag and both recipe `commit:` fields identify the final master commit
+  - Changelogs describe the final 1.7 contents, including the hidden preset
+  - Release APKs and the dependency graph pass the F-Droid readiness checks
+  - Manual: push the moved tag to GitHub, copy the recipe into `fdroiddata` and validate with fdroidserver
