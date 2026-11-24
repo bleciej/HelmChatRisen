@@ -379,9 +379,9 @@ source and advances the release metadata to version 1.7, code 7 and tag `V1.7`.
   `JitsiInitializer` during Application startup and creates AppCompat widgets;
   the former `android:Theme.Material` parent aborted the process with "requires
   your app theme to be Theme.AppCompat". The shared theme now descends from
-  `Theme.AppCompat.NoActionBar`, with AppCompat declared explicitly. An
-  instrumented smoke test constructs an AppCompat widget with the app context to
-  guard the launch path.
+  `Theme.AppCompat.NoActionBar`, with AppCompat declared explicitly (currently
+  `androidx.appcompat:appcompat:1.8.0`). An instrumented smoke test constructs an
+  AppCompat widget with the app context to guard the launch path.
 - **Ducking audio focus:** `AudioFocusController` requests
   `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK` with voice-communication attributes once
   per intercom call and abandons it at teardown. Jitsi keeps
@@ -399,7 +399,7 @@ source and advances the release metadata to version 1.7, code 7 and tag `V1.7`.
 - `./gradlew testDebugUnitTest assembleDebug lintDebug --console=plain
   --no-daemon --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4096m
   -Dfile.encoding=UTF-8"` passed: 199 JVM tests (0 failures/errors/skips),
-  lint 0 errors / 26 warnings (the extra warning suggests updating AppCompat),
+  lint 0 errors / 25 warnings,
   three debug APKs.
 - `./gradlew connectedAndroidTest` passed on `Medium_Phone_API_37.0`: 3 tests,
   including the AppCompat theme smoke test and the call timer accessibility
@@ -538,7 +538,7 @@ Remaining work before official inclusion:
   AAB passes `jarsigner -verify`.
 - Static analysis/inspections in the IDE or CI are recommended as well.
 - Latest run (`2026-11-24`, tag metadata `V1.7`, source-built SDK 13.1.1): 199 JVM tests pass with
-  0 failures/errors/skips; lint reports 0 errors / 26 warnings; `assembleDebug`,
+  0 failures/errors/skips; lint reports 0 errors / 25 warnings; `assembleDebug`,
   `assembleRelease`, `bundleRelease` and `connectedAndroidTest` (3 tests on the
   x86_64 emulator) all pass, and the reconnect JS patch is applied to both debug
   and release bundles. The launch crash caused by the non-AppCompat theme was
@@ -561,7 +561,7 @@ recipe:
   route. `AUDIOFOCUS_LOSS` only clears the held flag; transient losses are
   logged. The intent is to make the rider's radio duck rather than stop.
 - Verified in the final 1.7 build: five `AudioFocusControllerTest` cases pass
-  within 199 JVM tests (0 failures/errors/skips), lint 0 errors / 26 warnings,
+  within 199 JVM tests (0 failures/errors/skips), lint 0 errors / 25 warnings,
   and `connectedAndroidTest` runs 3/3 on `Medium_Phone_API_37.0`. The release
   APKs and AAB were rebuilt with this code and re-signed.
 - **Device audit (`2026-11-23`, 16:44:11–16:45:37, app PID 27456, TuneIn PID
@@ -609,7 +609,7 @@ recipe:
   suppresses `MissingTranslation`.
 - Verified in the final 1.7 build: 199 JVM tests (0 failures/errors/skips,
   including formatter, ticker and timestamp-lifecycle cases), lint 0 errors /
-  26 warnings, `assembleDebug` with per-ABI outputs, and `connectedAndroidTest`
+  25 warnings, `assembleDebug` with per-ABI outputs, and `connectedAndroidTest`
   3/3 on `Medium_Phone_API_37.0`, including the timer semantics test. Release
   APKs and AAB were rebuilt with this code and re-signed.
 - The compact Picture-in-Picture layout has no route button and therefore no

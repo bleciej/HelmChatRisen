@@ -878,7 +878,7 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   part of 1.7: `RELEASE_NOTES.md` documents it as shipped, and the release
   APKs/AAB and F-Droid recipe were rebuilt with it.
 - **Verification:** final 1.7 run: `testDebugUnitTest` 199/199, `lintDebug` 0
-  errors / 26 warnings, `assembleDebug`, `assembleRelease`, `bundleRelease` and
+  errors / 25 warnings, `assembleDebug`, `assembleRelease`, `bundleRelease` and
   `connectedAndroidTest` 3/3 on `Medium_Phone_API_37.0`.
   Device audit of `.agent/helmchat-logcat.txt` (`2026-11-23`, 16:44:11–16:45:37,
   app PID 27456): one focus request at 16:44:17.786 with `req=3`, granted; TuneIn
@@ -916,7 +916,7 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   short, hour-long, reconnecting, connecting and ending states. Included in
   the rebuilt, signed 1.7 APKs/AAB and in the F-Droid recipe.
 - **Verification:** `testDebugUnitTest` 199/199 (formatter, ticker and timestamp
-  lifecycle cases), `lintDebug` 0 errors / 26 warnings, `assembleDebug` with
+  lifecycle cases), `lintDebug` 0 errors / 25 warnings, `assembleDebug` with
   per-ABI outputs, and `connectedAndroidTest` 3/3 on `Medium_Phone_API_37.0`,
   including the new Compose accessibility test.
 - **Acceptance Criteria:**
@@ -972,4 +972,26 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - Dialog shows version, release date, Jitsi SDK version, min Android and SDK levels
   - Jitsi SDK value comes from the version catalog and is covered by a test
   - Documentation reflects the new dialog and the provisional tag/pin state
+  - Final tag and recipe pin updated after merge to `master` (manual, pending)
+
+### Task_95_AppCompat18: Upgrade AndroidX AppCompat to 1.8.0.
+- **Status:** COMPLETED (verified and rebuilt; final tag/pin update pending merge)
+- **Updates:** Bumped the `appcompat` version catalog entry from 1.7.0 to 1.8.0.
+  The explicit dependency remains in place because Jitsi 13.1.1 starts its
+  bridgeless `ReactHost` during Application startup and requires a
+  `Theme.AppCompat` descendant; the instrumented smoke test still guards that
+  invariant. No Jitsi SDK flags, audio routing or UI code changed. Refreshed the
+  1.7 release notes, changelogs and verification counts: the GradleDependency
+  hint for AppCompat disappeared, so lint is back to 0 errors / 25 warnings.
+- **Verification:** `testDebugUnitTest` 199/199, `lintDebug` 0 errors / 25
+  warnings, `assembleDebug`, `connectedAndroidTest` 3/3 on
+  `Medium_Phone_API_37.0`, `assembleRelease` and `bundleRelease` all passed.
+  `releaseRuntimeClasspath` resolves `androidx.appcompat:appcompat:1.8.0` and
+  still contains no forbidden GMS/Firebase/analytics groups. All three APKs
+  verify with `apksigner` (SHA-256
+  `dbce6bc9199558ae86ed0774d300adc2ecdd97b6438ae60c8af9e871876254c2`) and the
+  AAB verifies with `jarsigner -verify`.
+- **Acceptance Criteria:**
+  - AppCompat 1.8.0 resolved in every variant without API/theme changes
+  - Jitsi 13.1.1 audio-only path and AppCompat smoke test still pass on device
   - Final tag and recipe pin updated after merge to `master` (manual, pending)
