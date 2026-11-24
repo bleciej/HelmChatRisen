@@ -416,4 +416,45 @@ class JitsiCallManagerTest {
         assertTrue(JitsiCallManager.ERROR_DISPLAY_TIMEOUT_MS >= 2_000L)
         assertTrue(JitsiCallManager.ERROR_DISPLAY_TIMEOUT_MS <= 10_000L)
     }
+
+    /** A manager that has not joined a conference exposes no start timestamp. */
+    @Test
+    fun callStartedAtMillis_isUnsetBeforeJoin() {
+        assertEquals(NO_CALL_STARTED_MILLIS, callManager.callStartedAtMillis.value)
+    }
+
+    /** The timestamp is absent until the first confirmed join. */
+    @Test
+    fun callStartTracker_startsWithoutTimestamp() {
+        val tracker = CallStartTracker { 1_000L }
+
+        assertEquals(NO_CALL_STARTED_MILLIS, tracker.startedAtMillis.value)
+    }
+
+    /** Only the first confirmed join is recorded; a reconnect keeps the original timestamp. */
+    @Test
+    fun callStartTracker_recordsFirstJoinAndPreservesReconnects() {
+        var nowMillis = 1_000L
+        val tracker = CallStartTracker { nowMillis }
+
+        tracker.onConferenceJoined()
+        assertEquals(1_000L, tracker.startedAtMillis.value)
+
+        nowMillis = 9_000L
+        tracker.onConferenceJoined()
+        assertEquals(1_000L, tracker.startedAtMillis.value)
+    }
+
+    /** Join, teardown and error paths reuse the same reset so a later call starts fresh. */
+    @Test
+    fun callStartTracker_resetClearsTimestampForNextCall() {
+        val tracker = CallStartTracker { 5_000L }
+
+        tracker.onConferenceJoined()
+        tracker.reset()
+        assertEquals(NO_CALL_STARTED_MILLIS, tracker.startedAtMillis.value)
+
+        tracker.onConferenceJoined()
+        assertEquals(5_000L, tracker.startedAtMillis.value)
+    }
 }

@@ -50,10 +50,11 @@ object JitsiServers {
             url = "https://meet.systemli.org",
             descriptionRes = R.string.server_systemli_description,
         ),
-        JitsiServer(
-            url = "https://meet.jit.si",
-            descriptionRes = R.string.server_jitsi_description,
-        ),
+        // Hidden until the meet.jit.si moderator sign-in flow is fixed; restore in the next release.
+        // JitsiServer(
+        //     url = "https://meet.jit.si",
+        //     descriptionRes = R.string.server_jitsi_description,
+        // ),
     )
 
     /** The preset matching [JitsiCallManager.DEFAULT_SERVER_URL], used when the rider picks none. */

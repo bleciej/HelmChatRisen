@@ -39,6 +39,7 @@
     <string name="call_route_bluetooth">Interkom: %1$s</string>
     <string name="call_route_connecting">Łączenie z interkomem…</string>
     <string name="call_participants">Uczestnicy: %1$d</string>
+    <string name="call_duration">Czas rozmowy</string>
     <string name="call_error">Błąd połączenia: %1$s</string>
     <string name="call_reconnecting">Ponowne łączenie…</string>
     <string name="call_reconnecting_hint">Utracono połączenie — łączę ponownie automatycznie…</string>
@@ -89,8 +90,7 @@
     <string name="app_info_title">Informacje o aplikacji</string>
     <string name="app_info_name">Nazwa aplikacji: %1$s</string>
     <string name="app_info_version">Wersja: %1$s</string>
-    <string name="app_info_version_code">Kod wersji: %1$s</string>
-    <string name="app_info_tag">Tag: %1$s</string>
+    <string name="app_info_jitsi_sdk">SDK Jitsi: %1$s</string>
     <string name="app_info_release_date">Data wydania: %1$s</string>
     <string name="app_info_min_android">Minimalny Android: %1$s</string>
     <string name="app_info_sdk">SDK docelowy / kompilacji: %1$s</string>

@@ -38,6 +38,7 @@
     <string name="call_route_bluetooth">Интерком: %1$s</string>
     <string name="call_route_connecting">Свързване с интеркома…</string>
     <string name="call_participants">Участници: %1$d</string>
+    <string name="call_duration">Продължителност на разговора</string>
     <string name="call_error">Грешка при свързване: %1$s</string>
     <string name="call_reconnecting">Повторно свързване…</string>
     <string name="call_reconnecting_hint">Връзката е загубена — автоматично повторно свързване…</string>

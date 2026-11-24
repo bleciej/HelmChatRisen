@@ -1,0 +1,58 @@
+# Proposed fdroiddata metadata for HelmChatRisen 1.7 (release tag V1.7).
+# Copy this file to fdroiddata/metadata/dev.communicator.helmchatrisen.yml
+# before opening the inclusion merge request. See fdroid/README.md in this repo.
+
+Categories:
+  - Communication
+  - Internet
+
+AuthorName: HelmChatRisen contributors
+License: MIT
+SourceCode: https://github.com/bleciej/HelmChatRisen
+IssueTracker: https://github.com/bleciej/HelmChatRisen/issues
+Changelog: https://github.com/bleciej/HelmChatRisen/blob/master/RELEASE_NOTES.md
+
+RepoType: git
+Repo: https://github.com/bleciej/HelmChatRisen
+
+MaintainerNotes: |
+  The Jitsi Meet SDK is built from source with LIBRE_BUILD=true before the app
+  build; no prebuilt Jitsi AAR is consumed. Node.js 24.22.3 is downloaded with a
+  pinned SHA-256 because the buildserver base image does not ship Node 24.
+  Two JDKs are needed: 17 for Jitsi's Gradle toolchain and 21 for the app's
+  Gradle 9.6/AGP 9.5.2 build; scripts/fdroid-install-deps.sh installs both.
+  scripts/fdroid-build.sh performs the pinned Node bootstrap, SDK build and app
+  build. The Jitsi npm install needs several GiB of disk.
+  The commit below is the annotated V1.7 release commit; push the tag before
+  submitting. Upstream appVersionCode is 7, so the per-ABI VercodeOperation
+  values are 701 (armeabi-v7a) and 702 (arm64-v8a).
+
+Builds:
+  - versionName: '1.7'
+    versionCode: 701
+    commit: 03572db62c644d943c309778895fbaba18a2534b
+    timeout: 14400
+    sudo: ./scripts/fdroid-install-deps.sh
+    prebuild: |
+      sed -i "s/val appVersionCode = [0-9]*/val appVersionCode = $$VERCODE$$/" app/build.gradle.kts
+    build: ./scripts/fdroid-build.sh
+    output: app/build/outputs/apk/release/HelmChatRisen-*-release-armeabi-v7a.apk
+
+  - versionName: '1.7'
+    versionCode: 702
+    commit: 03572db62c644d943c309778895fbaba18a2534b
+    timeout: 14400
+    sudo: ./scripts/fdroid-install-deps.sh
+    prebuild: |
+      sed -i "s/val appVersionCode = [0-9]*/val appVersionCode = $$VERCODE$$/" app/build.gradle.kts
+    build: ./scripts/fdroid-build.sh
+    output: app/build/outputs/apk/release/HelmChatRisen-*-release-arm64-v8a.apk
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags V*
+UpdateCheckData: 'app/build.gradle.kts|val appVersionCode\s*=\s*(\d+)||val appVersionName\s*=\s*"([^"]+)"'
+VercodeOperation:
+  - 100 * %c + 1
+  - 100 * %c + 2
+CurrentVersion: '1.7'
+CurrentVersionCode: 702

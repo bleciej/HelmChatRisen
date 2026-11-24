@@ -48,9 +48,8 @@ fun JitsiConferenceView(
         factory = { viewContext ->
             val hostActivity = viewContext.findActivity() ?: activity
             JitsiMeetView(hostActivity).also { view ->
-                // The React instance is created lazily with the first JitsiMeetView. Tell the
-                // delegate the host is resumed so React attaches to the Activity even though
-                // the view was not present during Activity.onResume().
+                // SDK 13.1.1 starts ReactHost at app startup, but the delegate still needs the
+                // resume event so a view created later by Compose attaches to the Activity.
                 JitsiMeetActivityDelegate.onHostResume(hostActivity)
                 applyInteractivity(view, interactive)
                 if (callManager.canJoinConference()) {

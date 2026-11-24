@@ -38,6 +38,7 @@
     <string name="call_route_bluetooth">אינטרקום: %1$s</string>
     <string name="call_route_connecting">מתחבר לאינטרקום…</string>
     <string name="call_participants">משתתפים: %1$d</string>
+    <string name="call_duration">משך השיחה</string>
     <string name="call_error">שגיאת חיבור: %1$s</string>
     <string name="call_reconnecting">מתחבר מחדש…</string>
     <string name="call_reconnecting_hint">החיבור נותק — מתחבר מחדש אוטומטית…</string>

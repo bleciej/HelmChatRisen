@@ -38,6 +38,7 @@
     <string name="call_route_bluetooth">インターコム: %1$s</string>
     <string name="call_route_connecting">インターコムに接続中…</string>
     <string name="call_participants">参加者: %1$d</string>
+    <string name="call_duration">通話時間</string>
     <string name="call_error">接続エラー: %1$s</string>
     <string name="call_reconnecting">再接続中…</string>
     <string name="call_reconnecting_hint">接続が切断されました — 自動的に再接続しています…</string>

@@ -38,6 +38,7 @@
     <string name="call_route_bluetooth">Interkom: %1$s</string>
     <string name="call_route_connecting">Pripájanie k interkomu…</string>
     <string name="call_participants">Účastníci: %1$d</string>
+    <string name="call_duration">Dĺžka hovoru</string>
     <string name="call_error">Chyba pripojenia: %1$s</string>
     <string name="call_reconnecting">Opätovné pripájanie…</string>
     <string name="call_reconnecting_hint">Spojenie prerušené — automaticky sa pripájam znova…</string>

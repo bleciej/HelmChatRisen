@@ -38,6 +38,7 @@
     <string name="call_route_bluetooth">Intercomunicador: %1$s</string>
     <string name="call_route_connecting">Conectando al intercomunicador…</string>
     <string name="call_participants">Participantes: %1$d</string>
+    <string name="call_duration">Duración de la llamada</string>
     <string name="call_error">Error de conexión: %1$s</string>
     <string name="call_reconnecting">Reconectando…</string>
     <string name="call_reconnecting_hint">Conexión perdida: reconectando automáticamente…</string>

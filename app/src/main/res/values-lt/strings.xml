@@ -38,6 +38,7 @@
     <string name="call_route_bluetooth">Interkomas: %1$s</string>
     <string name="call_route_connecting">Jungiamasi prie interkomo…</string>
     <string name="call_participants">Dalyviai: %1$d</string>
+    <string name="call_duration">Skambučio trukmė</string>
     <string name="call_error">Ryšio klaida: %1$s</string>
     <string name="call_reconnecting">Jungiamasi iš naujo…</string>
     <string name="call_reconnecting_hint">Ryšys nutrūko — jungiamasi automatiškai…</string>

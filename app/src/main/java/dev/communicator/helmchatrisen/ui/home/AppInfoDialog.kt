@@ -45,14 +45,10 @@ fun AppInfoDialog(onDismiss: () -> Unit) {
                     stringResource(R.string.app_info_name, stringResource(R.string.app_name)),
                 )
                 InfoLine(stringResource(R.string.app_info_version, BuildConfig.VERSION_NAME))
-                InfoLine(
-                    stringResource(
-                        R.string.app_info_version_code,
-                        BuildConfig.VERSION_CODE.toString(),
-                    ),
-                )
-                InfoLine(stringResource(R.string.app_info_tag, BuildConfig.RELEASE_TAG))
                 InfoLine(stringResource(R.string.app_info_release_date, BuildConfig.RELEASE_DATE))
+                InfoLine(
+                    stringResource(R.string.app_info_jitsi_sdk, BuildConfig.JITSI_SDK_VERSION),
+                )
                 InfoLine(stringResource(R.string.app_info_min_android, BuildConfig.MIN_ANDROID))
                 InfoLine(stringResource(R.string.app_info_sdk, BuildConfig.SDK_LEVELS))
             }

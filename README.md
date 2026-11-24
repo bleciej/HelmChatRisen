@@ -32,7 +32,7 @@ Riders need reliable voice communication, not video. HelmChat strips everything 
 | UI            | Jetpack Compose, Material 3, Compose Material Adaptive                          |
 | Navigation    | Jetpack Navigation 3 (`rememberNavBackStack` + `NavDisplay`)                    |
 | Async / state | Kotlin Coroutines, `StateFlow`                                                  |
-| VoIP          | Jitsi Meet SDK 12.1.5 (audio-only)                                              |
+| VoIP          | Jitsi Meet SDK 13.1.1, built locally from source with `LIBRE_BUILD=true`        |
 | Audio routing | Android `AudioManager`, Bluetooth SCO/HFP                                       |
 | Persistence   | DataStore Preferences (recent rooms), SharedPreferences (language < Android 13) |
 | Build         | Gradle 9.6.0 (Kotlin DSL), AGP 9.5.2, version catalog                           |
@@ -58,6 +58,22 @@ app/src/main/java/dev/communicator/helmchatrisen/
 
 Requirements: JDK 21 for the Gradle daemon (app source stays Java 11 compatible), Android SDK platform 37.2 and Android build tools.
 
+The app consumes a **FLOSS-only Jitsi SDK** from `mavenLocal()`. Before the first
+build (and after cleaning `~/.m2/repository`), publish it from source with Node.js
+24 or newer. The generated toolchain and checkout are kept inside the gitignored
+project `build/` directory (`build/helmchat-jitsi-build/` and
+`build/helmchat-jitsi-sdk/`), not in `~/.cache`:
+
+```bash
+export PATH="$PWD/build/helmchat-jitsi-build/node24/bin:$PATH"
+export GRADLE_OPTS="-Dorg.gradle.java.installations.paths=$PWD/build/helmchat-jitsi-build/jdk17 -Dorg.gradle.jvmargs=-Xmx4096m -Dfile.encoding=UTF-8"
+./scripts/build-jitsi-libre-sdk.sh
+```
+
+The script pins `mobile-sdk-13.1.1`, sets `LIBRE_BUILD=true`, removes the
+install-attribution dependency from `react-native-device-info` and refuses to
+finish if any non-FLOSS POM metadata is published. Built AARs are never committed.
+
 ```bash
 # Debug APK
 ./gradlew assembleDebug
@@ -77,15 +93,15 @@ Requirements: JDK 21 for the Gradle daemon (app source stays Java 11 compatible)
 
 Release APKs are **per-ABI** (`arm64-v8a`, `armeabi-v7a`) plus a universal build, and are R8-minified. ABI splits are disabled automatically for `bundle*`, so `bundleRelease` produces one AAB-compatible output. Outputs are written to `app/build/outputs/apk/release/` and `app/build/outputs/bundle/release/`:
 
-- `HelmChatRisen-1.6-release-arm64-v8a.apk`
-- `HelmChatRisen-1.6-release-armeabi-v7a.apk`
-- `HelmChatRisen-1.6-release.apk` (universal)
-- `HelmChatRisen-1.6-release.aab`
+- `HelmChatRisen-1.7-release-arm64-v8a.apk`
+- `HelmChatRisen-1.7-release-armeabi-v7a.apk`
+- `HelmChatRisen-1.7-release.apk` (universal)
+- `HelmChatRisen-1.7-release.aab`
 
 Release signing is supplied out-of-band via all four Gradle properties (`releaseStoreFile`, `releaseStorePassword`, `releaseKeyAlias`, `releaseKeyPassword`) and is never committed. **If they are absent the build still succeeds but produces unsigned, unverifiable artifacts.** Verify signed APKs before publishing, for example:
 
 ```bash
-apksigner verify --print-certs app/build/outputs/apk/release/HelmChatRisen-1.6-release-arm64-v8a.apk
+apksigner verify --print-certs app/build/outputs/apk/release/HelmChatRisen-1.7-release-arm64-v8a.apk
 ```
 
 The build patches the merged Jitsi JS bundle (see the `androidComponents` block in [`app/build.gradle.kts`](app/build.gradle.kts)) to shorten the conference reload countdown to ~5 s; the patch fails loudly if the SDK bundle changes so the target can be updated deliberately.
@@ -94,10 +110,20 @@ The build patches the merged Jitsi JS bundle (see the `androidComponents` block 
 
 Full history and upgrade notes are in [`RELEASE_NOTES.md`](RELEASE_NOTES.md#installation--upgrade-notes). In short:
 
+- **1.6 → 1.7:** same application ID (`dev.communicator.helmchatrisen`), normal in-place upgrade to the source-built FLOSS Jitsi SDK.
 - **1.5 → 1.6:** same application ID (`dev.communicator.helmchatrisen`), normal in-place upgrade.
 - **1.4 → 1.5:** application ID changed from `com.example.helmChatRisen` to `dev.communicator.helmchatrisen`; installs as a separate app and does not migrate recent rooms, JWT tokens or the language choice.
 - Launcher label: `HelmChat Risen`. In-app title: `HelmChat - Risen`.
 - Build and tag the final release commit before publishing; release artifacts require the signing properties described above.
+
+## F-Droid
+
+A candidate `fdroiddata` recipe, upstream app descriptions and the buildserver
+bootstrap scripts are in [`fdroid/`](fdroid/README.md) and
+[`fastlane/metadata/android/`](fastlane/metadata/android/). The recipe builds
+the Jitsi SDK from source with `LIBRE_BUILD=true` before assembling the
+per-ABI release APKs; the linked README lists the remaining steps before an
+official inclusion request.
 
 ## Permissions
 

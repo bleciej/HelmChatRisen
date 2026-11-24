@@ -2,33 +2,35 @@
 
 |                      |                                  |
 |----------------------|----------------------------------|
-| Version              | 1.6                              |
-| Version code         | 6                                |
-| Tag                  | `V1.6`                           |
-| Release date         | 2026-11-22                       |
-| Last updated         | 2026-11-22                       |
+| Version              | 1.7                              |
+| Version code         | 7                                |
+| Tag                  | `V1.7`                           |
+| Release date         | 2026-11-29                       |
+| Last updated         | 2026-11-29                       |
 | Minimum Android      | 8.0 (API 26)                     |
 | Target / compile SDK | 37 / 37.2                        |
 | Application ID       | `dev.communicator.helmchatrisen` |
 
-Release history in chronological order (oldest first). The current release
-candidate is **1.6** on branch `V1.6`; create the `V1.6` tag from the final
-release commit before publishing. The shared sections at the end describe the
+Release history in chronological order (oldest first). The current release is
+**1.7** with version code 7 and tag `V1.7`; create the tag from the final release
+commit before publishing. The shared sections at the end describe the
 functionality and build/upgrade rules that apply to the current build.
 
 ## Release history
 
 - [1.4 — 2026-11-14](#14--2026-11-14)
 - [1.5 — 2026-11-17](#15--2026-11-17)
-- [1.6 — 2026-11-22 (current)](#16--2026-11-22-current)
+- [1.6 — 2026-11-22](#16--2026-11-22)
+- [1.7 — 2026-11-29 (current)](#17--2026-11-29-current)
 
 ## Release matrix
 
-| Release | Version code | Tag    | Release date                          | Application ID                     | Minimum Android | Target / compile SDK |
-|---------|-------------:|--------|---------------------------------------|------------------------------------|-----------------|----------------------|
-| 1.4     | 4            | `V1.4` | 2026-11-14                            | `com.example.helmChatRisen`        | 7.0 (API 24)    | 37 / 37              |
-| 1.5     | 5            | `V1.5` | 2026-11-17 (tag commit 2026-11-19)    | `dev.communicator.helmchatrisen`   | 8.0 (API 26)    | 37 / 37              |
-| 1.6     | 6            | `V1.6` | 2026-11-22 (candidate 4b48505; tag pending) | `dev.communicator.helmchatrisen` | 8.0 (API 26) | 37 / 37.2 |
+| Release | Version code | Tag    | Release date | Application ID                   | Minimum Android | Target / compile SDK |
+|---------|-------------:|--------|--------------|----------------------------------|-----------------|----------------------|
+| 1.4     |            4 | `V1.4` | 2026-11-14   | `com.example.helmChatRisen`      | 7.0 (API 24)    | 37 / 37              |
+| 1.5     |            5 | `V1.5` | 2026-11-17   | `dev.communicator.helmchatrisen` | 8.0 (API 26)    | 37 / 37              |
+| 1.6     |            6 | `V1.6` | 2026-11-22   | `dev.communicator.helmchatrisen` | 8.0 (API 26)    | 37 / 37.2            |
+| 1.7     |            7 | `V1.7` | 2026-11-29   | `dev.communicator.helmchatrisen` | 8.0 (API 26)    | 37 / 37.2            |
 
 ## 1.4 — 2026-11-14
 
@@ -188,18 +190,18 @@ in-app info dialog, and fixed Android App Bundle packaging.
 - Real-device verification was still needed for Bluetooth helmet routing, PiP
   continuity and multi-rider participant counting.
 
-## 1.6 — 2026-11-22 (current)
+## 1.6 — 2026-11-22
 
 > **Scope note:** branch HEAD `4b48505` contains the dependency bump,
 > routing/watchdog work and call-service cleanup. The follow-ups listed below
-> are present in the current `V1.6` working tree and must be committed before
-> the release tag; they are included in the 1.6 build described here.
+> are present in the `V1.6` working tree and must be committed before the
+> release tag; they are included in the 1.6 build described here.
 
 ### Summary
 
-The current maintenance release. It upgrades the Jitsi SDK and AndroidX stack,
-reworks helmet routing and reconnect handling, removes explicit audio-focus
-management, and applies the latest invite-copy and PiP-position UI changes.
+The maintenance release that upgrades the Jitsi SDK and AndroidX stack, reworks
+helmet routing and reconnect handling, removes explicit audio-focus management,
+and applies the latest invite-copy and PiP-position UI changes.
 
 ### Highlights
 
@@ -248,7 +250,7 @@ management, and applies the latest invite-copy and PiP-position UI changes.
 - `4b48505`: removed unused `AudioCallService.stopCall()` and a redundant SDK
   version check for notification channel creation.
 
-### Current 1.6 follow-ups
+### 1.6 follow-ups
 
 #### Call audio
 
@@ -332,7 +334,7 @@ management, and applies the latest invite-copy and PiP-position UI changes.
 - `./gradlew assembleRelease --console=plain` and, in a separate invocation,
   `./gradlew bundleRelease --console=plain` also passed, producing the three
   release APKs and the AAB named below. No signing properties were configured,
-  so those current release outputs are unsigned and not publishable.
+  so those release outputs were unsigned and not publishable.
 - Coverage includes headset-family classification, tri-state HFP lookup,
   stale-SCO suppression, local-stop token retirement, SCO-removal/noisy-event
   suppression, one-shot communication-mode entry, named-route retention during
@@ -348,9 +350,79 @@ management, and applies the latest invite-copy and PiP-position UI changes.
   `DELETE_FAILED_INTERNAL_ERROR`, but the Gradle runner replaced the app and
   executed the test. Physical helmet/PiP checks remain manual.
 
+## 1.7 — 2026-11-29 (current)
+
+### Summary
+
+This release replaces the prebuilt Jitsi AAR with a FLOSS SDK compiled from
+source and advances the release metadata to version 1.7, code 7 and tag `V1.7`.
+
+### Highlights
+
+- **FLOSS Jitsi SDK 13.1.1:** `gradle/libs.versions.toml` pins
+  `org.jitsi.react:jitsi-meet-sdk:13.1.1` and `settings.gradle.kts` resolves it
+  from `mavenLocal()` with no remote Jitsi Maven repository.
+  `scripts/build-jitsi-libre-sdk.sh` builds the pinned `mobile-sdk-13.1.1`
+  commit with `LIBRE_BUILD=true`, strips the install-attribution/GMS hooks and
+  verifies the published POMs. `setAudioOnly()` and the audio-only behavior are
+  unchanged.
+- **Release metadata:** `appVersionName = "1.7"`, `appVersionCode = 7`,
+  `appReleaseTag = "V1.7"` and `appReleaseDate = "2026-11-29"`; the in-app
+  Application info dialog and artifact names use the new version. The dialog
+  now shows the bundled Jitsi SDK version (from the version catalog) instead of
+  the internal version code and tag, which are not useful to riders.
+- **F-Droid recipe:** candidate metadata in `fdroid/` and upstream descriptions
+  in `fastlane/metadata/android/` target ABI-specific codes 701 and 702.
+- **Reconnect patch:** verified against the 13.1.1 JS bundle and applied to both
+  debug and release assets.
+- **Startup crash fixed:** SDK 13.1.1 starts its bridgeless ReactHost from
+  `JitsiInitializer` during Application startup and creates AppCompat widgets;
+  the former `android:Theme.Material` parent aborted the process with "requires
+  your app theme to be Theme.AppCompat". The shared theme now descends from
+  `Theme.AppCompat.NoActionBar`, with AppCompat declared explicitly (currently
+  `androidx.appcompat:appcompat:1.8.0`). An instrumented smoke test constructs an
+  AppCompat widget with the app context to guard the launch path.
+- **Ducking audio focus:** `AudioFocusController` requests
+  `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK` with voice-communication attributes once
+  per intercom call and abandons it at teardown. Jitsi keeps
+  `audio-focus.disabled=true`, so the app is the only focus owner. Denied,
+  delayed or lost focus never ends the call or changes the helmet route. A
+  `2026-11-23` device run confirmed TuneIn ducked to 25 % rather than pausing.
+- **In-call duration timer:** `JitsiCallManager` records the first confirmed
+  join through `CallStartTracker`; a lifecycle-scoped ticker drives a large
+  timer above the route button, with a localized label translated in all 29 app
+  locales. Reconnects keep one continuous count; the compact PiP layout is
+  unchanged.
+
+### Verification
+
+- `./gradlew testDebugUnitTest assembleDebug lintDebug --console=plain
+  --no-daemon --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4096m
+  -Dfile.encoding=UTF-8"` passed: 199 JVM tests (0 failures/errors/skips),
+  lint 0 errors / 25 warnings,
+  three debug APKs.
+- `./gradlew connectedAndroidTest` passed on `Medium_Phone_API_37.0`: 3 tests,
+  including the AppCompat theme smoke test and the call timer accessibility
+  test. The rebuilt debug APK was installed
+  on the emulator, launched, stayed alive and rendered the home screen; no
+  `Theme.AppCompat` or fatal Jitsi/React Native error appeared in logcat.
+- `./gradlew assembleRelease` and, in a separate invocation,
+  `./gradlew bundleRelease` passed; three release APKs and the AAB are named
+  below. All four signing properties were supplied for the final run, so the
+  artifacts are signed with the developer's own self-signed certificate
+  (APK Signature Scheme v2).
+- Generated debug/release BuildConfig contains `VERSION_CODE=7`,
+  `VERSION_NAME="1.7"`, `RELEASE_TAG="V1.7"` and `RELEASE_DATE="2026-11-29"`.
+  `releaseRuntimeClasspath` resolves Jitsi 13.1.1 locally and contains no
+  Play Services, Firebase, GMS, install-referrer, Amplitude, Giphy or
+  Google Sign-In dependency.
+- An x86_64 emulator was attached for the launch check; call audio and helmet
+  routing with SDK 13.1.1 on a physical device/intercom still require a manual
+  check.
+
 ## Current feature baseline
 
-The following capabilities are carried forward into the current 1.6 build.
+The following capabilities are carried forward into the current 1.7 build.
 
 - **Audio-only group calls:** any Jitsi server, with video disabled, car-mode
   defaults, Opus capped at 24 kbps, and forced WebRTC noise suppression, echo
@@ -389,7 +461,7 @@ The following capabilities are carried forward into the current 1.6 build.
 - Gradle Kotlin DSL, version catalog and AGP 9.5.2; app source compatibility is
   Java 11 while the Gradle daemon JVM toolchain is 21.
 - SDK levels: `compileSdk 37.2` / `targetSdk 37` / `minSdk 26` (required by
-  Jitsi Meet SDK 12.1.5 and Compose 1.13.0).
+  Jitsi Meet SDK 13.1.1 and Compose 1.13.0).
 - Release APK builds: per-ABI (`arm64-v8a`, `armeabi-v7a`) plus a universal APK,
   R8-minified and resource-shrunk.
 - App Bundle builds (`bundle*`): ABI splits are disabled automatically to
@@ -398,16 +470,62 @@ The following capabilities are carried forward into the current 1.6 build.
   `releaseStoreFile`, `releaseStorePassword`, `releaseKeyAlias` and
   `releaseKeyPassword`; signing material is never committed. If none are
   present the release tasks succeed but produce **unsigned, unverifiable**
-  artifacts that must not be published.
-- Deterministic output names: `HelmChatRisen-1.6-release-<abi>.apk`,
-  `HelmChatRisen-1.6-release.apk` (universal) and
-  `HelmChatRisen-1.6-release.aab`.
+  artifacts that must not be published. The final 1.7 artifacts were built with
+  a local `keystore.jks` (PKCS#12) and verified with `apksigner`.
+- Deterministic output names: `HelmChatRisen-1.7-release-<abi>.apk`,
+  `HelmChatRisen-1.7-release.apk` (universal) and
+  `HelmChatRisen-1.7-release.aab`.
 - The build patches the merged Jitsi JS bundle to shorten the conference reload
   countdown to ~5 s; its pattern ignores minified identifier names and fails
   loudly if that JS logic changes in a future SDK upgrade.
 
+## F-Droid readiness (1.7)
+
+Audit against the F-Droid inclusion policy and developer FAQ on 2026-11-22.
+
+The previous blockers from the prebuilt Jitsi Meet SDK 12.1.5 are gone: the app
+now consumes a locally built **Jitsi Meet SDK 13.1.1** from `mavenLocal()`.
+`scripts/build-jitsi-libre-sdk.sh` pins the `mobile-sdk-13.1.1` source tag, sets
+`LIBRE_BUILD=true` (which excludes Amplitude, Giphy and Google Sign-In), strips
+the install-referrer/Firebase/GMS IID hooks from `react-native-device-info`,
+publishes the artifacts and checks their POM metadata. The untrusted remote
+Jitsi Maven repository is no longer configured, and built AARs are never
+committed — an F-Droid recipe must run the source build itself.
+
+Already compliant: MIT license with `LICENSE` at the repository root, public
+source on GitHub with a consistent `V*` tag scheme (the `V1.7` tag is prepared
+locally and still needs pushing), static `versionName`/`versionCode`, committed
+Gradle wrapper and jar, no ads and no application-level Firebase, Play
+Services or analytics, user-selectable/self-hostable Jitsi servers (no
+`TetheredNet` dependence), and no forbidden group in `releaseRuntimeClasspath`.
+
+Remaining work before official inclusion:
+
+- No `fdroiddata` metadata entry exists for `dev.communicator.helmchatrisen`
+  yet, but a candidate recipe and upstream descriptions are prepared in
+  [`fdroid/`](fdroid/README.md) and `fastlane/metadata/android/`. It must still
+  be pushed to `fdroiddata` after the `V1.7` tag is published; the recipe runs
+  `scripts/build-jitsi-libre-sdk.sh` first (Node.js 24+, JDK 17 and a local
+  Maven repository) and then builds the app against that SDK.
+- `versionName` and `versionCode` are local Gradle `val`s, so the candidate
+  recipe sets explicit `UpdateCheckData` regexes (checked against
+  `app/build.gradle.kts`) and `UpdateCheckMode: Tags V*`.
+- `assembleRelease` emits three APKs; the recipe handles this with two per-ABI
+  build blocks (701/702) and explicit `output` globs.
+- Both `commit:` values now pin the 1.7 release commit; the `V1.7` tag still
+  needs pushing before the inclusion MR.
+  `fdroid readmeta`/`rewritemeta`/`lint`/`build` have not been run locally
+  because `fdroidserver` is not installed in this environment.
+- The locally generated toolchain and checkout live in the gitignored
+  `build/helmchat-jitsi-build` and `build/helmchat-jitsi-sdk` directories and
+  must be recreated in F-Droid's build environment.
+
 ## Verification commands
 
+- Source-built SDK: `scripts/build-jitsi-libre-sdk.sh` (Node.js 24+ on `PATH`),
+  then `./gradlew :app:dependencies --configuration releaseRuntimeClasspath`
+  must show no Play Services, Firebase, install-referrer, Amplitude, Giphy or
+  Google Sign-In dependency.
 - `./gradlew assembleDebug`
 - `./gradlew testDebugUnitTest`
 - `./gradlew lintDebug`
@@ -415,25 +533,101 @@ The following capabilities are carried forward into the current 1.6 build.
   invocation, `./gradlew bundleRelease` (ABI splits are disabled for `bundle*`).
 - Signed-artifact check: `apksigner verify --print-certs <apk>` for each release
   APK; a missing signature means the signing properties were not supplied.
+  Final 1.7 run: all three APKs verify with v2; signer SHA-256 is
+  `dbce6bc9199558ae86ed0774d300adc2ecdd97b6438ae60c8af9e871876254c2` and the
+  AAB passes `jarsigner -verify`.
 - Static analysis/inspections in the IDE or CI are recommended as well.
-- Latest run (`2026-11-22`): 182 JVM tests pass with 0 failures/errors/skips;
-  lint reports 0 errors / 25 warnings; debug build, `bundleRelease`,
-  `assembleRelease` and `connectedAndroidTest` all pass. The single
-  instrumented test ran on `SM-S721B` / `R5CX9339VAJ` after stale incompatible
-  debug/test packages were removed from the device. All release outputs are
-  unsigned because the four signing properties were not supplied.
+- Latest run (`2026-11-24`, tag metadata `V1.7`, source-built SDK 13.1.1): 199 JVM tests pass with
+  0 failures/errors/skips; lint reports 0 errors / 25 warnings; `assembleDebug`,
+  `assembleRelease`, `bundleRelease` and `connectedAndroidTest` (3 tests on the
+  x86_64 emulator) all pass, and the reconnect JS patch is applied to both debug
+  and release bundles. The launch crash caused by the non-AppCompat theme was
+  reproduced and fixed; the app now stays alive and displays the home screen.
+  The physical-device `connectedAndroidTest` on `SM-S721B` / `R5CX9339VAJ`
+  predates the SDK switch, so call audio and helmet routing with 13.1.1 still
+  need a device check. All release outputs are now signed with the developer's
+  self-signed certificate; F-Droid re-signs its own source builds.
 
-## Known limitations (current 1.6 build)
+### Feature detail: transient audio focus (included in 1.7)
+
+Included in the rebuilt and signed 1.7 APKs/AAB and in the F-Droid candidate
+recipe:
+
+- `AudioFocusController` requests `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK` once per
+  intercom call with `USAGE_VOICE_COMMUNICATION` / `CONTENT_TYPE_SPEECH`, then
+  abandons it at teardown. Jitsi keeps `audio-focus.disabled=true`, so the app
+  is the only focus owner.
+- A denied, delayed or lost focus never ends the call or changes the helmet
+  route. `AUDIOFOCUS_LOSS` only clears the held flag; transient losses are
+  logged. The intent is to make the rider's radio duck rather than stop.
+- Verified in the final 1.7 build: five `AudioFocusControllerTest` cases pass
+  within 199 JVM tests (0 failures/errors/skips), lint 0 errors / 25 warnings,
+  and `connectedAndroidTest` runs 3/3 on `Medium_Phone_API_37.0`. The release
+  APKs and AAB were rebuilt with this code and re-signed.
+- **Device audit (`2026-11-23`, 16:44:11–16:45:37, app PID 27456, TuneIn PID
+  6920):** the app issued exactly one `requestAudioFocus()` at 16:44:17.786
+  (`req=3` / `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK`, voice-communication
+  attributes), received `AUDIOFOCUS_REQUEST_GRANTED`, and TuneIn immediately got
+  `AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK` (`-3`), set its `AudioTrack` volume to
+  0.25 and logged `Audio focus lost and audio ducked`. The radio was **ducked,
+  not paused**. At 16:45:06 the Bluetooth ACL to `Redmi Buds 5 Pro` dropped;
+  TuneIn's own `Audio output disconnect` handler paused it and restored volume —
+  this was not a focus action by this app. At 16:45:11 the user tapped play in
+  TuneIn, which requested `AUDIOFOCUS_GAIN` (`req=1`); the system removed the
+  app's focus entry and dispatched `AUDIOFOCUS_LOSS` (`-1`). The controller
+  logged `Intercom audio focus lost; keeping the call and route unchanged`; the
+  call, SCO route and hang-up proceeded normally (SCO reconnected at 16:45:23,
+  `Jitsi confirmed the hang-up` at 16:45:29, service destroyed at 16:45:29).
+  No `FATAL EXCEPTION`, ANR or `am_crash` occurred; the known non-fatal React
+  Native soft exception was logged again. Because focus had already been lost,
+  teardown correctly skipped the abandon call and no stale focus entry remained.
+- Result: the feature **works for its stated goal at call start**. A manual
+  resume of the radio mid-call legitimately takes focus back and undoes the
+  ducking; the app deliberately does not fight that user action. Still pending:
+  a run with the actual helmet intercom, and a normal teardown without a prior
+  focus loss to observe `abandonAudioFocusRequest()` on device.
+
+### Feature detail: in-call duration timer (included in 1.7)
+
+Included in the rebuilt and signed 1.7 APKs/AAB and in the F-Droid candidate
+recipe:
+
+- `JitsiCallManager.callStartedAtMillis` records `SystemClock.elapsedRealtime()`
+  at the first confirmed `CONFERENCE_JOINED` and is cleared when a new join or a
+  teardown starts. Reconnects and activity recreation therefore keep one
+  continuous timer.
+- `CallDuration.kt` formats elapsed time as `MM:SS`, switching to `H:MM:SS` from
+  one hour onward, and exposes a cold ticker collected with the host lifecycle.
+  The collector lives in a call-route-only composable, so only the timer text
+  recomposes each second and no one-second updates are posted while the host is
+  stopped.
+- `CallScreen` shows the localized `call_duration` label above the timer, which
+  sits directly above the intercom/speaker button. The timer is hidden until the
+  first confirmed join, stays visible through reconnects, and is hidden on error
+  and teardown. The label and value are merged into one accessibility node. The
+  label is translated in all 29 app locales and the base English entry no longer
+  suppresses `MissingTranslation`.
+- Verified in the final 1.7 build: 199 JVM tests (0 failures/errors/skips,
+  including formatter, ticker and timestamp-lifecycle cases), lint 0 errors /
+  25 warnings, `assembleDebug` with per-ABI outputs, and `connectedAndroidTest`
+  3/3 on `Medium_Phone_API_37.0`, including the timer semantics test. Release
+  APKs and AAB were rebuilt with this code and re-signed.
+- The compact Picture-in-Picture layout has no route button and therefore no
+  timer; it stays unchanged.
+- **Manual verification pending:** watch the label advance during a live call,
+  including across a reconnect.
+
+## Known limitations (current 1.7 build)
 
 - Physical verification of Bluetooth helmet intercom routing remains
   environment-dependent. The recent fixes still need a retest on the Samsung
   Galaxy S25 with the actual helmet intercom; available logs were captured with
   `Redmi Buds 5 Pro (Bartosz)`.
-- The one-shot communication-mode fix must be confirmed on the Samsung Galaxy
-  S25 with a player/radio already running before an intercom call. If background
-  media is still attenuated, the likely cause is platform/OEM communication-mode
-  ducking rather than app audio focus; that finding must be recorded instead of
-  claiming the symptom is fixed.
+- The one-shot communication-mode fix has now been exercised on the Samsung
+  Galaxy S25 with TuneIn already running: the 1.7 focus request made the radio
+  duck to 25 % volume on `2026-11-23` rather than pause it. Audible
+  confirmation with the actual helmet intercom is still needed; OEM
+  communication-mode attenuation can occur independently of audio focus.
 - The in-call route button is intended to move both the intercom call and the
   rider's background radio/music. The silent voice-communication keep-alive
   reproduces Jitsi's multi-rider playback state so OEM policies can apply the
@@ -442,9 +636,19 @@ The following capabilities are carried forward into the current 1.6 build.
   required; Android does not expose a public API to force another app's media
   output, so this remains platform-policy dependent. Logcat evidence from
   `2026-11-22` shows A2DP suspension and `STREAM_MUSIC` suppression while SCO is
-  active, with no focus/duck request from this app.
+  active, with no focus/duck request from this app. The 1.7 focus feature is
+  included in the rebuilt artifacts; its `2026-11-23` device run ducked TuneIn
+  but still needs a helmet-intercom run.
 - Real network-loss rejoin and multi-rider participant counting remain
   unverified on device.
+- A `2026-11-23` device run with SDK 13.1.1 logged React Native 0.85.2's
+  bridgeless host reporting `ReactNoCrashSoftException: getNativeModule(UIManagerModule.class)
+  cannot be called when the bridge is disabled` from `react-native-safe-area-context`
+  and `react-native-screens` while the hidden Jitsi view attached. React Native
+  classifies this as a soft exception: there was no crash, and the full call
+  cycle completed (`CONFERENCE_JOINED`, mute toggles, `CONFERENCE_TERMINATED`,
+  `AudioCallService destroyed`). Jitsi also logged a dynamic-branding network
+  error when outbound access was blocked; neither affects call audio.
 - `meet.jit.si` may require moderator sign-in via the browser before joining
   from the app; password-protected rooms may not work in the embedded view.
 - Unreachable or misconfigured servers surface a localized error after the
@@ -458,19 +662,24 @@ The following capabilities are carried forward into the current 1.6 build.
   migrated; uninstall the old build to avoid duplicate launcher icons.
 - **1.5 → 1.6:** the application ID is unchanged, so this is a normal in-place
   upgrade.
+- **1.6 → 1.7:** the application ID and stored user data are unchanged; the
+  source-built FLOSS Jitsi SDK replaces the prebuilt AAR in the same in-place
+  upgrade.
 - App label: `HelmChat Risen`; in-app title: `HelmChat - Risen`.
 - Release signing configuration is required for installable/publishable release
   artifacts: all four Gradle properties must be present, otherwise the build
-  emits unsigned APKs/AABs. Debug builds work without it.
-- Release APKs: `HelmChatRisen-1.6-release-arm64-v8a.apk`,
-  `HelmChatRisen-1.6-release-armeabi-v7a.apk` and the universal
-  `HelmChatRisen-1.6-release.apk`.
+  emits unsigned APKs/AABs. Debug builds work without it. For 1.7 the local
+  `keystore.jks` is configured in `~/.gradle/gradle.properties` (outside the
+  repository) and the outputs are signed with a self-signed certificate.
+- Release APKs: `HelmChatRisen-1.7-release-arm64-v8a.apk`,
+  `HelmChatRisen-1.7-release-armeabi-v7a.apk` and the universal
+  `HelmChatRisen-1.7-release.apk`.
 
 ## Building release artifacts
 
 ```bash
-# After committing the release tree and creating the annotated V1.6 tag:
-git checkout tags/V1.6
+# After committing the release tree and creating the annotated V1.7 tag:
+git checkout tags/V1.7
 
 # Provide releaseStoreFile, releaseStorePassword, releaseKeyAlias and
 # releaseKeyPassword via ~/.gradle/gradle.properties or -P before building.
@@ -480,10 +689,10 @@ git checkout tags/V1.6
 
 # Confirm every APK is signed before publishing.
 apksigner verify --print-certs \
-  app/build/outputs/apk/release/HelmChatRisen-1.6-release-arm64-v8a.apk
+  app/build/outputs/apk/release/HelmChatRisen-1.7-release-arm64-v8a.apk
 ```
 
 APKs are written under `app/build/outputs/apk/release/` and bundles under
 `app/build/outputs/bundle/release/`. Any manual copy under `app/release/` is
-local-only and ignored by Git. Until the tag exists, `git checkout V1.6`
-selects the same-named branch rather than a release tag.
+local-only and ignored by Git. The `V1.7` tag exists locally but has not been
+pushed yet; push it before building the published binaries from a clean tag.

@@ -1,0 +1,24 @@
+HelmChat is a voice intercom for motorcyclists. It is an audio-only group
+calling app built on the Jitsi Meet SDK, with an interface designed to be
+operated with gloves on — at speed.
+
+Video streams are strictly disabled and the Opus codec is capped at 24 kbps to
+keep data usage and battery drain low. A high-contrast dark theme, a 168 dp mic
+toggle, haptic feedback and an ongoing call notification make it usable on a
+bike. Bluetooth SCO/HFP routing sends call audio to a helmet intercom, with a
+dedicated button to switch between the headset and the phone speaker.
+
+You can join or create a room on curated public Jitsi servers, use your own
+self-hosted server, or supply a JWT token for authenticated deployments. Recent
+rooms are remembered, and an invite can be shared as a plain browser link.
+The app offers 30 languages, per-app language selection on Android 13+, and an
+adaptive layout for phones, tablets and foldables.
+
+This build uses Jitsi Meet SDK 13.1.1 compiled from source with LIBRE_BUILD=true.
+No prebuilt Jitsi AAR is consumed, and the release dependency graph contains no
+Play Services, Firebase, analytics or install-referrer libraries. The Jitsi JS
+bundle is patched at build time to shorten the conference reload countdown to
+about five seconds for motorcycle connections.
+
+The app is licensed under the MIT License. The source, build recipe and release
+notes are available in the public repository linked above.

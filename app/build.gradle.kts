@@ -5,16 +5,16 @@ plugins {
 }
 
 /** Version name shared by the artifact names and the in-app Application info dialog. */
-val appVersionName = "1.6"
+val appVersionName = "1.7"
 
-/** Version code for the 1.6 release line. */
-val appVersionCode = 6
+/** Version code for the 1.7 release line. */
+val appVersionCode = 7
 
 /** Release tag published for this build (kept in sync with RELEASE_NOTES.md). */
 val appReleaseTag = "V$appVersionName"
 
 /** Release date published for this build (kept in sync with RELEASE_NOTES.md). */
-val appReleaseDate = "2026-11-22"
+val appReleaseDate = "2026-11-29"
 
 /** Minimum supported API level, also shown in the Application info dialog. */
 val appMinSdk = 26
@@ -30,6 +30,9 @@ val appCompileSdkMinor = 2
 
 /** Human-readable Android version for [appMinSdk]. */
 val minAndroidDisplay = "8.0 (API $appMinSdk)"
+
+/** Jitsi Meet SDK version from the version catalog, shown in the Application info dialog. */
+val jitsiSdkVersion = libs.versions.jitsiMeetSdk.get()
 
 /** Human-readable compile SDK including the extension/minor revision when present. */
 val compileSdkDisplay = if (appCompileSdkMinor > 0) {
@@ -82,6 +85,7 @@ android {
         buildConfigField("int", "COMPILE_SDK_MINOR", "$appCompileSdkMinor")
         buildConfigField("String", "MIN_ANDROID", "\"$minAndroidDisplay\"")
         buildConfigField("String", "SDK_LEVELS", "\"$sdkDisplay\"")
+        buildConfigField("String", "JITSI_SDK_VERSION", "\"$jitsiSdkVersion\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -237,6 +241,8 @@ androidComponents {
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
+    // AppCompat theme parent is required by Jitsi 13.1.1's bridgeless ReactHost.
+    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.compose.adaptive)
     implementation(libs.androidx.compose.adaptive.layout)
     implementation(libs.androidx.compose.adaptive.navigation3)
@@ -258,7 +264,10 @@ dependencies {
     implementation(libs.kotlinx.serialization.core)
     implementation(libs.kotlinx.serialization.json)
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.runner)
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

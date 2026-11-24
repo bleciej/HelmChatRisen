@@ -38,6 +38,7 @@
     <string name="call_route_bluetooth">Intercom: %1$s</string>
     <string name="call_route_connecting">Kobler til intercom…</string>
     <string name="call_participants">Deltakere: %1$d</string>
+    <string name="call_duration">Samtalens varighet</string>
     <string name="call_error">Tilkoblingsfeil: %1$s</string>
     <string name="call_reconnecting">Kobler til på nytt…</string>
     <string name="call_reconnecting_hint">Tilkoblingen ble mistet — kobler til automatisk på nytt…</string>

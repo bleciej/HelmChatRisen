@@ -38,6 +38,7 @@
     <string name="call_route_bluetooth">Interkom: %1$s</string>
     <string name="call_route_connecting">Csatlakozás az interkomhoz…</string>
     <string name="call_participants">Résztvevők: %1$d</string>
+    <string name="call_duration">Hívás időtartama</string>
     <string name="call_error">Kapcsolódási hiba: %1$s</string>
     <string name="call_reconnecting">Újracsatlakozás…</string>
     <string name="call_reconnecting_hint">A kapcsolat megszakadt — automatikus újracsatlakozás…</string>
