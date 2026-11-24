@@ -241,7 +241,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun presets_containAllAdvertisedServers() {
+    fun presets_containVisibleServers() {
         val hosts = JitsiServers.presets.map { it.host }
 
         assertEquals(
@@ -251,10 +251,11 @@ class HomeViewModelTest {
                 "webex.muc.ccc.de",
                 "fairmeeting.net",
                 "meet.systemli.org",
-                "meet.jit.si",
             ),
             hosts,
         )
+        // meet.jit.si stays hidden until its moderator sign-in flow is fixed.
+        assertNull(JitsiServers.byUrl("https://meet.jit.si"))
         assertEquals("meet.ffmuc.net", JitsiServers.default.host)
     }
 }

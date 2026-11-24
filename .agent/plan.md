@@ -995,3 +995,23 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - AppCompat 1.8.0 resolved in every variant without API/theme changes
   - Jitsi 13.1.1 audio-only path and AppCompat smoke test still pass on device
   - Final tag and recipe pin updated after merge to `master` (manual, pending)
+
+### Task_96_HideMeetJitsiPresetTemporarily: Remove meet.jit.si from the server picker for 1.7.
+- **Status:** COMPLETED
+- **Updates:** Commented out the `https://meet.jit.si` entry in `JitsiServers.presets` with an
+  explanatory note to restore it in the next release, because moderator sign-in does not work
+  reliably yet. `JitsiCallManager.DEFAULT_SERVER_URL` remains `https://meet.ffmuc.net`, so the
+  derived `JitsiServers.default` is unaffected. Updated `HomeViewModelTest` to expect the five
+  visible presets and to assert that the hidden host no longer matches a preset. Kept
+  `server_jitsi_description` in all locales for the planned restoration and suppressed the
+  resulting `UnusedResources` lint warning on the default string with a note. No Jitsi call,
+  host-setup, routing or permission code changed.
+- **Verification:** `./gradlew testDebugUnitTest assembleDebug lintDebug --no-daemon --max-workers=2
+  -Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8"` passed: 199 JVM tests (0 failures/errors),
+  lint 0 errors / 25 warnings (unchanged baseline), arm64-v8a/armeabi-v7a/universal debug APKs
+  produced; `git diff --check` clean.
+- **Acceptance Criteria:**
+  - `meet.jit.si` is not offered in the home-screen server picker
+  - Default server and all other presets remain unchanged
+  - Translations for the hidden preset are retained for the next release
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
