@@ -1040,3 +1040,23 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - Changelogs describe the final 1.7 contents, including the hidden preset
   - Release APKs and the dependency graph pass the F-Droid readiness checks
   - Manual: push the moved tag to GitHub, copy the recipe into `fdroiddata` and validate with fdroidserver
+
+### Task_98_RemoveFairmeetingPreset: Drop the incompatible fairmeeting.net server.
+- **Status:** COMPLETED
+- **Updates:** Removed `https://fairmeeting.net` from `JitsiServers.presets` and deleted
+  `server_fairmeeting_description` from all 31 string catalogs (key sets remain consistent; no
+  extra or duplicate keys). Updated `JitsiServersTest` and `HomeViewModelTest` to cover the other
+  presets, assert that Fairmeeting is no longer resolvable, and verify that old recent rooms on
+  that URL reopen in custom-server mode with the URL pre-filled. Updated the curated-server list
+  in `README.md`.
+- **Verification:** `./gradlew testDebugUnitTest assembleDebug lintDebug --no-daemon
+  --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8"` passed: 201 JVM tests
+  (0 failures/errors), lint 0 errors / 25 warnings (unchanged baseline), and arm64-v8a,
+  armeabi-v7a and universal debug APKs produced. `./gradlew connectedAndroidTest` passed on
+  `Medium_Phone_API_37.0` with 3 instrumented tests (0 failures/errors). `git diff --check` clean.
+  Installed the new universal debug APK on `emulator-5554` and confirmed via a UI hierarchy dump
+  that the server picker lists exactly netcup, ffmuc, ccc and systemli with no Fairmeeting row.
+- **Acceptance Criteria:**
+  - `fairmeeting.net` is absent from the server picker, translations and documentation
+  - Old recent rooms using `fairmeeting.net` fall back to custom-server mode with the URL pre-filled
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass

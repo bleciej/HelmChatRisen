@@ -71,7 +71,6 @@
     <string name="server_netcup_description">最高の回線品質 — ドイツの Netcup データセンター。</string>
     <string name="server_ffmuc_description">Freifunk München による安定したコミュニティプロジェクト。</string>
     <string name="server_ccc_description">セキュリティとプライバシー — Chaos Computer Club München。</string>
-    <string name="server_fairmeeting_description">オーストリアの Fairkom サーバー — クリアな音声。</string>
     <string name="server_systemli_description">匿名性 — Systemli ネットワークコレクティブ。</string>
     <string name="server_jitsi_description">Jitsi.org による安定かつ安全なプロジェクト。</string>
 

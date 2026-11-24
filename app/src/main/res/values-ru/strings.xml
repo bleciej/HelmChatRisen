@@ -71,7 +71,6 @@
     <string name="server_netcup_description">Лучшее качество связи — дата-центр Netcup в Германии.</string>
     <string name="server_ffmuc_description">Стабильный общественный проект Freifunk München.</string>
     <string name="server_ccc_description">Безопасность и приватность — Chaos Computer Club München.</string>
-    <string name="server_fairmeeting_description">Австрийский сервер Fairkom — чистый звук.</string>
     <string name="server_systemli_description">Анонимность — сетевой коллектив Systemli.</string>
     <string name="server_jitsi_description">Стабильный и безопасный проект Jitsi.org.</string>
 

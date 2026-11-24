@@ -71,7 +71,6 @@
     <string name="server_netcup_description">Καλύτερη ποιότητα σύνδεσης — κέντρο δεδομένων Netcup στη Γερμανία.</string>
     <string name="server_ffmuc_description">Σταθερό κοινοτικό έργο του Freifunk München.</string>
     <string name="server_ccc_description">Ασφάλεια και ιδιωτικότητα — Chaos Computer Club München.</string>
-    <string name="server_fairmeeting_description">Αυστριακός διακομιστής Fairkom — καθαρός ήχος.</string>
     <string name="server_systemli_description">Ανωνυμία — το δίκτυο συλλογικότητας Systemli.</string>
     <string name="server_jitsi_description">Σταθερό και ασφαλές έργο του Jitsi.org.</string>
 

@@ -71,7 +71,6 @@
     <string name="server_netcup_description">Geriausia ryšio kokybė — Netcup duomenų centras Vokietijoje.</string>
     <string name="server_ffmuc_description">Stabilus bendruomenės projektas Freifunk München.</string>
     <string name="server_ccc_description">Saugumas ir privatumas — Chaos Computer Club München.</string>
-    <string name="server_fairmeeting_description">Austrijos Fairkom serveris — švarus garsas.</string>
     <string name="server_systemli_description">Anonimiškumas — Systemli tinklo kolektyvas.</string>
     <string name="server_jitsi_description">Stabilus ir saugus Jitsi.org projektas.</string>
 

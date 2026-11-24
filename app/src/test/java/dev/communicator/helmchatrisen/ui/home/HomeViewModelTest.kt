@@ -119,6 +119,22 @@ class HomeViewModelTest {
         assertEquals("https://moj-serwer.pl", state.effectiveServerUrl)
     }
 
+    /** Verifies that a recent room on a removed preset reopens in custom-server mode. */
+    @Test
+    fun applyRecentRoom_fallsBackToCustomServerForRemovedPreset() {
+        viewModel.applyRecentRoom(
+            RecentRoom(
+                roomName = "ride",
+                serverUrl = "https://fairmeeting.net",
+            ),
+        )
+
+        val state = viewModel.uiState.value
+        assertTrue(state.useCustomServer)
+        assertEquals("https://fairmeeting.net", state.customServerUrl)
+        assertEquals("https://fairmeeting.net", state.effectiveServerUrl)
+    }
+
     @Test
     fun applyRecentRoom_clearsJwtToken() {
         viewModel.onUseCustomServerChange(true)
@@ -190,18 +206,19 @@ class HomeViewModelTest {
         assertEquals("meet.systemli.org", state.selectedServer.host)
     }
 
+    /** Verifies that selecting a preset clears custom-server fields and the JWT token. */
     @Test
     fun selectingPreset_clearsCustomServerAndToken() {
         viewModel.onUseCustomServerChange(true)
         viewModel.onCustomServerUrlChange("https://moj-serwer.pl")
         viewModel.onJwtTokenChange("secret-token")
 
-        viewModel.onPresetServerSelected(JitsiServers.byUrl("https://fairmeeting.net")!!)
+        viewModel.onPresetServerSelected(JitsiServers.byUrl("https://freejitsi01.netcup.net")!!)
 
         val state = viewModel.uiState.value
         assertEquals("", state.customServerUrl)
         assertEquals("", state.jwtToken)
-        assertEquals("https://fairmeeting.net", state.effectiveServerUrl)
+        assertEquals("https://freejitsi01.netcup.net", state.effectiveServerUrl)
     }
 
     @Test
@@ -240,6 +257,7 @@ class HomeViewModelTest {
         assertNull(request?.token)
     }
 
+    /** Verifies the picker's preset list and the handling of hidden or removed presets. */
     @Test
     fun presets_containVisibleServers() {
         val hosts = JitsiServers.presets.map { it.host }
@@ -249,11 +267,12 @@ class HomeViewModelTest {
                 "meet.ffmuc.net",
                 "freejitsi01.netcup.net",
                 "webex.muc.ccc.de",
-                "fairmeeting.net",
                 "meet.systemli.org",
             ),
             hosts,
         )
+        // Removed presets stay usable only through the custom-server form for old recent rooms.
+        assertNull(JitsiServers.byUrl("https://fairmeeting.net"))
         // meet.jit.si stays hidden until its moderator sign-in flow is fixed.
         assertNull(JitsiServers.byUrl("https://meet.jit.si"))
         assertEquals("meet.ffmuc.net", JitsiServers.default.host)

@@ -16,7 +16,7 @@ Riders need reliable voice communication, not video. HelmChat strips everything 
 ## Features
 
 - Join or create an audio room on any Jitsi server.
-- Curated drop-down of public Jitsi servers (meet.ffmuc.net, webex.muc.ccc.de, fairmeeting.net, meet.systemli.org), plus support for custom self-hosted instances.
+- Curated drop-down of public Jitsi servers (meet.ffmuc.net, freejitsi01.netcup.net, webex.muc.ccc.de, meet.systemli.org), plus support for custom self-hosted instances.
 - Optional **JWT token** field for token-authenticated Jitsi deployments.
 - **Recent rooms** — the last 8 rooms persist across restarts and can be re-joined with one tap, edited or deleted.
 - **Invite friends** — share a room invitation (room name + plain browser link) from the join screen or from an active call; recipients without the app can join in a browser.

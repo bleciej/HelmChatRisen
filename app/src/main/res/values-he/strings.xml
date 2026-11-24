@@ -71,7 +71,6 @@
     <string name="server_netcup_description">איכות קישור הטובה ביותר — מרכז נתונים Netcup בגרמניה.</string>
     <string name="server_ffmuc_description">פרויקט קהילתי יציב של Freifunk München.</string>
     <string name="server_ccc_description">אבטחה ופרטיות — Chaos Computer Club München.</string>
-    <string name="server_fairmeeting_description">שרת Fairkom אוסטרי — צליל נקי.</string>
     <string name="server_systemli_description">אנונימיות — קולקטיב הרשת Systemli.</string>
     <string name="server_jitsi_description">פרויקט יציב ומאובטח של Jitsi.org.</string>
 

@@ -71,7 +71,6 @@
     <string name="server_netcup_description">Parim ühenduse kvaliteet — Netcupi andmekeskus Saksamaal.</string>
     <string name="server_ffmuc_description">Stabiilne kogukonnaprojekt Freifunk München.</string>
     <string name="server_ccc_description">Turvalisus ja privaatsus — Chaos Computer Club München.</string>
-    <string name="server_fairmeeting_description">Austria Fairkomi server — puhas heli.</string>
     <string name="server_systemli_description">Anonüümsus — Systemli võrgustikukollektiiv.</string>
     <string name="server_jitsi_description">Jitsi.orgi stabiilne ja turvaline projekt.</string>
 

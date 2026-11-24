@@ -71,7 +71,6 @@
     <string name="server_netcup_description">Bedste linkkvalitet — Netcup-datacenter i Tyskland.</string>
     <string name="server_ffmuc_description">Stabilt fællesskabsprojekt af Freifunk München.</string>
     <string name="server_ccc_description">Sikkerhed og privatliv — Chaos Computer Club München.</string>
-    <string name="server_fairmeeting_description">Østrigsk Fairkom-server — ren lyd.</string>
     <string name="server_systemli_description">Anonymitet — netværkskollektivet Systemli.</string>
     <string name="server_jitsi_description">Stabilt og sikkert projekt af Jitsi.org.</string>
 
