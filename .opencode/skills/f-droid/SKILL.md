@@ -33,14 +33,18 @@ Fetch the current pages before an audit or submission: the policy and the list o
 
 ### 3. Versioning and build
 - Keep versionName and versionCode static in the build file. No time-based or computed versions: F-Droid scrapes files and does not execute build logic.
-- Commit the Gradle wrapper (properties AND jar), pin toolchains, and avoid build steps that download JDKs or binaries on demand.
+- Commit the Gradle wrapper (properties AND jar), pin toolchains, and avoid build steps that download JDKs or binaries on demand; any checksum-pinned tool bootstrap must be documented in metadata.
+- If metadata rewrites `./gradlew` to `gradle`, the `sudo` step or srclib must provide the exact wrapper version. Keep the installer checksum equal to `distributionSha256Sum` in `gradle/wrapper/gradle-wrapper.properties`.
 - F-Droid runs assembleRelease. ABI splits produce several APKs: either select one output in metadata or define per-ABI build blocks with VercodeOperation.
+- Keep `output`, `versionCode`, `VercodeOperation`, `CurrentVersionCode`, changelog filenames and local helper names in sync; remove obsolete ABI-specific code files when collapsing build blocks.
 - Build from a clean tree at the exact tag. AGP 8.3+ embeds VCS info in the APK; disable it only deliberately.
 
 ### 4. Metadata
 - In an fdroiddata checkout, run `fdroid import --url=<repo>` (the docs also show `fdroid import` after cloning the app repo) to generate a template, then complete License, SourceCode, Repo, RepoType, Summary, Description, Categories, Builds and UpdateCheckMode.
 - When version fields are indirect or the tag scheme is unusual, set UpdateCheckData/AutoUpdateMode explicitly instead of relying on RepoManifest.
 - `fdroid lint <package>` and `fdroid build -v <package>:<versionCode>` validate the recipe; `fdroid rewritemeta` normalises it.
+- After any metadata or toolchain change, rerun `readmeta`, `rewritemeta`, `lint` and the relevant `build`; earlier passes are stale and must not be reported as current.
+- Keep `fdroid/README.md`, `RELEASE_NOTES.md` and these project notes in sync with the metadata. Never claim a tag push, `fdroid lint` or `fdroid build` was completed unless it was verified in the current session.
 - Upstream fastlane/Triple-T metadata under fastlane/metadata/<locale>/ can supply name, summary and description.
 
 ### 5. Anti-features
@@ -72,18 +76,40 @@ Fetch the current pages before an audit or submission: the policy and the list o
 - Buildserver prerequisites: Node.js 24.22.3 is downloaded with a pinned
   SHA-256 by `scripts/fdroid-build.sh` (base image has no Node 24), JDK 17 for
   Jitsi's Gradle 8.14 build and JDK 21 for the app's Gradle 9.6 / AGP 9.5.2.
-  Both are installed via `sudo: ./scripts/fdroid-install-deps.sh`. The npm
-  install needs several GiB of disk.
-- Candidate recipe: `fdroid/dev.communicator.helmchatrisen.yml` with per-ABI
-  codes 701 (`armeabi-v7a`) and 702 (`arm64-v8a`) derived from upstream code 7;
-  `CurrentVersionCode: 702`, `UpdateCheckMode: Tags V*`. Description and summary
-  come from `fastlane/metadata/android/en-US/` - do NOT duplicate `Summary` or
+  `sudo: ./scripts/fdroid-install-deps.sh` installs both JDKs plus a
+  checksum-pinned Gradle 9.6 symlinked to `/usr/local/bin/gradle`; the
+  metadata `prebuild` then replaces `./gradlew` with `gradle` because F-Droid
+  strips the wrapper. The npm install needs several GiB of disk.
+- Candidate recipe: `fdroid/dev.communicator.helmchatrisen.yml` publishes only
+  `arm64-v8a` with F-Droid code 700, derived from upstream code 7 via
+  `VercodeOperation: 100 * %c`; `CurrentVersionCode: 700`,
+  `UpdateCheckMode: Tags V*`. The 32-bit package was dropped because it repeats
+  the long Jitsi SDK/npm build. Description and summary come from
+  `fastlane/metadata/android/en-US/` - do NOT duplicate `Summary` or
   `Description` in the `.yml`, F-Droid docs say the upstream fastlane text wins
   and the metadata field would override it.
-- Both `commit:` values are still placeholders. Push the `V1.7` tag, then
-  replace them with that tag's full commit hash. Validate with
-  `fdroid readmeta` / `rewritemeta` / `lint` / `build -v ...:701` and `:702`
-  in an `fdroidserver` environment (not installed locally).
+- The `commit:` field pins the published `V1.7` commit
+  `3e2f332109e973e2a630472bf0595eae1ba642ac`. `readmeta` / `rewritemeta` /
+  `lint` passed before the Gradle provisioning fix; rerun all three plus
+  `build -v ...:700` in an `fdroidserver` environment. Locally,
+  fdroidserver 2.2.1 needs a temporary rewrite of the `{env: ...}` values in
+  `config.yml`.
+
+### Project recipe invariants
+
+Check every one of these before changing the recipe or helpers:
+
+- Exactly one build block, one `VercodeOperation`, code `700`, and an
+  `arm64-v8a` `output` glob.
+- Changelogs contain `7.txt` and `700.txt`; codes `701`/`702` and their
+  changelogs/helpers are gone.
+- `scripts/fdroid-install-deps.sh` installs Gradle 9.6.0 with the checksum from
+  `gradle/wrapper/gradle-wrapper.properties` and exposes it as `gradle` on
+  `PATH`; metadata `prebuild` may then rewrite `./gradlew` to `gradle`.
+- Local helpers use uppercase variables, install their `EXIT` trap before any
+  file patching, restore with `cp -p`, and keep `config.yml` out of Git.
+- `.idea/deploymentTargetSelector.xml` stays ignored/untracked; no device serial
+  belongs in a committed file.
 - Local release outputs are signed (APK Signature Scheme v2) with a developer
   self-signed certificate from the gitignored repository-root `keystore.jks`,
   configured via `releaseStoreFile` (absolute path) and the other three

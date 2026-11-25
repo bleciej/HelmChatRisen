@@ -5,15 +5,22 @@
 repository so the build can be reviewed together with the source; it is not a
 substitute for the authoritative metadata in `fdroiddata/metadata/`.
 
+Only the `arm64-v8a` APK is submitted to F-Droid. Upstream still builds 32-bit and
+universal APKs, but the F-Droid recipe has a single build block with version code
+`700`; the 32-bit code `701` is deliberately not published.
+
 ## What the recipe does
 
 1. `sudo` runs [`scripts/fdroid-install-deps.sh`](../scripts/fdroid-install-deps.sh)
-   to install build tools plus JDK 17 (Jitsi's Gradle toolchain) and JDK 21
-   (the app's Gradle 9.6 / AGP 9.5.2 build).
+   to install build tools, JDK 17 (Jitsi's Gradle toolchain), JDK 21 (the app's
+   Gradle 9.6 / AGP 9.5.2 build) and a checksum-pinned Gradle 9.6 distribution.
+   The script links that distribution to `/usr/local/bin/gradle`.
 2. `prebuild` rewrites `app/build.gradle.kts` so the version code comes from
    F-Droid's `$$VERCODE$$`. This keeps the APK version code in sync with the
-   metadata's per-ABI `VercodeOperation` values (701 for `armeabi-v7a`, 702 for
-   `arm64-v8a`, derived from upstream code 7) without changing the public source.
+   metadata's `VercodeOperation` value (700 for `arm64-v8a`, derived from upstream
+   code 7) without changing the public source. It also replaces `./gradlew` with
+   `gradle`, because F-Droid removes the wrapper and the pinned Gradle is on
+   `PATH` after the `sudo` step.
 3. `build` runs [`scripts/fdroid-build.sh`](../scripts/fdroid-build.sh), which:
    - downloads Node.js 24.22.3 from nodejs.org and verifies its SHA-256
      (the F-Droid base image does not provide Node 24),
@@ -21,7 +28,7 @@ substitute for the authoritative metadata in `fdroiddata/metadata/`.
      SDK 13.1.1 from the pinned `mobile-sdk-13.1.1` commit with
      `LIBRE_BUILD=true`,
    - assembles the release APKs against that local SDK.
-4. `output` selects the ABI-specific APK from the three produced by
+4. `output` selects the `arm64-v8a` APK from the release outputs of
    `assembleRelease`.
 
 No prebuilt Jitsi AAR is fetched or committed. The remote Jitsi Maven
@@ -31,46 +38,51 @@ repository list.
 ## Before opening the fdroiddata merge request
 
 - [x] Merge `V1.7-rc` into `master` and move the annotated `V1.7` tag to the
-      final `master` commit `3e2f332109e973e2a630472bf0595eae1ba642ac`. Both
-      `commit:` fields now pin that hash; the published tag was force-moved from
+      final `master` commit `3e2f332109e973e2a630472bf0595eae1ba642ac`. The
+      `commit:` field pins that hash; the published tag was force-moved from
       `03572db` to include the final changes.
-- [ ] Push the moved `V1.7` tag to `github` (force-push required; HTTPS
-      credentials were unavailable in this session). Verify with
-      `git ls-remote --tags github 'refs/tags/V1.7*'`.
-- [ ] Review the upstream short/full descriptions already present under
+- [x] Push the moved `V1.7` tag to GitHub. Verified:
+      `refs/tags/V1.7` = `3e2f332109e973e2a630472bf0595eae1ba642ac`.
+- [x] Review the upstream short/full descriptions under
       `fastlane/metadata/android/en-US/` (they supply F-Droid's Summary and
-      Description, so do not duplicate those fields in the `.yml`), add
-      screenshots if desired, and verify changelog filenames match the final
-      version codes (`7.txt`, `701.txt`, `702.txt` are present).
+      Description, so do not duplicate those fields in the `.yml`). Changelogs
+      `7.txt` and `700.txt` are present; `701.txt` and `702.txt` were removed
+      with the unpublished 32-bit/702 packages. Screenshots remain optional.
 - [ ] Confirm the F-Droid runner has enough disk: Jitsi's `node_modules` is
       about 6 GiB and the toolchain adds roughly 0.5 GiB.
-- [ ] Validate the metadata in an `fdroidserver` checkout:
+- [ ] Re-validate the metadata in an `fdroidserver` checkout after adding the
+      pinned Gradle install:
 
       ```bash
       fdroid readmeta dev.communicator.helmchatrisen
       fdroid rewritemeta dev.communicator.helmchatrisen
       fdroid lint dev.communicator.helmchatrisen
-      fdroid build -v dev.communicator.helmchatrisen:701
-      fdroid build -v dev.communicator.helmchatrisen:702
+      fdroid build -v dev.communicator.helmchatrisen:700
       ```
 
-- [ ] Re-run `./gradlew :app:dependencies --configuration releaseRuntimeClasspath`
+      `readmeta`/`rewritemeta`/`lint` passed before that change; the full
+      `fdroid build` for code 700 has not been rerun yet.
+- [x] Re-run `./gradlew :app:dependencies --configuration releaseRuntimeClasspath`
       on the tagged commit and confirm no Play Services, Firebase, GMS,
       install-referrer, Amplitude, Giphy or Google Sign-In dependency appears.
-- [ ] Document the source-built SDK prerequisite in the merge request and in
-      `MaintainerNotes`; expect reviewers to ask why Node/JDK are bootstrapped.
+- [x] Document the source-built SDK prerequisite in the merge request and in
+      `MaintainerNotes`; expect reviewers to ask why Node/JDK/Gradle are
+      bootstrapped.
 
 ## Known risks to raise with maintainers
 
-- The Node tarball is a pinned, checksum-verified build-tool download. If the
-  build server blocks downloads outside the trusted Maven lists, replace it
-  with an F-Droid-provided Node 24 `srclib`.
+- The Node and Gradle archives are pinned, checksum-verified build-tool
+  downloads. If the build server blocks downloads outside the trusted Maven
+  lists, replace them with F-Droid-provided Node 24/Gradle 9.6 `srclib`s or an
+  approved toolchain image.
 - `npm ci` fetches ~2100 packages from the npm registry using Jitsi's committed
   `package-lock.json`. The Jitsi git commit is pinned in
   `scripts/build-jitsi-libre-sdk.sh`, but the npm registry itself is not
   mirrored by F-Droid.
-- `assembleRelease` builds all three APKs for each block and then selects one;
-  this costs build time but avoids patching the ABI configuration.
+- `assembleRelease` builds 32-bit, 64-bit and universal APKs before `output`
+  selects the 64-bit one. This keeps the tagged source unchanged but repeats
+  work; a later recipe could patch the ABI split and the Jitsi SDK's own ABI
+  filters to build only `arm64-v8a`.
 - Physical call/intercom verification with SDK 13.1.1 has not been done (no
   device was available); this does not block a source build but should be
   disclosed.

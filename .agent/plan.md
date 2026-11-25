@@ -1060,3 +1060,189 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - `fairmeeting.net` is absent from the server picker, translations and documentation
   - Old recent rooms using `fairmeeting.net` fall back to custom-server mode with the URL pre-filled
   - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+
+### Task_99_ValidateFdroidBuildV17: Lokalna weryfikacja receptury F-Droid dla 1.7.
+- **Status:** COMPLETED (merge request do `fdroid/fdroiddata` do otwarcia ręcznie)
+- **Updates:** Skopiowano metadane do lokalnego `fdroiddata` i zatwierdzono je jako
+  `6aa2242323 Add HelmChatRisen (audio-only motorcycle intercom)` (6 plików: recipe,
+  opisy en-US i changelogi 7/701/702). Poprawiono kategorię `Communication` →
+  `Connectivity`, Changelog `/blob/master/` → `/blob/HEAD/` oraz dodano do `prebuild`
+  podmianę `./gradlew` → `gradle`, ponieważ F-Droid usuwa wrapper przed buildem.
+  Dodano niezatwierdzone lokalne helpery `scripts/fdroid-build-local.sh`,
+  `scripts/fdroid-build-701.sh` i `scripts/fdroid-build-702.sh` (ustawiają JDK 17,
+  Android SDK, disk-backed `TMPDIR`, Gradle 9.6 i tymczasowo łatają `config.yml`
+  dla `fdroidserver 2.2.1`; przywracają oryginał po buildzie).
+- **Verification:** `fdroid readmeta -W warn`, `fdroid rewritemeta
+  dev.communicator.helmchatrisen` i `fdroid lint dev.communicator.helmchatrisen`
+  zakończyły się bez uwag dla naszej aplikacji. `fdroid build` zbudował obie wersje
+  z pinnowanego commitu `3e2f332109e973e2a630472bf0595eae1ba642ac`:
+  `dev.communicator.helmchatrisen_701.apk` (32 MB, versionCode 701, armeabi-v7a)
+  oraz `_702.apk` (41 MB, versionCode 702, arm64-v8a), oba z versionName 1.7 i
+  minSdk 26; pliki leżą w `fdroiddata/unsigned/`. `config.yml` został przywrócony
+  do wersji z repo i nie jest częścią commitu. Obciążenie/błędy `npm ci` wynikały
+  z tmpfs `/tmp`; z `TMPDIR` na dysku instalacja przebiegła poprawnie.
+- **Acceptance Criteria:**
+  - Metadane przechodzą `readmeta`/`rewritemeta`/`lint` i zawierają tylko pliki przeznaczone do MR
+  - `fdroid build` produkuje poprawne APK-i 701 (armeabi-v7a) i 702 (arm64-v8a)
+  - `config.yml` i lokalne skrypty nie są zatwierdzone
+  - Manual: wypchnąć branch z `fdroiddata` na fork i otworzyć MR do `fdroid/fdroiddata`
+
+### Task_100_DropFdroidArmeabiV7a: Publikuj w F-Droid tylko arm64-v8a.
+- **Status:** COMPLETED (merge request do `fdroid/fdroiddata` do otwarcia ręcznie)
+- **Updates:** Usunięto blok buildu 701 z receptury w `fdroid/` i z lokalnego
+  `fdroiddata`, usunięto odpowiedni changelog `701.txt` w obu repozytoriach oraz
+  nieaktualny helper `scripts/fdroid-build-701.sh`. `VercodeOperation` ma teraz
+  jedną operację `100 * %c + 2`, więc jedyny pakiet F-Droid zachowuje kod 702
+  (`arm64-v8a`) z tagu `V1.7`; kod upstream 7 i wersja 1.7 nie zmieniły się.
+  Zaktualizowano `fdroid/README.md`, `RELEASE_NOTES.md` i domyślny wariant
+  `scripts/fdroid-build-local.sh` (domyślnie 702). W `fdroiddata` dodano
+  nie-destrukcyjny commit `455cd5fd30 build(fdroid): publish only arm64-v8a
+  package` nad istniejącym `6aa2242323`; oba zawierają wyłącznie metadane.
+- **Verification:** `fdroid readmeta -W warn`, `fdroid rewritemeta
+  dev.communicator.helmchatrisen` i `fdroid lint dev.communicator.helmchatrisen`
+  zakończyły się kodem 0 (ostrzeżenia dotyczyły innych aplikacji w repozytorium
+  oraz lokalnych uprawnień `config.yml`). `config.yml` został przywrócony do
+  wersji z repo i nie jest częścią żadnego z commitów. Build `:702` z tego samego
+  pinnowanego commitu i tego samego bloku buildu wcześniej zakończył się
+  sukcesem; nowa receptura nie zmienia komend buildu. Skrypty
+  `scripts/fdroid-build-local.sh` i `scripts/fdroid-build-702.sh` przechodzą
+  `bash -n`. W repo aplikacji żadne zmiany nie zostały zatwierdzone.
+- **Acceptance Criteria:**
+  - Receptura F-Droid ma jeden blok buildu, jeden `VercodeOperation` i kod 702
+  - Metadane przechodzą `readmeta`/`rewritemeta`/`lint`
+  - Changelog 701 i lokalny helper 701 nie są już częścią przygotowania do MR
+  - Manual: wypchnąć dwa commity z `fdroiddata` na fork i otworzyć MR
+
+### Task_101_UseFdroidVersionCode700: Jeden pakiet F-Droid z kodem 700.
+- **Status:** COMPLETED (merge request do `fdroid/fdroiddata` do otwarcia ręcznie)
+- **Updates:** Zmieniono jedyny blok F-Droid z kodu 702 na 700 oraz
+  `VercodeOperation: 100 * %c` (z upstreamowego kodu 7), `CurrentVersionCode:
+  700`, opisy w `fdroid/README.md`, `RELEASE_NOTES.md` i projekcie skill
+  `.opencode/skills/f-droid/SKILL.md`. Changelog `702.txt` zastąpiony przez
+  `700.txt` zarówno w `fastlane/`, jak i w `fdroiddata`. Helper
+  `scripts/fdroid-build-702.sh` zastąpiony przez `scripts/fdroid-build-700.sh`,
+  a `scripts/fdroid-build-local.sh` domyślnie buduje 700. W `fdroiddata` dodano
+  trzeci commit `0d615f31dd build(fdroid): use version code 700 for arm64 build`
+  nad `455cd5fd30` i `6aa2242323`; żaden nie zawiera `config.yml` ani APK.
+- **Verification:** `fdroid readmeta -W warn`, `fdroid rewritemeta
+  dev.communicator.helmchatrisen` i `fdroid lint dev.communicator.helmchatrisen`
+  zakończyły się kodem 0. Aby nie powtarzać ~30-minutowego rebuildu Jitsi,
+  z tagu `V1.7` zrobiono szybką weryfikację z lokalnie opublikowanym SDK
+  13.1.1: po zastosowaniu tego samego `prebuild` (`appVersionCode = 700`)
+  `gradle assembleRelease` zakończył się sukcesem w 3m42s
+  (`build/fdroid-700-verify.log`). `aapt dump badging` dla
+  `HelmChatRisen-1.7-release-arm64-v8a.apk` potwierdza versionCode 700,
+  versionName 1.7, `native-code: arm64-v8a` i minSdk 26. Skrypty `700`
+  przechodzą `bash -n`. Stary lokalny `unsigned/..._702.apk` pozostaje tylko
+  jako nieużywany artefakt i nie trafia do MR.
+- **Acceptance Criteria:**
+  - Receptura F-Droid ma jeden blok, kod 700 i jedną operację `100 * %c`
+  - Changelog i helpery używają wyłącznie 700
+  - Metadane przechodzą `readmeta`/`rewritemeta`/`lint`
+  - Manual: wypchnąć trzy commity z `fdroiddata` na fork i otworzyć MR
+
+### Task_102_ShellSkillAndEnglishComments: Konwencje SH w projekcie.
+- **Status:** COMPLETED
+- **Updates:** Komentarze w `scripts/fdroid-build-local.sh` i
+  `scripts/fdroid-build-700.sh` przełożone na angielski. Dodano projektowy skill
+  `.opencode/skills/shell-scripts/SKILL.md` opisujący styl Bash, angielskie
+  komentarze, polskie komunikaty dla użytkownika, układ `scripts/` vs `build/`,
+  środowisko F-Droid (JDK, SDK, disk-backed TMPDIR, Gradle 9.6, config.yml),
+  zasady bezpieczeństwa i listę weryfikacji. Nie zmieniano
+  `.opencode/opencode.json` — katalog `.opencode/skills/` jest wykrywany
+  automatycznie.
+- **Verification:** `bash -n` przechodzi dla obu skryptów. Skill został
+  pomyślnie załadowany przez narzędzie `skill` jako `shell-scripts` i pojawił
+  się w zestawie dostępnych skilli. Żadne commitowane pliki aplikacji nie
+  zostały zmienione w ramach tego zadania.
+- **Acceptance Criteria:**
+  - Wszystkie komentarze w skryptach SH są po angielsku
+  - Skill `shell-scripts` jest widoczny i możliwy do załadowania w OpenCode
+  - Skrypty przechodzą sprawdzanie składni
+
+### Task_103_RefreshLauncherIconsFromCurrentSvg: Regenerate launcher icons from `helmchat.svg` with safe-zone sizing.
+- **Status:** COMPLETED
+- **Updates:** The shipped icons were generated from an older artwork revision and their
+  foreground content spanned ~12–88% of the 108 dp adaptive-icon canvas, i.e. outside the
+  66 dp safe zone, so launchers clipped the artwork at the edges. Re-rendered the current
+  `/home/burt/Obrazy/helmchat.svg` at 4096 px with Inkscape, cropped to its true alpha bounds
+  (aspect 1.163), and regenerated all 20 density-specific WebP files. The adaptive foreground
+  and monochrome layers now fit their corners inside a 66 dp circle (max opaque radius 0.537
+  of the half-canvas vs. 0.611 allowed), and the legacy square/round icons fit inside a
+  circular mask (max radius ≈0.84 vs. 1.0). Kept the artwork's transparent background and the
+  existing adaptive-icon XML; preserved exact density dimensions (48/72/96/144/192 px legacy,
+  108/162/216/324/432 px foreground/monochrome). Total icon payload is ~144 KB, with the
+  largest single file at 14 KB.
+- **Verification:** `./gradlew assembleDebug testDebugUnitTest lintDebug --no-daemon
+  --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8"` passed: 201 JVM
+  tests (0 failures/errors), lint 0 errors / 25 pre-existing warnings, and all three debug
+  ABI APKs produced. `git diff --check` clean. Installed the signed release arm64-v8a APK
+  (versionCode 7, signer SHA-256 `dbce6bc9…`) on the connected S25 (`RF8MA07XRWN`) after the
+  user confirmed the manual install had failed; the app launched with no FATAL/ANR in logcat
+  and the installed APK contains the regenerated icon WebPs. Visual launcher appearance still
+  needs a manual look. Follow-up: the user reported `drawable-nodpi/helmchat_logo.webp` was still
+  the pre-SVG revision (file dated 2026-11-12 vs SVG 2026-11-25). Regenerated it at 512×512 from
+  the same rendered artwork with circle-safe fitting (~27 KB) and rebuilt the signed release APK.
+  The connected device had meanwhile switched from the S25 to the x86_64 emulator
+  (`emulator-5554`), so the arm64-v8a split crashed with `SoLoaderDSONotFoundError` for
+  `libjitsisdkmodules.so`; installed the universal release APK instead, which contains x86_64
+  libraries. App launched with PID 6910 and no FATAL/ANR; verified the new logo bytes are inside
+  the installed APK.
+- **Acceptance Criteria:**
+  - All launcher icons regenerated from the current `helmchat.svg`
+  - Adaptive foreground/monochrome content stays inside the 66 dp safe zone; no edge clipping
+  - Legacy square/round icons fit circular masks; WebP dimensions match every density
+  - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
+
+### Task_104_FixFdroidHelperAndToolchainFindings: Address the F-Droid review findings.
+- **Status:** COMPLETED (full `fdroid build` for code 700 still needs a rerun in fdroidserver)
+- **Updates:** Fixed `scripts/fdroid-build-local.sh`: enabled `set -euo pipefail`,
+  guarded missing `fdroiddata`/`config.yml`, installed the `EXIT` restore trap
+  before patching, replaced the undefined `$config.yml` with `$CONFIG`, restored
+  the config with `cp -p` instead of a hardcoded `chmod 664`, and wrapped the
+  captured `fdroid build` status in an `if` block so failure handling still works
+  with `errexit`. Added a PATH fallback for an already-installed Gradle 9.6.
+  Hardened `scripts/fdroid-install-deps.sh` to install the same checksum-pinned
+  Gradle 9.6 zip as `gradle-wrapper.properties` into `/opt/gradle-9.6.0` and
+  symlink it to `/usr/local/bin/gradle`, so the metadata `prebuild` replacement
+  `./gradlew` → `gradle` resolves to the correct version on the buildserver.
+  Ignored and untracked `.idea/deploymentTargetSelector.xml` and reverted the
+  device-serial selection. Corrected the tag-push and validation claims in
+  `RELEASE_NOTES.md` and refreshed `fdroid/README.md` plus the F-Droid/shell
+  skills to describe the Gradle install and remaining fdroidserver rerun.
+- **Verification:** `bash -n` passed for all four F-Droid shell scripts; the YAML
+  parsed with one build block, code 700 and `VercodeOperation: 100 * %c`; a
+  simulated `fdroid build` confirmed the config is patched, restored byte-for-byte
+  with its original `664` mode on both success and failure; and the metadata
+  `sed` correctly rewrites `./gradlew` to `gradle`. The pinned Gradle checksum
+  matches `gradle/wrapper/gradle-wrapper.properties`. `./gradlew
+  testDebugUnitTest assembleDebug lintDebug --no-daemon --max-workers=2
+  -Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8"` passed: 201 JVM tests,
+  0 failures/errors/skips, lint 0 errors / 26 warnings and all three debug APKs.
+  `git diff --check` is clean. `fdroid lint`/`fdroid build` were not rerun because
+  no `fdroiddata` checkout is available in this session.
+- **Acceptance Criteria:**
+  - Local helper no longer aborts on the undefined `config.yml` variable and restores `config.yml` safely
+  - F-Droid `sudo` step provides pinned Gradle 9.6 on `PATH`
+  - IDE deployment target file is untracked and ignored
+  - Release/submission docs no longer contradict each other
+  - Shell/YAML validation, JVM tests, debug build and lint pass
+
+### Task_105_StrengthenFdroidSkills: Turn review findings into skill checklists.
+- **Status:** COMPLETED
+- **Updates:** Added explicit failure patterns to `.opencode/skills/shell-scripts/SKILL.md`
+  (undefined lowercase variables, restore trap ordering, mode-preserving `cp -p`
+  restore, `if`/`else` status capture instead of dropping `-e`, verifying `sed`
+  rewrites and tool versions, and keeping IDE device state untracked). Expanded
+  its verification checklist with stale-variable grep, simulated success/failure
+  restore checks, and full fdroidserver revalidation after metadata/toolchain
+  changes. Added F-Droid rules for matching the `gradle` replacement to the
+  wrapper checksum, keeping code/output/changelog/helper names in sync,
+  revalidating after every metadata change, avoiding stale claims in docs, and
+  a project recipe invariants checklist.
+- **Verification:** `git diff --check` clean. Documentation-only change; no app
+  build or tests were required.
+- **Acceptance Criteria:**
+  - Skills warn about the exact defects found in the review
+  - Skills require validation after metadata/toolchain changes
+  - Documentation stays consistent with the current single-build code-700 recipe
