@@ -71,7 +71,6 @@
     <string name="server_netcup_description">Най-добро качество на връзката — център за данни Netcup в Германия.</string>
     <string name="server_ffmuc_description">Стабилен общностен проект на Freifunk München.</string>
     <string name="server_ccc_description">Сигурност и поверителност — Chaos Computer Club München.</string>
-    <string name="server_fairmeeting_description">Австрийски сървър Fairkom — чист звук.</string>
     <string name="server_systemli_description">Анонимност — мрежовият колектив Systemli.</string>
     <string name="server_jitsi_description">Стабилен и сигурен проект на Jitsi.org.</string>
 
@@ -81,5 +80,4 @@
     <string name="language_system">Език на системата</string>
     <string name="language_close">Затвори</string>
         <string name="call_error_connect_timeout">Could not connect. Check the server address and your internet connection.</string>
-        <string name="call_error_reconnect_timeout">Could not resume the connection. Check your network and rejoin.</string>
 </resources>

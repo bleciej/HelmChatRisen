@@ -34,6 +34,223 @@ class JitsiCallManagerTest {
         assertFalse(isReconnectWatchdogState(CallState.Ending))
     }
 
+    /**
+     * A stalled reconnect may replace the view repeatedly while the same room is still live. Only
+     * a hang-up, terminal state, different room or missing view stops the retry chain.
+     */
+    @Test
+    fun shouldForceFreshJitsiView_allowsUnboundedRetriesWhileLive() {
+        val room = "ride"
+        val url = "https://meet.ffmuc.net"
+
+        assertTrue(
+            shouldForceFreshJitsiView(
+                timedOutRoom = room,
+                currentRoomName = room,
+                callState = CallState.Reconnecting(room, url),
+                isLeaving = false,
+                hasActiveView = true,
+            ),
+        )
+        assertTrue(
+            shouldForceFreshJitsiView(
+                timedOutRoom = room,
+                currentRoomName = room,
+                callState = CallState.Connecting(room, url),
+                isLeaving = false,
+                hasActiveView = true,
+            ),
+        )
+
+        assertFalse(
+            shouldForceFreshJitsiView(
+                timedOutRoom = room,
+                currentRoomName = room,
+                callState = CallState.Reconnecting(room, url),
+                isLeaving = true,
+                hasActiveView = true,
+            ),
+        )
+        assertFalse(
+            shouldForceFreshJitsiView(
+                timedOutRoom = room,
+                currentRoomName = "other",
+                callState = CallState.Reconnecting(room, url),
+                isLeaving = false,
+                hasActiveView = true,
+            ),
+        )
+        assertFalse(
+            shouldForceFreshJitsiView(
+                timedOutRoom = room,
+                currentRoomName = room,
+                callState = CallState.Reconnecting(room, url),
+                isLeaving = false,
+                hasActiveView = false,
+            ),
+        )
+        assertFalse(
+            shouldForceFreshJitsiView(
+                timedOutRoom = room,
+                currentRoomName = room,
+                callState = CallState.Connected(room, url),
+                isLeaving = false,
+                hasActiveView = true,
+            ),
+        )
+    }
+
+    /** A live call remains eligible for repeated view replacements while it keeps stalling. */
+    @Test
+    fun shouldForceFreshJitsiView_remainsEligibleAcrossRepeatedTimeouts() {
+        repeat(times = 5) {
+            assertTrue(
+                shouldForceFreshJitsiView(
+                    timedOutRoom = "ride",
+                    currentRoomName = "ride",
+                    callState = CallState.Reconnecting("ride", "https://meet.ffmuc.net"),
+                    isLeaving = false,
+                    hasActiveView = true,
+                ),
+            )
+        }
+    }
+
+    /** Offline first joins poll cheaply instead of recreating the native view. */
+    @Test
+    fun shouldPostponeJoinRetry_waitsOnlyWhileOffline() {
+        assertTrue(shouldPostponeJoinRetry(isNetworkAvailable = false))
+        assertFalse(shouldPostponeJoinRetry(isNetworkAvailable = true))
+    }
+
+    /** Repeated eligible timeouts increment the retry count; settled calls clear it. */
+    @Test
+    fun reconnectAttemptTracker_recordsOnlyEligibleAttemptsAndResets() {
+        val tracker = ReconnectAttemptTracker()
+        assertEquals(0, tracker.attempts)
+
+        assertFalse(tracker.record(eligible = false))
+        assertEquals(0, tracker.attempts)
+
+        repeat(times = 3) { assertTrue(tracker.record(eligible = true)) }
+        assertEquals(3, tracker.attempts)
+
+        tracker.reset()
+        assertEquals(0, tracker.attempts)
+    }
+
+    /** Callbacks queued by a replaced view must not affect the fresh view. */
+    @Test
+    fun isCurrentViewEpoch_rejectsCallbacksFromReplacedView() {
+        assertTrue(isCurrentViewEpoch(callbackEpoch = 4L, currentEpoch = 4L))
+        assertFalse(isCurrentViewEpoch(callbackEpoch = 4L, currentEpoch = 5L))
+    }
+
+    /** Only the matching replacement join may keep the timer and connection history. */
+    @Test
+    fun shouldPreserveCallSessionOnJoin_matchesOnlyThePendingRoom() {
+        assertTrue(
+            shouldPreserveCallSessionOnJoin(
+                isAwaitingRestoredView = true,
+                currentRoomName = "ride",
+                joiningRoomName = "ride",
+            ),
+        )
+        assertFalse(
+            shouldPreserveCallSessionOnJoin(
+                isAwaitingRestoredView = false,
+                currentRoomName = "ride",
+                joiningRoomName = "ride",
+            ),
+        )
+        assertFalse(
+            shouldPreserveCallSessionOnJoin(
+                isAwaitingRestoredView = true,
+                currentRoomName = "ride",
+                joiningRoomName = "other",
+            ),
+        )
+        assertFalse(
+            shouldPreserveCallSessionOnJoin(
+                isAwaitingRestoredView = true,
+                currentRoomName = null,
+                joiningRoomName = "ride",
+            ),
+        )
+    }
+
+    /** Restoring a default network retries only a still-pending first join. */
+    @Test
+    fun shouldRetryFirstJoinOnNetworkRestore_onlyForPendingFirstJoin() {
+        val connecting = CallState.Connecting("ride", "https://server")
+
+        assertTrue(
+            shouldRetryFirstJoinOnNetworkRestore(
+                wasOffline = true,
+                callState = connecting,
+                hasConnectedConference = false,
+                hasPendingConnectTimeout = true,
+            ),
+        )
+        assertFalse(
+            shouldRetryFirstJoinOnNetworkRestore(
+                wasOffline = false,
+                callState = connecting,
+                hasConnectedConference = false,
+                hasPendingConnectTimeout = true,
+            ),
+        )
+        assertFalse(
+            shouldRetryFirstJoinOnNetworkRestore(
+                wasOffline = true,
+                callState = connecting,
+                hasConnectedConference = true,
+                hasPendingConnectTimeout = true,
+            ),
+        )
+        assertFalse(
+            shouldRetryFirstJoinOnNetworkRestore(
+                wasOffline = true,
+                callState = connecting,
+                hasConnectedConference = false,
+                hasPendingConnectTimeout = false,
+            ),
+        )
+        assertFalse(
+            shouldRetryFirstJoinOnNetworkRestore(
+                wasOffline = true,
+                callState = CallState.Connected("ride", "https://server"),
+                hasConnectedConference = true,
+                hasPendingConnectTimeout = false,
+            ),
+        )
+    }
+
+    /** Releasing the pending old view stops normal teardown but only cleans native state when owned. */
+    @Test
+    fun classifyForcedRejoinViewRelease_keepsTheCallAlive() {
+        val ownedPendingRelease = classifyForcedRejoinViewRelease(
+            isPendingView = true,
+            isActiveView = true,
+        )
+        assertTrue(ownedPendingRelease.consumeRelease)
+        assertTrue(ownedPendingRelease.releaseNativeView)
+
+        val alreadyReplacedRelease = classifyForcedRejoinViewRelease(
+            isPendingView = true,
+            isActiveView = false,
+        )
+        assertTrue(alreadyReplacedRelease.consumeRelease)
+        assertFalse(alreadyReplacedRelease.releaseNativeView)
+
+        val ordinaryRelease = classifyForcedRejoinViewRelease(
+            isPendingView = false,
+            isActiveView = true,
+        )
+        assertFalse(ordinaryRelease.consumeRelease)
+        assertFalse(ordinaryRelease.releaseNativeView)
+    }
+
     /** WILL_JOIN keeps the first-join deadline and only hands it over for an actual rejoin. */
     @Test
     fun handsOverJoinDeadlineToRejoin_onlyAfterTheConferenceHasConnected() {
@@ -85,6 +302,7 @@ class JitsiCallManagerTest {
     fun reconnectTimeOutConstants_outlastJitsiBackoff() {
         assertTrue(JitsiCallManager.RECONNECT_RELOAD_TIMEOUT_MS >= 60_000L)
         assertTrue(JitsiCallManager.REJOIN_COMPLETION_TIMEOUT_MS >= 120_000L)
+        assertTrue(JitsiCallManager.CONNECT_RETRY_CHECK_MS in 1_000L..30_000L)
         assertTrue(
             JitsiCallManager.REJOIN_COMPLETION_TIMEOUT_MS >
                 JitsiCallManager.RECONNECT_RELOAD_TIMEOUT_MS,

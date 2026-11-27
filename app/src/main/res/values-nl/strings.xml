@@ -71,7 +71,6 @@
     <string name="server_netcup_description">Beste linkkwaliteit — Netcup-datacenter in Duitsland.</string>
     <string name="server_ffmuc_description">Stabiel communityproject van Freifunk München.</string>
     <string name="server_ccc_description">Veiligheid en privacy — Chaos Computer Club München.</string>
-    <string name="server_fairmeeting_description">Oostenrijkse Fairkom-server — helder geluid.</string>
     <string name="server_systemli_description">Anonimiteit — het netwerkcollectief Systemli.</string>
     <string name="server_jitsi_description">Stabiel en veilig project van Jitsi.org.</string>
 
@@ -81,5 +80,4 @@
     <string name="language_system">Systeemtaal</string>
     <string name="language_close">Sluiten</string>
         <string name="call_error_connect_timeout">Could not connect. Check the server address and your internet connection.</string>
-        <string name="call_error_reconnect_timeout">Could not resume the connection. Check your network and rejoin.</string>
 </resources>

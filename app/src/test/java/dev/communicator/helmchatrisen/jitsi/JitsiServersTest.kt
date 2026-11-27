@@ -30,10 +30,11 @@ class JitsiServersTest {
         assertEquals("https://meet.ffmuc.net", server?.url)
     }
 
+    /** Verifies URL matching trims surrounding whitespace. */
     @Test
     fun byUrl_trimsWhitespace() {
-        val server = JitsiServers.byUrl("  https://fairmeeting.net  ")
-        assertEquals("https://fairmeeting.net", server?.url)
+        val server = JitsiServers.byUrl("  https://freejitsi01.netcup.net  ")
+        assertEquals("https://freejitsi01.netcup.net", server?.url)
     }
 
     @Test
@@ -45,6 +46,13 @@ class JitsiServersTest {
     @Test
     fun byUrl_returnsNullForUnknownServer() {
         assertNull(JitsiServers.byUrl("https://example.com"))
+    }
+
+    /** Verifies that the removed Fairmeeting URL is no longer resolved as a preset. */
+    @Test
+    fun byUrl_returnsNullForRemovedFairmeetingPreset() {
+        assertNull(JitsiServers.byUrl("https://fairmeeting.net"))
+        assertNull(JitsiServers.byUrl("fairmeeting.net"))
     }
 
     @Test
@@ -88,9 +96,10 @@ class JitsiServersTest {
         assertNull(JitsiServers.byUrl("http://meet.ffmuc.net"))
     }
 
+    /** Verifies that plain HTTP never resolves to an HTTPS preset. */
     @Test
     fun byUrl_doesNotMatchHttpUrlOfOtherPreset() {
         assertNull(JitsiServers.byUrl("http://meet.systemli.org"))
-        assertNull(JitsiServers.byUrl("http://fairmeeting.net/"))
+        assertNull(JitsiServers.byUrl("http://freejitsi01.netcup.net/"))
     }
 }

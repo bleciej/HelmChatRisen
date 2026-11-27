@@ -71,7 +71,6 @@
     <string name="server_netcup_description">最佳连接质量——位于德国的 Netcup 数据中心。</string>
     <string name="server_ffmuc_description">Freifunk München 的稳定社区项目。</string>
     <string name="server_ccc_description">安全与隐私——Chaos Computer Club München。</string>
-    <string name="server_fairmeeting_description">奥地利 Fairkom 服务器——清晰音质。</string>
     <string name="server_systemli_description">匿名——Systemli 网络集体。</string>
     <string name="server_jitsi_description">Jitsi.org 稳定且安全的项目。</string>
 
@@ -81,5 +80,4 @@
     <string name="language_system">系统默认</string>
     <string name="language_close">关闭</string>
         <string name="call_error_connect_timeout">Could not connect. Check the server address and your internet connection.</string>
-        <string name="call_error_reconnect_timeout">Could not resume the connection. Check your network and rejoin.</string>
 </resources>

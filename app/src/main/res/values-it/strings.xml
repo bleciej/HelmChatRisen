@@ -71,7 +71,6 @@
     <string name="server_netcup_description">Migliore qualità di connessione — data center Netcup in Germania.</string>
     <string name="server_ffmuc_description">Progetto comunitario stabile di Freifunk München.</string>
     <string name="server_ccc_description">Sicurezza e privacy — Chaos Computer Club München.</string>
-    <string name="server_fairmeeting_description">Server austriaco Fairkom — audio pulito.</string>
     <string name="server_systemli_description">Anonimato — collettivo di rete Systemli.</string>
     <string name="server_jitsi_description">Progetto stabile e sicuro di Jitsi.org.</string>
 
@@ -81,5 +80,4 @@
     <string name="language_system">Lingua di sistema</string>
     <string name="language_close">Chiudi</string>
         <string name="call_error_connect_timeout">Could not connect. Check the server address and your internet connection.</string>
-        <string name="call_error_reconnect_timeout">Could not resume the connection. Check your network and rejoin.</string>
 </resources>

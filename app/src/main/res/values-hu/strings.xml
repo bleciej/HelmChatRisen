@@ -71,7 +71,6 @@
     <string name="server_netcup_description">Legjobb kapcsolatminőség — Netcup adatközpont Németországban.</string>
     <string name="server_ffmuc_description">Stabil közösségi projekt a Freifunk Münchentől.</string>
     <string name="server_ccc_description">Biztonság és adatvédelem — Chaos Computer Club München.</string>
-    <string name="server_fairmeeting_description">Osztrák Fairkom szerver — tiszta hang.</string>
     <string name="server_systemli_description">Névtelenség — a Systemli hálózati kollektíva.</string>
     <string name="server_jitsi_description">A Jitsi.org stabil és biztonságos projektje.</string>
 
@@ -81,5 +80,4 @@
     <string name="language_system">Rendszer nyelve</string>
     <string name="language_close">Bezárás</string>
         <string name="call_error_connect_timeout">Could not connect. Check the server address and your internet connection.</string>
-        <string name="call_error_reconnect_timeout">Could not resume the connection. Check your network and rejoin.</string>
 </resources>

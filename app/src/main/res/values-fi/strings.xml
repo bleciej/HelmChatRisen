@@ -71,7 +71,6 @@
     <string name="server_netcup_description">Paras yhteyden laatu — Netcupin datakeskus Saksassa.</string>
     <string name="server_ffmuc_description">Vakaa yhteisöprojekti Freifunk Müncheniltä.</string>
     <string name="server_ccc_description">Turvallisuus ja yksityisyys — Chaos Computer Club München.</string>
-    <string name="server_fairmeeting_description">Itävaltalainen Fairkom-palvelin — puhdas ääni.</string>
     <string name="server_systemli_description">Anonyymius — Systemli-verkkokollektiivi.</string>
     <string name="server_jitsi_description">Jitsi.orgin vakaa ja turvallinen projekti.</string>
 
@@ -81,5 +80,4 @@
     <string name="language_system">Järjestelmän kieli</string>
     <string name="language_close">Sulje</string>
         <string name="call_error_connect_timeout">Could not connect. Check the server address and your internet connection.</string>
-        <string name="call_error_reconnect_timeout">Could not resume the connection. Check your network and rejoin.</string>
 </resources>

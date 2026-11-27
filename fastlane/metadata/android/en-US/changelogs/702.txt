@@ -1,4 +1,0 @@
-F-Droid build for arm64-v8a of HelmChatRisen 1.7. Audio-only Jitsi calls, helmet intercom routing and the source-built FLOSS Jitsi SDK 13.1.1. Version code 702 is the F-Droid ABI-specific code derived from upstream code 7. Includes radio ducking during calls and the in-call duration timer.
-The Application info dialog now shows the bundled Jitsi SDK version instead of the internal version code and tag.
-Updated AndroidX AppCompat to 1.8.0 for the Jitsi-compatible host theme.
-The meet.jit.si preset is temporarily hidden until its moderator sign-in flow is fixed.

@@ -372,7 +372,8 @@ source and advances the release metadata to version 1.7, code 7 and tag `V1.7`.
   now shows the bundled Jitsi SDK version (from the version catalog) instead of
   the internal version code and tag, which are not useful to riders.
 - **F-Droid recipe:** candidate metadata in `fdroid/` and upstream descriptions
-  in `fastlane/metadata/android/` target ABI-specific codes 701 and 702.
+  in `fastlane/metadata/android/` publish only the `arm64-v8a` package with
+  F-Droid code 700; the 32-bit package is deliberately not submitted.
 - **Reconnect patch:** verified against the 13.1.1 JS bundle and applied to both
   debug and release assets.
 - **Startup crash fixed:** SDK 13.1.1 starts its bridgeless ReactHost from
@@ -494,31 +495,35 @@ committed — an F-Droid recipe must run the source build itself.
 
 Already compliant: MIT license with `LICENSE` at the repository root, public
 source on GitHub with a consistent `V*` tag scheme (the `V1.7` tag was moved to
-the final master commit `3e2f332` and pushed to `origin`; the GitHub push is
-still pending), static `versionName`/`versionCode`, committed
-Gradle wrapper and jar, no ads and no application-level Firebase, Play
-Services or analytics, user-selectable/self-hostable Jitsi servers (no
-`TetheredNet` dependence), and no forbidden group in `releaseRuntimeClasspath`.
+the final master commit `3e2f332` and pushed to both `origin` and GitHub),
+static `versionName`/`versionCode`, committed Gradle wrapper and jar, no ads
+and no application-level Firebase, Play Services or analytics,
+user-selectable/self-hostable Jitsi servers (no `TetheredNet` dependence), and
+no forbidden group in `releaseRuntimeClasspath`.
 
 Remaining work before official inclusion:
 
-- No `fdroiddata` metadata entry exists for `dev.communicator.helmchatrisen`
-  yet, but a candidate recipe and upstream descriptions are prepared in
-  [`fdroid/`](fdroid/README.md) and `fastlane/metadata/android/`. It must still
-  be pushed to `fdroiddata` after the `V1.7` tag is published; the recipe runs
-  `scripts/build-jitsi-libre-sdk.sh` first (Node.js 24+, JDK 17 and a local
-  Maven repository) and then builds the app against that SDK.
-- `versionName` and `versionCode` are local Gradle `val`s, so the candidate
-  recipe sets explicit `UpdateCheckData` regexes (checked against
-  `app/build.gradle.kts`) and `UpdateCheckMode: Tags V*`.
-- `assembleRelease` emits three APKs; the recipe handles this with two per-ABI
-  build blocks (701/702) and explicit `output` globs.
-- Both `commit:` values pin the final 1.7 release commit
+- The candidate recipe and upstream descriptions in
+  [`fdroid/`](fdroid/README.md) and `fastlane/metadata/android/` were copied into
+  a local `fdroiddata` checkout. The inclusion merge request still has to be
+  pushed from that checkout; the recipe runs
+  `scripts/fdroid-install-deps.sh` first (JDK 17/21, build tools and a
+  checksum-pinned Gradle 9.6), then `scripts/build-jitsi-libre-sdk.sh`
+  (Node.js 24+ and a local Maven repository), and then builds the app.
+- `versionName` and `versionCode` are local Gradle `val`s, so the recipe sets
+  explicit `UpdateCheckData` regexes (checked against `app/build.gradle.kts`)
+  and `UpdateCheckMode: Tags V*`.
+- `assembleRelease` emits three APKs; the recipe selects only `arm64-v8a` with
+  one build block (code 700) and an explicit `output` glob. The 32-bit build was
+  dropped from F-Droid because it repeats the long Jitsi SDK/npm compile.
+- The `commit:` field pins the final 1.7 release commit
   `3e2f332109e973e2a630472bf0595eae1ba642ac`; the published `V1.7` tag was
-  force-moved from `03572db` to that commit and pushed to `origin`. Push the
-  moved tag to GitHub before the inclusion MR.
-  `fdroid readmeta`/`rewritemeta`/`lint`/`build` have not been run locally
-  because `fdroidserver` is not installed in this environment.
+  force-moved from `03572db` to that commit and pushed to `origin` and GitHub.
+  `fdroid readmeta`/`rewritemeta`/`lint` passed before the Gradle provisioning
+  fix, and a quick Gradle build from that commit with `appVersionCode = 700`
+  produced the `arm64-v8a` APK. A full `fdroid build -v
+  dev.communicator.helmchatrisen:700` still has to be rerun in `fdroidserver`
+  after the pinned Gradle installation was added.
 - The locally generated toolchain and checkout live in the gitignored
   `build/helmchat-jitsi-build` and `build/helmchat-jitsi-sdk` directories and
   must be recreated in F-Droid's build environment.
@@ -676,7 +681,8 @@ recipe:
   repository) and the outputs are signed with a self-signed certificate.
 - Release APKs: `HelmChatRisen-1.7-release-arm64-v8a.apk`,
   `HelmChatRisen-1.7-release-armeabi-v7a.apk` and the universal
-  `HelmChatRisen-1.7-release.apk`.
+  `HelmChatRisen-1.7-release.apk`. F-Droid publishes only the first one, as
+  `dev.communicator.helmchatrisen_700.apk`.
 
 ## Building release artifacts
 
@@ -697,5 +703,5 @@ apksigner verify --print-certs \
 
 APKs are written under `app/build/outputs/apk/release/` and bundles under
 `app/build/outputs/bundle/release/`. Any manual copy under `app/release/` is
-local-only and ignored by Git. The `V1.7` tag exists locally but has not been
-pushed yet; push it before building the published binaries from a clean tag.
+local-only and ignored by Git. The `V1.7` tag is published on `origin` and
+GitHub; verify it before building published binaries from a clean tag.

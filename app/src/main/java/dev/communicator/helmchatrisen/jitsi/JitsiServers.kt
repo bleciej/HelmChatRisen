@@ -43,10 +43,6 @@ object JitsiServers {
             descriptionRes = R.string.server_ccc_description,
         ),
         JitsiServer(
-            url = "https://fairmeeting.net",
-            descriptionRes = R.string.server_fairmeeting_description,
-        ),
-        JitsiServer(
             url = "https://meet.systemli.org",
             descriptionRes = R.string.server_systemli_description,
         ),
