@@ -100,6 +100,32 @@ internal class CallStartTracker(
     }
 }
 
+/** Counts forced view replacements for one call so the retry loop stays testable and observable. */
+internal class ReconnectAttemptTracker {
+    private var count = 0
+
+    /** Number of forced view replacements requested for the current call. */
+    val attempts: Int
+        get() = count
+
+    /**
+     * Records one forced view replacement.
+     *
+     * @param eligible `true` when the manager accepted the replacement request.
+     * @return `true` when the attempt was recorded.
+     */
+    fun record(eligible: Boolean): Boolean {
+        if (!eligible) return false
+        count += 1
+        return true
+    }
+
+    /** Clears the counter so the next call starts from zero. */
+    fun reset() {
+        count = 0
+    }
+}
+
 /**
  * Controls an embedded [JitsiMeetView] in strictly audio-only, low-bandwidth mode.
  *
@@ -115,6 +141,15 @@ class JitsiCallManager {
         const val DEFAULT_SERVER_URL = "https://meet.ffmuc.net"
         private const val OPUS_MAX_AVERAGE_BITRATE = 24_000
         private const val CONNECT_TIMEOUT_MS = 30_000L
+
+        /**
+         * How often the first-join watchdog checks again while the device is offline. No new view
+         * is created during an outage; the retry starts as soon as a default network is back.
+         */
+        internal const val CONNECT_RETRY_CHECK_MS = 10_000L
+
+        /** Delay used to retry a stalled first join as soon as a default network returns. */
+        private const val FIRST_JOIN_RETRY_ON_NETWORK_MS = 0L
 
         /**
          * How long a failed call stays on screen before the manager publishes [CallState.Idle] and
@@ -137,16 +172,16 @@ class JitsiCallManager {
         private const val HANG_UP_ABORT_TIMEOUT_MS = 2_000L
 
         /**
-         * How long Jitsi may spend showing its reload dialog before the app shows an error. The
-         * bundled countdown is patched to about six seconds, so this is only a safety net for a
-         * conference that never reloads at all.
+         * How long the app gives Jitsi's own reload dialog before creating a fresh view. The bundled
+         * countdown is patched to about six seconds, so this is only a safety net for a conference
+         * that never reloads at all. Expiry triggers another attempt, never a terminal error.
          */
         internal const val RECONNECT_RELOAD_TIMEOUT_MS = 60_000L
 
         /**
-         * How long Jitsi may spend joining a room after a reload. Its conference-request backoff
+         * How long a freshly created view may spend joining the room. Its conference-request backoff
          * can reach 120 seconds ("Not ready yet, will retry in ... ms"), so the watchdog must outlast
-         * that instead of reporting a false failure while Jitsi is still retrying.
+         * that instead of restarting the view too early. Expiry triggers another attempt.
          */
         internal const val REJOIN_COMPLETION_TIMEOUT_MS = 150_000L
 
@@ -256,6 +291,33 @@ class JitsiCallManager {
      */
     private var activeView: JitsiMeetView? = null
 
+    /**
+     * Incremented when the app must replace the embedded view to force a real rejoin. The Compose
+     * host uses this value as an `AndroidView` key; Jitsi 13.1.1 otherwise treats a reload with the
+     * same room URL as a no-op.
+     */
+    private val _viewRecreationToken = MutableStateFlow(value = 0)
+    /** Token identifying the current embedded Jitsi view instance. */
+    val viewRecreationToken: StateFlow<Int> = _viewRecreationToken.asStateFlow()
+
+    /** The old view that Compose is about to release during a forced rejoin. */
+    private var pendingForcedRejoinView: JitsiMeetView? = null
+
+    /** `true` between a forced rejoin request and the next view's [join]. */
+    private var isAwaitingRestoredView = false
+
+    /**
+     * Generation of the embedded view. Broadcasts and participant snapshots capture it so callbacks
+     * queued by a replaced view cannot affect the fresh view.
+     */
+    private var viewEpoch = 0L
+
+    /**
+     * Number of fresh views requested for the current call. Used only for diagnostics: a dropped
+     * conference is retried for as long as the rider keeps the call screen open.
+     */
+    private val reconnectAttemptTracker = ReconnectAttemptTracker()
+
     /** Incremented for every join so stale teardown timers from an older call can be ignored. */
     private var sessionGeneration = 0L
 
@@ -278,13 +340,25 @@ class JitsiCallManager {
     private var connectivityManager: ConnectivityManager? = null
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         /**
-         * Marks the network as available and, when a reconnect was paused, restarts its timeout
-         * with only the time that was left before the outage.
+         * Marks the network as available, resumes a stalled first join, and restarts a paused
+         * reconnect timeout with only the time that was left before the outage.
          *
          * @param network the network that became available.
          */
         override fun onAvailable(network: Network) {
+            val wasOffline = !_isNetworkAvailable.value
             _isNetworkAvailable.value = true
+            val joinRoom = currentRoomName
+            if ((joinRoom != null) && shouldRetryFirstJoinOnNetworkRestore(
+                    wasOffline = wasOffline,
+                    callState = _callState.value,
+                    hasConnectedConference = hasConnectedConference,
+                    hasPendingConnectTimeout = connectTimeout != null,
+                )
+            ) {
+                Timber.i("Network restored, retrying the first join for '$joinRoom'")
+                scheduleConnectTimeout(joinRoom, FIRST_JOIN_RETRY_ON_NETWORK_MS)
+            }
             if (!reconnectPaused) return
             reconnectPaused = false
             val room = pendingReconnectRoom ?: return
@@ -347,13 +421,27 @@ class JitsiCallManager {
             return
         }
 
+        // A view created by requestForcedRejoin() must not restart the call timer or forget that
+        // the conference previously connected: the watchdog handover depends on that history.
+        val isRestoredView = shouldPreserveCallSessionOnJoin(
+            isAwaitingRestoredView = isAwaitingRestoredView,
+            currentRoomName = currentRoomName,
+            joiningRoomName = roomName,
+        )
+        isAwaitingRestoredView = false
+        pendingForcedRejoinView = null
+        viewEpoch += 1
+
         val activeServerUrl = sanitizeServerUrl(serverUrl)
         // Detach from the old conference before disposing its view: a stale termination from the
         // previous call must not push this new join into Reconnecting.
         unregisterBroadcastReceiver()
         hasConferenceConfirmation = false
-        hasConnectedConference = false
-        callStartTracker.reset()
+        if (!isRestoredView) {
+            hasConnectedConference = false
+            reconnectAttemptTracker.reset()
+            callStartTracker.reset()
+        }
         releaseActiveView()
         sessionGeneration += 1
         teardownGeneration = Long.MAX_VALUE
@@ -366,12 +454,16 @@ class JitsiCallManager {
         _isMuted.value = isMuted
         resetParticipantSession()
 
-        registerBroadcastReceiver(view.context.applicationContext)
+        registerBroadcastReceiver(view.context.applicationContext, expectedEpoch = viewEpoch)
         registerNetworkCallback(view.context.applicationContext)
 
         cancelReconnectTimeout()
         reconnectPaused = false
-        _callState.value = CallState.Connecting(roomName, activeServerUrl)
+        _callState.value = if (isRestoredView) {
+            CallState.Reconnecting(roomName, activeServerUrl)
+        } else {
+            CallState.Connecting(roomName, activeServerUrl)
+        }
 
         try {
             val options = buildConferenceOptions(
@@ -382,12 +474,20 @@ class JitsiCallManager {
                 token = token,
             )
 
-            Timber.i("Joining embedded audio-only room '$roomName' on '$activeServerUrl'")
+            if (isRestoredView) {
+                Timber.i("Rejoining audio-only room '$roomName' with a fresh Jitsi view")
+            } else {
+                Timber.i("Joining embedded audio-only room '$roomName' on '$activeServerUrl'")
+            }
             view.join(options)
-            scheduleConnectTimeout(roomName)
+            if (isRestoredView) {
+                scheduleReconnectTimeout(roomName, REJOIN_COMPLETION_TIMEOUT_MS)
+            } else {
+                scheduleConnectTimeout(roomName)
+            }
         } catch (e: Exception) {
             Timber.e(e, "Failed to join room '$roomName'")
-            failCall(CallState.Error(message = e.message ?: "Failed to join room"))
+            failCall(CallState.Error(messageResId = R.string.call_error_connect_timeout))
         }
     }
 
@@ -410,6 +510,21 @@ class JitsiCallManager {
     fun onViewReleased(view: JitsiMeetView? = null) {
         if ((view != null) && (activeView != null) && (activeView !== view)) {
             Timber.d("Ignoring release for a view that is no longer owned by the manager")
+            return
+        }
+        val pendingRelease = classifyForcedRejoinViewRelease(
+            isPendingView = (view != null) && (pendingForcedRejoinView === view),
+            isActiveView = activeView === view,
+        )
+        if (pendingRelease.consumeRelease) {
+            pendingForcedRejoinView = null
+            if (pendingRelease.releaseNativeView) {
+                // Compose disposed the old view before the replacement's factory ran. Clean up the
+                // native conference but keep the app-level call session alive for the new view.
+                releaseActiveView()
+                resetParticipantSession()
+                hasConferenceConfirmation = false
+            }
             return
         }
         releaseActiveView()
@@ -490,6 +605,9 @@ class JitsiCallManager {
         cancelHangUpTimeouts()
         cancelErrorIdleTimeout()
         reconnectPaused = false
+        pendingForcedRejoinView = null
+        isAwaitingRestoredView = false
+        reconnectAttemptTracker.reset()
         unregisterNetworkCallback()
         // Publish Ending before sending the external API events so a fast acknowledgement cannot
         // be applied to a state that still looks like an active call.
@@ -538,6 +656,9 @@ class JitsiCallManager {
         cancelHangUpTimeouts()
         cancelErrorIdleTimeout()
         reconnectPaused = false
+        pendingForcedRejoinView = null
+        isAwaitingRestoredView = false
+        reconnectAttemptTracker.reset()
         unregisterNetworkCallback()
         sendBroadcast(BroadcastIntentHelper.buildSetAudioMutedIntent(true))
         sendBroadcast(BroadcastIntentHelper.buildHangUpIntent())
@@ -603,6 +724,9 @@ class JitsiCallManager {
         reconnectPaused = false
         isLeaving = false
         teardownGeneration = Long.MAX_VALUE
+        pendingForcedRejoinView = null
+        isAwaitingRestoredView = false
+        reconnectAttemptTracker.reset()
         hasConferenceConfirmation = false
         hasConnectedConference = false
         callStartTracker.reset()
@@ -788,11 +912,12 @@ class JitsiCallManager {
 
     /**
      * Registers the local broadcast receiver that turns Jitsi SDK events into call state
-     * updates.
+     * updates. Events queued for an older view epoch are ignored.
      *
      * @param context any context; only its [LocalBroadcastManager] is used.
+     * @param expectedEpoch the view generation this receiver belongs to.
      */
-    private fun registerBroadcastReceiver(context: Context) {
+    private fun registerBroadcastReceiver(context: Context, expectedEpoch: Long) {
         val manager = LocalBroadcastManager.getInstance(context)
         val filter = IntentFilter().apply {
             BroadcastEvent.Type.entries.forEach { addAction(it.action) }
@@ -808,7 +933,7 @@ class JitsiCallManager {
             override fun onReceive(receiverContext: Context?, intent: Intent?) {
                 if (intent == null) return
                 try {
-                    handleBroadcastEvent(BroadcastEvent(intent))
+                    handleBroadcastEvent(BroadcastEvent(intent), expectedEpoch)
                 } catch (e: Exception) {
                     Timber.w(e, "Ignoring malformed Jitsi broadcast event")
                 }
@@ -879,23 +1004,30 @@ class JitsiCallManager {
     }
 
     /**
-     * Fails the call if Jitsi has not reported [BroadcastEvent.Type.CONFERENCE_JOINED] within
-     * [CONNECT_TIMEOUT_MS]. This matters for unreachable or misconfigured servers, where Jitsi
-     * would otherwise keep retrying its hidden UI forever behind the custom overlay.
+     * Keeps a first join alive until Jitsi reports [BroadcastEvent.Type.CONFERENCE_JOINED].
+     * A stalled attempt creates a fresh view just like a dropped conference, because a rider with
+     * no coverage may wait several minutes before the room becomes reachable. While offline the
+     * deadline only polls cheaply and does not churn native views.
      *
      * @param roomName the room the timeout applies to; a stale timeout is ignored when the
      *   active room changed.
+     * @param delayMs the delay before this check; shorter for the offline polling loop.
      */
-    private fun scheduleConnectTimeout(roomName: String) {
+    private fun scheduleConnectTimeout(roomName: String, delayMs: Long = CONNECT_TIMEOUT_MS) {
         cancelConnectTimeout()
         val runnable = Runnable {
-            if (_callState.value is CallState.Connecting && currentRoomName == roomName) {
-                Timber.w("Connection to room '$roomName' timed out")
-                failCall(CallState.Error(messageResId = R.string.call_error_connect_timeout))
+            connectTimeout = null
+            if (_callState.value !is CallState.Connecting || currentRoomName != roomName) return@Runnable
+            if (shouldPostponeJoinRetry(isNetworkAvailable = _isNetworkAvailable.value)) {
+                Timber.d("Still offline, postponing the first join retry for '$roomName'")
+                scheduleConnectTimeout(roomName, CONNECT_RETRY_CHECK_MS)
+                return@Runnable
             }
+            Timber.w("Connection to room '$roomName' timed out, retrying with a fresh view")
+            requestForcedRejoin(roomName)
         }
         connectTimeout = runnable
-        mainHandler.postDelayed(runnable, CONNECT_TIMEOUT_MS)
+        mainHandler.postDelayed(runnable, delayMs)
     }
 
     /**
@@ -936,12 +1068,75 @@ class JitsiCallManager {
             pendingReconnectRoom = null
             reconnectDeadline.clear()
             if (isReconnectWatchdogState(_callState.value) && currentRoomName == roomName) {
-                Timber.w("Reconnect to room '$roomName' timed out")
-                failCall(CallState.Error(messageResId = R.string.call_error_reconnect_timeout))
+                handleReconnectTimeout(roomName)
             }
         }
         reconnectTimeout = runnable
         mainHandler.postDelayed(runnable, timeoutMs)
+    }
+
+    /**
+     * Replaces the embedded Jitsi view so the SDK cannot treat the recovery as a no-op reload.
+     *
+     * Jitsi 13.1.1's `reloadNow()` navigates with the same room URL and returns early while the
+     * conference object still exists, so a dropped call can wait forever behind the app's overlay.
+     * Requesting a new `AndroidView` makes the SDK build a fresh conference. The call timer, room
+     * and "has connected" history survive this replacement. The view epoch is advanced first so
+     * callbacks already queued by the old view are ignored. This may be repeated indefinitely while
+     * the rider keeps the call screen open.
+     *
+     * @param roomName the room whose watchdog expired.
+     * @return `true` when a fresh view was requested; `false` when the call is no longer eligible.
+     */
+    internal fun requestForcedRejoin(roomName: String): Boolean {
+        val view = activeView
+        val shouldForce = shouldForceFreshJitsiView(
+            timedOutRoom = roomName,
+            currentRoomName = currentRoomName,
+            callState = _callState.value,
+            isLeaving = isLeaving,
+            hasActiveView = view != null,
+        )
+        if (!shouldForce) return false
+
+        reconnectAttemptTracker.record(eligible = shouldForce)
+        Timber.w(
+            "Reconnect to '$roomName' stalled, forcing fresh Jitsi view " +
+                "(attempt ${reconnectAttemptTracker.attempts})",
+        )
+        viewEpoch += 1
+        hasConferenceConfirmation = false
+        resetParticipantSession()
+        isAwaitingRestoredView = true
+        pendingForcedRejoinView = view
+        // Ignore teardown events and snapshots from the old view while it is being disposed.
+        unregisterBroadcastReceiver()
+        cancelConnectTimeout()
+        cancelReconnectTimeout()
+        reconnectPaused = false
+        _callState.value = CallState.Reconnecting(roomName, currentServerUrl)
+        // Guard against a Compose host that never recreates the view (for example the app is in the
+        // background). The new join cancels this deadline and re-arms it for its own attempt.
+        scheduleReconnectTimeout(roomName, REJOIN_COMPLETION_TIMEOUT_MS)
+        _viewRecreationToken.value += 1
+        return true
+    }
+
+    /**
+     * Applies an expired reconnect watchdog by scheduling another attempt, never by failing the
+     * call. The rider can stay disconnected for minutes; only the leave button ends the session.
+     *
+     * @param roomName the room whose reconnect attempt timed out.
+     */
+    private fun handleReconnectTimeout(roomName: String) {
+        if (requestForcedRejoin(roomName)) {
+            Timber.i("Continued reconnect to '$roomName' with a fresh Jitsi view")
+            return
+        }
+        // The state may have changed or the view may be temporarily unavailable. Keep the call
+        // screen and watchdog alive instead of turning a long outage into a terminal failure.
+        Timber.w("Could not replace the Jitsi view for '$roomName' yet, checking again shortly")
+        scheduleReconnectTimeout(roomName, CONNECT_RETRY_CHECK_MS)
     }
 
     /**
@@ -987,13 +1182,18 @@ class JitsiCallManager {
      * the room and repairs any event the app might have missed. The request is fire-and-forget,
      * so [ParticipantTracker] bounds it with a deadline and falls back to the event stream when
      * the SDK never answers. The service only exists once the Jitsi React context has been
-     * created, so it is treated as optional.
+     * created, so it is treated as optional. A response from a replaced view epoch is ignored.
      */
     private fun refreshParticipantCount() {
         val service = ParticipantsService.getInstance() ?: return
         val request = participantTracker.onSnapshotRequested() ?: return
+        val expectedEpoch = viewEpoch
 
         val callback = ParticipantsService.ParticipantsInfoCallback { participants ->
+            if (!isCurrentViewEpoch(expectedEpoch, viewEpoch)) {
+                Timber.d("Ignoring participant snapshot from an obsolete Jitsi view epoch")
+                return@ParticipantsInfoCallback
+            }
             participantTracker.onSnapshotReceived(
                 request = request,
                 snapshotIds = sanitizeParticipantIds(participants.map { it.id }),
@@ -1023,11 +1223,17 @@ class JitsiCallManager {
 
     /**
      * Translates a Jitsi broadcast event into call-state, mute-state and participant updates.
-     * Events arriving after a failed call are discarded so a late termination cannot revive it.
+     * Events from a replaced view or after a failed call are discarded so a late termination cannot
+     * revive a call or overwrite the fresh view's state.
      *
      * @param event the event to apply.
+     * @param eventEpoch the view generation that delivered the event.
      */
-    private fun handleBroadcastEvent(event: BroadcastEvent) {
+    private fun handleBroadcastEvent(event: BroadcastEvent, eventEpoch: Long) {
+        if (!isCurrentViewEpoch(eventEpoch, viewEpoch)) {
+            Timber.d("Ignoring ${event.type} from an obsolete Jitsi view epoch")
+            return
+        }
         if (_callState.value is CallState.Error) {
             Timber.d("Ignoring ${event.type} after the call failed")
             return
@@ -1113,6 +1319,7 @@ class JitsiCallManager {
         val room = currentRoomName ?: return
         hasConferenceConfirmation = true
         hasConnectedConference = true
+        reconnectAttemptTracker.reset()
         callStartTracker.onConferenceJoined()
         _callState.value = CallState.Connected(room, currentServerUrl)
         participantTracker.onConferenceJoined()
@@ -1336,6 +1543,101 @@ internal fun handsOverJoinDeadlineToRejoin(
 ): Boolean = type == BroadcastEvent.Type.CONFERENCE_WILL_JOIN &&
     (callState is CallState.Reconnecting ||
         (callState is CallState.Connecting && hasConnectedConference))
+
+/**
+ * Reports whether a first-join retry must wait for a network instead of replacing the Jitsi view.
+ *
+ * @param isNetworkAvailable whether the device currently has a default network.
+ * @return `true` while offline, so the retry loop only polls until coverage returns.
+ */
+internal fun shouldPostponeJoinRetry(isNetworkAvailable: Boolean): Boolean = !isNetworkAvailable
+
+/**
+ * Reports whether a callback still belongs to the embedded view that produced it.
+ *
+ * @param callbackEpoch the view generation captured when the callback was registered.
+ * @param currentEpoch the manager's current view generation.
+ * @return `true` while the callback may still affect the active view.
+ */
+internal fun isCurrentViewEpoch(callbackEpoch: Long, currentEpoch: Long): Boolean =
+    callbackEpoch == currentEpoch
+
+/**
+ * Reports whether a join uses the replacement view requested by a forced rejoin.
+ *
+ * @param isAwaitingRestoredView `true` between a forced rejoin request and the next join.
+ * @param currentRoomName the room still owned by the manager, or `null` when none is active.
+ * @param joiningRoomName the room the new view is joining.
+ * @return `true` when the call timer and connection history must be preserved.
+ */
+internal fun shouldPreserveCallSessionOnJoin(
+    isAwaitingRestoredView: Boolean,
+    currentRoomName: String?,
+    joiningRoomName: String,
+): Boolean = isAwaitingRestoredView && currentRoomName == joiningRoomName
+
+/**
+ * Reports whether restoring a default network should retry a first join immediately.
+ *
+ * @param wasOffline `true` when the previous network state was unavailable.
+ * @param callState the current call state.
+ * @param hasConnectedConference whether this call already confirmed a conference join.
+ * @param hasPendingConnectTimeout whether a first-join deadline is still scheduled.
+ * @return `true` when the stalled first join must be retried now.
+ */
+internal fun shouldRetryFirstJoinOnNetworkRestore(
+    wasOffline: Boolean,
+    callState: CallState,
+    hasConnectedConference: Boolean,
+    hasPendingConnectTimeout: Boolean,
+): Boolean = wasOffline && hasPendingConnectTimeout &&
+    callState is CallState.Connecting && !hasConnectedConference
+
+/** How the manager must handle a view release observed during a forced rejoin. */
+internal data class ForcedRejoinViewRelease(
+    /** Whether the release belongs to the pending old view and must stop normal teardown. */
+    val consumeRelease: Boolean,
+    /** Whether the pending old view is still the manager's active view and needs native cleanup. */
+    val releaseNativeView: Boolean,
+)
+
+/**
+ * Classifies a view release relative to a pending forced rejoin.
+ *
+ * @param isPendingView `true` when the released view is the one awaiting replacement.
+ * @param isActiveView `true` when the released view is still the manager's active view.
+ * @return the actions required for this release.
+ */
+internal fun classifyForcedRejoinViewRelease(
+    isPendingView: Boolean,
+    isActiveView: Boolean,
+): ForcedRejoinViewRelease = ForcedRejoinViewRelease(
+    consumeRelease = isPendingView,
+    releaseNativeView = isPendingView && isActiveView,
+)
+
+/**
+ * Reports whether an expired watchdog should replace the embedded Jitsi view.
+ *
+ * Retries are intentionally unbounded while the same room is still active: a motorcycle intercom
+ * may stay offline for many minutes. Only an explicit hang-up, a terminal state or a missing view
+ * stops the retry chain.
+ *
+ * @param timedOutRoom the room whose watchdog expired.
+ * @param currentRoomName the room still owned by the manager, or `null` when none is active.
+ * @param callState the current call state.
+ * @param isLeaving `true` when the rider requested a hang-up.
+ * @param hasActiveView whether there is a view the manager can dispose.
+ * @return `true` when a fresh view must be requested.
+ */
+internal fun shouldForceFreshJitsiView(
+    timedOutRoom: String,
+    currentRoomName: String?,
+    callState: CallState,
+    isLeaving: Boolean,
+    hasActiveView: Boolean,
+): Boolean = !isLeaving && hasActiveView &&
+    timedOutRoom == currentRoomName && isReconnectWatchdogState(callState)
 
 /**
  * Reports whether a hang-up timeout still belongs to the teardown in progress.

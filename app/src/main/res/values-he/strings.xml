@@ -80,5 +80,4 @@
     <string name="language_system">שפת המערכת</string>
     <string name="language_close">סגור</string>
         <string name="call_error_connect_timeout">Could not connect. Check the server address and your internet connection.</string>
-        <string name="call_error_reconnect_timeout">Could not resume the connection. Check your network and rejoin.</string>
 </resources>

@@ -1246,3 +1246,53 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - Skills warn about the exact defects found in the review
   - Skills require validation after metadata/toolchain changes
   - Documentation stays consistent with the current single-build code-700 recipe
+
+### Task_106_ForceFreshJitsiViewOnStalledReconnect: Ponawianie połączenia do skutku.
+- **Status:** COMPLETED (implementacja i weryfikacja lokalna; scenariusz rzeczywistego
+  zaniku sieci na telefonie S25 nadal wymaga potwierdzenia)
+- **Updates:** Zdiagnozowano, że w Jitsi 13.1.1 `reloadNow()` przechodzi przez
+  `appNavigate`, który przy tym samym pokoju i hoście wychodzi wcześniej bez
+  `disconnect()` — więc widok może bezskutecznie czekać, aż watchdog aplikacji
+  uzna próbę za zatrzymaną. `JitsiCallManager` po wygaśnięciu watchdoga żąda
+  nowej instancji `JitsiMeetView`: cofa subskrypcję starych zdarzeń, zachowuje
+  `currentRoomName`, znacznik czasu rozmowy i fakt wcześniejszego połączenia,
+  a następnie zwiększa `viewRecreationToken`. `JitsiConferenceView` używa tego
+  tokenu jako klucza `AndroidView`, więc Compose niszczy stary widok i buduje
+  świeży, który wykonuje prawdziwy `join()` do tego samego pokoju. Po uwzględnieniu
+  uwagi o trasie motocyklowej pętla jest nieograniczona: każdy kolejny timeout
+  (60 s dla własnego reloadu Jitsi, 150 s dla świeżego widoku) powoduje kolejną
+  próbę, a udany `CONFERENCE_JOINED` zeruje licznik. Pierwsze łączenie bez zasięgu
+  jest traktowane tak samo, z tanim sprawdzaniem co 10 s offline zamiast
+  niepotrzebnego tworzenia widoków. Terminalny błąd pozostaje tylko dla
+  wyjątku lokalnego `join()` oraz jawnego zakończenia przez jeźdźca; usunięto
+  nieużywany string `call_error_reconnect_timeout` ze wszystkich katalogów.
+  Stare `onViewReleased` nie przechodzi przez `finalizeSession`, więc trwająca
+  rozmowa nie znika z ekranu, a zdarzenia z usuwanego widoku są ignorowane.
+- **Verification:** `./gradlew testDebugUnitTest assembleDebug lintDebug
+  --no-daemon --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4096m
+  -Dfile.encoding=UTF-8"` passed: 203 JVM tests (0 failures/errors/skips),
+  lint 0 errors / 26 warnings (brak ostrzeżeń w zmienionych plikach) i trzy
+  debug APK-i (arm64-v8a, armeabi-v7a, universal). `./gradlew
+  connectedDebugAndroidTest --no-daemon --max-workers=2` passed 3/3 on
+  `Medium_Phone_API_37.0`. Wewnętrzny test `emulator-5554` z trybem samolotowym
+  potwierdził wcześniej, że Jitsi potrafi samo odnowić XMPP bez
+  `CONFERENCE_TERMINATED`; nowa pętla jest uruchamiana wyłącznie przy rzeczywistym
+  zatrzymaniu watchdoga. `git diff --check` clean.
+- **Acceptance Criteria:**
+  - Zatrzymany reload nie kończy się błędem i jest ponawiany dowolną liczbę razy
+  - Długi brak zasięgu (5–10 min i dłużej) nie rozłącza rozmowy ani nie wygasza timera
+  - Timer, pokój, liczba uczestników i stan połączenia przetrwają każdą zamianę widoku
+  - Stale eventy i `onViewReleased` starego widoku nie kasują nowej rozmowy
+  - Offline nie powoduje niepotrzebnego odtwarzania widoku, tylko tanie sprawdzanie co 10 s
+  - Build, JVM tests, lint i instrumented tests przechodzą
+  - Manual: potwierdzić na S25 z rzeczywistym interkomem i logcatem z failing reconnectu
+
+### Task_107_ApplyForcedRejoinReviewFixes: Nieaktualizowanie starych callbacków i natychmiastowy retry pierwszego joinu.
+- **Status:** COMPLETED (implementacja i weryfikacja lokalna; potwierdzenie failing reconnect na S25 nadal wymagane)
+- **Updates:** Zastosowano trzy uwagi po przeglądzie zmian z `Task_106`. (1) `JitsiCallManager` prowadzi `viewEpoch`: odbiornik `LocalBroadcastManager` i callback `ParticipantsService` zapamiętują epokę widoku, więc zdarzenia już zakolejkowane przez usuwany widok (np. `CONFERENCE_TERMINATED` / `CONFERENCE_WILL_JOIN`) oraz stare snapshoty uczestników są ignorowane po wymuszonym rejoinie. Epoka jest inkrementowana w `requestForcedRejoin()` oraz w `join()`, a `hasConferenceConfirmation` i sesja uczestników są resetowane już w momencie żądania nowego widoku. `localBroadcastManager` pozostaje dostępny dla hang-upu. (2) `ConnectivityManager.NetworkCallback.onAvailable()` wykrywa przejście z offlinu na online i, gdy pierwsze łączenie wciąż jest w `Connecting` z oczekującym `connectTimeout`, natychmiast przekłada kolejkę retry (`FIRST_JOIN_RETRY_ON_NETWORK_MS = 0`) zamiast czekać do kolejnego 10 s pollingu. Watchdog reconnectu i polityka nieograniczonych prób pozostały bez zmian. (3) Dodano testowalne, czyste decyzje (`ReconnectAttemptTracker`, `isCurrentViewEpoch`, `shouldPreserveCallSessionOnJoin`, `shouldRetryFirstJoinOnNetworkRestore`, `classifyForcedRejoinViewRelease`) i 6 JVM testów obejmujących liczenie prób, odrzucanie starych callbacków, zachowanie sesji przy właściwym widoku, warunki natychmiastowego retry po sieci, klasyfikację release'u starego widoku oraz brak limitu kolejnych timeoutów.
+- **Verification:** `./gradlew testDebugUnitTest lintDebug --no-daemon --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8"` zakończone `BUILD SUCCESSFUL`: 209 JVM testów (0 failures/errors/skips), lint 0 errors / 26 warnings (bez nowych ostrzeżeń w zmienionych plikach). `git diff --check` czysty. Nie uruchamiano testów instrumentowanych ani weryfikacji na telefonie w tej rundzie.
+- **Acceptance Criteria:**
+  - Stale eventy i snapshoty z poprzedniej epoki widoku nie zmieniają stanu ani nie uzbrajają watchdoga nowego widoku
+  - Utracone pierwsze łączenie jest wznawiane od razu po powrocie domyślnej sieci, bez zmiany 10 s pollingu offline
+  - Kluczowe decyzje maszyny stanów wymuszonego rejoinu mają deterministyczne testy JVM, a próby pozostają nieograniczone
+  - `testDebugUnitTest` i `lintDebug` przechodzą bez regresji
