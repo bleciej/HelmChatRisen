@@ -1,6 +1,6 @@
 # Project Plan
 
-HelmChatReborn - aplikacja Android do komunikacji głosowej (audio call) dla motocyklistów na bazie Jitsi SDK.
+HelmChatReborn - an Android voice communication (audio call) application for motorcyclists based on the Jitsi SDK.
 
 ## Project Brief
 
@@ -59,7 +59,7 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
 
 ### Task_4_RunAndVerify: Build project, verify app stability and functionality. Instruct critic_agent to verify application stability (no crashes), confirm alignment with user requirements, and report critical UI issues.
 - **Status:** COMPLETED
-- **Updates:** Verified the full flow on the `Medium_Phone_API_37.0` emulator. Fixed a fatal crash (`IllegalStateException` from react-native-screens) by making `MainActivity` extend `FragmentActivity`, which Jitsi's embedded UI requires. Added a 30 s connection timeout so an unreachable/misconfigured server surfaces a Polish error instead of an endless "Łączenie…" state, and a default Jitsi display name (`Motocyklista`) so the hidden Jitsi UI does not open its "What's your name?" prompt/IME behind the custom overlay. Verified: app launch, runtime permission denial dialog, audio-only join on a custom server (`meet.ffmuc.net`), `CONFERENCE_JOINED` state, participant count, mute/unmute (UI + notification action), speaker/helmet toggle, rotation (adaptive list-detail), background foreground-service notification with mute/end actions, notification "Zakończ" teardown, and clean leave/back navigation. No crashes were observed in the final runs. `assembleDebug`, `testDebugUnitTest` (12 tests) and `lintDebug` pass (lint has warnings only). The default server was changed from `helmchat.eu` (which returns NXDOMAIN) to `meet.ffmuc.net`, which allows anonymous audio-only joins.
+- **Updates:** Verified the full flow on the `Medium_Phone_API_37.0` emulator. Fixed a fatal crash (`IllegalStateException` from react-native-screens) by making `MainActivity` extend `FragmentActivity`, which Jitsi's embedded UI requires. Added a 30 s connection timeout so an unreachable/misconfigured server surfaces a Polish error instead of an endless "Connecting…" state, and a default Jitsi display name (`Motocyklista`) so the hidden Jitsi UI does not open its "What's your name?" prompt/IME behind the custom overlay. Verified: app launch, runtime permission denial dialog, audio-only join on a custom server (`meet.ffmuc.net`), `CONFERENCE_JOINED` state, participant count, mute/unmute (UI + notification action), speaker/helmet toggle, rotation (adaptive list-detail), background foreground-service notification with mute/end actions, notification "End" teardown, and clean leave/back navigation. No crashes were observed in the final runs. `assembleDebug`, `testDebugUnitTest` (12 tests) and `lintDebug` pass (lint has warnings only). The default server was changed from `helmchat.eu` (which returns NXDOMAIN) to `meet.ffmuc.net`, which allows anonymous audio-only joins.
 - **Acceptance Criteria:**
   - build pass
   - app does not crash
@@ -78,7 +78,7 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
 
 ### Task_6_RecentRoomsAndMeetJitSiAuth: Add recent-room selection on the home screen and practical handling for servers that require authentication.
 - **Status:** COMPLETED
-- **Updates:** Added a DataStore-backed `RecentRoomsRepository` that stores the last 8 rooms (name, server URL, optional display name, last-used timestamp) as JSON, deduplicates by room + server, and exposes them as a `Flow`. The home screen now shows a glove-friendly "Ostatnie pokoje" card with one-tap form pre-fill, per-room delete, and "Wyczyść"; rooms are recorded when a call is started and persist across restarts. Added optional JWT token support to `HomeUiState`, `CallRequest`, `CallRoute`, `JitsiCallManager.buildConferenceOptions` and `JitsiConferenceView` for self-hosted Jitsi servers that use token auth. For `meet.jit.si`, added a clear warning plus a browser button that opens the room in the system browser so the moderator can sign in with Google/GitHub/Facebook and start the meeting before joining from the app; the warning explains that password-protected rooms may not work in the embedded view. Added unit tests for recent-room merging, form pre-fill, JWT token passing and meet.jit.si detection. Verified `assembleDebug`, `testDebugUnitTest` (23 tests) and `lintDebug` pass, and verified on the `Medium_Phone_API_37.0` emulator that a joined room appears in recents, survives a force-stop/restart, pre-fills the form when tapped, can be deleted, the meet.jit.si warning/JWT field render, and the browser button opens Chrome; no crashes in the crash log.
+- **Updates:** Added a DataStore-backed `RecentRoomsRepository` that stores the last 8 rooms (name, server URL, optional display name, last-used timestamp) as JSON, deduplicates by room + server, and exposes them as a `Flow`. The home screen now shows a glove-friendly "Recent rooms" card with one-tap form pre-fill, per-room delete, and "Clear"; rooms are recorded when a call is started and persist across restarts. Added optional JWT token support to `HomeUiState`, `CallRequest`, `CallRoute`, `JitsiCallManager.buildConferenceOptions` and `JitsiConferenceView` for self-hosted Jitsi servers that use token auth. For `meet.jit.si`, added a clear warning plus a browser button that opens the room in the system browser so the moderator can sign in with Google/GitHub/Facebook and start the meeting before joining from the app; the warning explains that password-protected rooms may not work in the embedded view. Added unit tests for recent-room merging, form pre-fill, JWT token passing and meet.jit.si detection. Verified `assembleDebug`, `testDebugUnitTest` (23 tests) and `lintDebug` pass, and verified on the `Medium_Phone_API_37.0` emulator that a joined room appears in recents, survives a force-stop/restart, pre-fills the form when tapped, can be deleted, the meet.jit.si warning/JWT field render, and the browser button opens Chrome; no crashes in the crash log.
 - **Acceptance Criteria:**
   - Previously used rooms are selectable from the home screen and persist across restarts
   - Recent rooms can be deleted or cleared
@@ -96,7 +96,7 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
 
 ### Task_8_EnglishAsDefaultLocale: Make English the default resource language and move Polish to `values-pl`.
 - **Status:** COMPLETED
-- **Updates:** Swapped the resource sets so `app/src/main/res/values/strings.xml` (default) now contains the English text and `app/src/main/res/values-pl/strings.xml` contains the Polish translation; removed `values-en`. All 50 string keys and every format placeholder (`%1$s`, `%1$d`) match between the two sets, and the app name is unchanged. Verified `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass with no missing/extra-translation warnings. Confirmed on the `Medium_Phone_API_37.0` emulator that the app renders English by default (`Voice intercom for motorcyclists`, `Audio-only mode`, `Room name`, `Join call`) and Polish when the app locale is forced to `pl-PL` (`Interkom głosowy dla motocyklistów`, `Tryb audio-only`, `Nazwa pokoju`, `Dołącz do rozmowy`).
+- **Updates:** Swapped the resource sets so `app/src/main/res/values/strings.xml` (default) now contains the English text and `app/src/main/res/values-pl/strings.xml` contains the Polish translation; removed `values-en`. All 50 string keys and every format placeholder (`%1$s`, `%1$d`) match between the two sets, and the app name is unchanged. Verified `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass with no missing/extra-translation warnings. Confirmed on the `Medium_Phone_API_37.0` emulator that the app renders English by default (`Voice intercom for motorcyclists`, `Audio-only mode`, `Room name`, `Join call`) and Polish when the app locale is forced to `pl-PL` (`Voice intercom for motorcyclists`, `Audio-only mode`, `Room name`, `Join call`).
 - **Acceptance Criteria:**
   - Default resources are English
   - Polish is available via `values-pl`
@@ -122,7 +122,7 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
 
 ### Task_11_ServerDropdown: Replace the single default server with a curated drop-down of public Jitsi servers.
 - **Status:** COMPLETED
-- **Updates:** Added `jitsi/JitsiServers.kt` with six public presets (freejitsi01.netcup.net, meet.ffmuc.net, webex.muc.ccc.de, meet.golem.de, fairmeeting.net, meet.systemli.org), each with a short translated description, plus `byUrl()` matching that ignores scheme/case/trailing slash. `HomeUiState` now tracks `selectedServerUrl` and `useCustomServer` (renamed from `useDefaultServer`) and exposes `selectedServer`; `onPresetServerSelected()` switches back from custom mode and clears the custom URL/JWT, and `applyRecentRoom()` reselects a preset when the stored server matches one. The home screen now shows a 76 dp drop-down (host + description + chevron) with tall menu rows and a check mark on the active server, followed by a "Custom server" switch that reveals the existing URL/JWT fields. Removed the obsolete `home_server_default` string and added `home_server_custom_switch` plus `server_*_description` to all six catalogs (60 strings each, no gaps). Updated `HomeViewModelTest` for the renamed state and added tests for preset selection, preset reset of custom fields, recent-room preset matching, request URL and the preset list itself (28 unit tests). Verified `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass. On the `Medium_Phone_API_37.0` emulator: the drop-down lists all six servers with descriptions in Polish and English, selecting meet.systemli.org updates the card, enabling "Własny serwer" reveals the URL/JWT fields and flags an empty URL, picking meet.golem.de again disables custom mode and clears the fields, and a smoke join opened the call screen with `https://meet.golem.de` as the active server (that host currently returns NXDOMAIN, so the conference itself could not connect; the other five presets answer `config.js` with HTTP 200).
+- **Updates:** Added `jitsi/JitsiServers.kt` with six public presets (freejitsi01.netcup.net, meet.ffmuc.net, webex.muc.ccc.de, meet.golem.de, fairmeeting.net, meet.systemli.org), each with a short translated description, plus `byUrl()` matching that ignores scheme/case/trailing slash. `HomeUiState` now tracks `selectedServerUrl` and `useCustomServer` (renamed from `useDefaultServer`) and exposes `selectedServer`; `onPresetServerSelected()` switches back from custom mode and clears the custom URL/JWT, and `applyRecentRoom()` reselects a preset when the stored server matches one. The home screen now shows a 76 dp drop-down (host + description + chevron) with tall menu rows and a check mark on the active server, followed by a "Custom server" switch that reveals the existing URL/JWT fields. Removed the obsolete `home_server_default` string and added `home_server_custom_switch` plus `server_*_description` to all six catalogs (60 strings each, no gaps). Updated `HomeViewModelTest` for the renamed state and added tests for preset selection, preset reset of custom fields, recent-room preset matching, request URL and the preset list itself (28 unit tests). Verified `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass. On the `Medium_Phone_API_37.0` emulator: the drop-down lists all six servers with descriptions in Polish and English, selecting meet.systemli.org updates the card, enabling "Custom server" reveals the URL/JWT fields and flags an empty URL, picking meet.golem.de again disables custom mode and clears the fields, and a smoke join opened the call screen with `https://meet.golem.de` as the active server (that host currently returns NXDOMAIN, so the conference itself could not connect; the other five presets answer `config.js` with HTTP 200).
 - **Acceptance Criteria:**
   - Default server row is a drop-down with the six requested public servers and their descriptions
   - Custom server entry still works, including JWT
@@ -147,7 +147,7 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
 
 ### Task_14_SortLanguages: Sort the language picker alphabetically by native name.
 - **Status:** COMPLETED
-- **Updates:** Reordered `AppLanguage.supportedTags` and `nativeNames` alphabetically by the name shown in the picker (diacritics ignored: Čeština before Dansk; Latin, then Greek, then Cyrillic: Ελληνικά, Български, Українська at the end). Matched `res/xml/locales_config.xml` to the same order. Added `AppLanguageTest` (JVM) asserting that every tag has a native name and that `supportedTags` equals the collator-sorted native names, so the list cannot silently drift out of order. "System default" remains the first row. Verified `assembleDebug`, `testDebugUnitTest` (30 tests) and `lintDebug`; on the emulator the dialog shows Čeština → Dansk → Deutsch → Eesti → English → Español → Français → Italiano → Latviešu → Lietuvių → Magyar → Norsk → Polski → Slovenčina → Suomi → Svenska → Ελληνικά → Български → Українська.
+- **Updates:** Reordered `AppLanguage.supportedTags` and `nativeNames` alphabetically by the name shown in the picker (diacritics ignored: Cestina before Dansk; Latin, then Greek, then Cyrillic: Ελληνικά, Български, Українська at the end). Matched `res/xml/locales_config.xml` to the same order. Added `AppLanguageTest` (JVM) asserting that every tag has a native name and that `supportedTags` equals the collator-sorted native names, so the list cannot silently drift out of order. "System default" remains the first row. Verified `assembleDebug`, `testDebugUnitTest` (30 tests) and `lintDebug`; on the emulator the dialog shows Cestina → Dansk → Deutsch → Eesti → English → Español → Français → Italiano → Latviesu → Lietuviu → Magyar → Norsk → Polski → Slovencina → Suomi → Svenska → Ελληνικά → Български → Українська.
 - **Acceptance Criteria:**
   - Picker list is alphabetical by displayed language name
   - System default stays first
@@ -156,7 +156,7 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
 
 ### Task_15_InviteFriends: Share a room invitation with new riders.
 - **Status:** COMPLETED
-- **Updates:** Added `jitsi/RoomLinks.kt` with `roomLink(serverUrl, roomName)` that trims inputs, strips a trailing slash and path-encodes the room (UTF-8, spaces as `%20`), so the shared link works in any browser. `HomeUiState.canInvite` enables the action as soon as a room name is typed. The join card gained a 76 dp "Invite" outlined button under "Join call", and the call screen a 64 dp share icon in the top-right corner; both call `shareRoomInvite()` in `HelmChatApp`, which opens the system share sheet (`ACTION_SEND`, `text/plain`) with the message `home_invite_message` (room name + link) and the room as subject. Recipients without the app can join straight from the browser. Added `home_invite` and `home_invite_message` to all 19 catalogs (61 keys each, placeholders verified) and tests: `RoomLinksTest` (4) and a `canInvite` case in `HomeViewModelTest`. Verified `assembleDebug`, `testDebugUnitTest` (35 tests) and `lintDebug` (no new warning types). On the `Medium_Phone_API_37.0` emulator, inviting for room "niedzielna test" opened the chooser with `Dołącz do mojego interkomu HelmChat!\nPokój: niedzielna test\nLink: https://meet.ffmuc.net/niedzielna%20test`; the in-call share icon produced the same message and the call ended cleanly.
+- **Updates:** Added `jitsi/RoomLinks.kt` with `roomLink(serverUrl, roomName)` that trims inputs, strips a trailing slash and path-encodes the room (UTF-8, spaces as `%20`), so the shared link works in any browser. `HomeUiState.canInvite` enables the action as soon as a room name is typed. The join card gained a 76 dp "Invite" outlined button under "Join call", and the call screen a 64 dp share icon in the top-right corner; both call `shareRoomInvite()` in `HelmChatApp`, which opens the system share sheet (`ACTION_SEND`, `text/plain`) with the message `home_invite_message` (room name + link) and the room as subject. Recipients without the app can join straight from the browser. Added `home_invite` and `home_invite_message` to all 19 catalogs (61 keys each, placeholders verified) and tests: `RoomLinksTest` (4) and a `canInvite` case in `HomeViewModelTest`. Verified `assembleDebug`, `testDebugUnitTest` (35 tests) and `lintDebug` (no new warning types). On the `Medium_Phone_API_37.0` emulator, inviting for room "niedzielna test" opened the chooser with `Join my HelmChat intercom!\nRoom: niedzielna test\nLink: https://meet.ffmuc.net/niedzielna%20test`; the in-call share icon produced the same message and the call ended cleanly.
 - **Acceptance Criteria:**
   - Invite action is reachable from the join card and from the active call
   - Shared message contains the room name and a browser-openable link
@@ -371,7 +371,7 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
 - **Updates:** Locked `MainActivity` to portrait in `AndroidManifest.xml` as requested by the rider, so the large glove-friendly call controls can never be clipped by a landscape detail pane (PiP remains available). Reworked Jitsi teardown: `JitsiCallManager.hangUp()` now mutes first, sends HANG_UP, resets the React props through `JitsiMeetView.abort()`, keeps its broadcast receiver registered for the SDK acknowledgement, and publishes a new `CallState.Ending` instead of immediate `Idle`. The call screen stays mounted until Jitsi emits `CONFERENCE_TERMINATED` / `READY_TO_CLOSE`, with a two-stage fallback timeout that aborts the view and finally releases the UI if the SDK never replies. Stale join/mute/participant events are ignored while leaving. `AudioCallService`, `HelmChatApp`, PiP and the call UI now understand `Ending`; in the final Task_45 design the leave button keeps the foreground service and audio route alive until `CallState.Idle`, then the state observer stops the service and navigates home. Added Polish/English "ending" status strings and an ending-state preview. Task_45 also replaced the weak view reference with owned view cleanup and added short-window scrolling; the portrait lock from this task remains. Added JVM coverage for hang-up acknowledgement classification and for `Ending` not counting as a live participant session. Verified on `emulator-5554`: forcing system rotation leaves the activity in portrait; join → connected → "End call" produced `READY_TO_CLOSE`, `Jitsi confirmed the hang-up`, returned home, audio mode `MODE_NORMAL` and no active capture track. `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass.
 - **Acceptance Criteria:**
   - Landscape orientation cannot hide the call controls (activity stays portrait)
-  - "Zakończ połączenie" leaves the Jitsi conference before the embedded view is disposed
+  - "End call" leaves the Jitsi conference before the embedded view is disposed
   - Microphone capture, foreground service/notification and audio routing stop after hang-up
   - The UI returns home automatically once Jitsi confirms the leave
   - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
@@ -425,9 +425,9 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
 
 ### Task_49_FixAudioRouteToggleWhenNoHeadset: Lock the call audio-route button to the speaker without a headset.
 - **Status:** COMPLETED
-- **Updates:** The call-screen speaker/headset button used an independent local `isSpeakerOn` boolean, so with no headset connected it incorrectly showed "Interkom / słuchawki", stayed tappable and toggled the actual audio route. `BluetoothAudioRouter` now publishes `isHeadsetConnected`, detecting Bluetooth SCO/A2DP, wired/USB headsets and SCO-capable headsets whose channel is not open yet, and re-evaluating it on call start, SCO state changes, Bluetooth/wired headset plug events and noisy-audio. With no headset the router routes call audio to the built-in speaker (all API levels) and ignores toggle requests. Added `AudioRouteControl.kt` with a pure `resolveAudioRouteControl` helper: no headset → speaker shown and switching disabled; headset connected → button mirrors the active route and toggles between headset and speaker. `HelmChatApp` derives the button state and label from these flows instead of local mutable state, and `CallScreenState.canSwitchAudioRoute` disables the control while no headset is connected (or during teardown). Added `AudioRouteControlTest` (7 JVM tests) and a no-headset preview. Verified `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass; no device/emulator is available for manual audio-routing verification.
+- **Updates:** The call-screen speaker/headset button used an independent local `isSpeakerOn` boolean, so with no headset connected it incorrectly showed "Intercom / headset", stayed tappable and toggled the actual audio route. `BluetoothAudioRouter` now publishes `isHeadsetConnected`, detecting Bluetooth SCO/A2DP, wired/USB headsets and SCO-capable headsets whose channel is not open yet, and re-evaluating it on call start, SCO state changes, Bluetooth/wired headset plug events and noisy-audio. With no headset the router routes call audio to the built-in speaker (all API levels) and ignores toggle requests. Added `AudioRouteControl.kt` with a pure `resolveAudioRouteControl` helper: no headset → speaker shown and switching disabled; headset connected → button mirrors the active route and toggles between headset and speaker. `HelmChatApp` derives the button state and label from these flows instead of local mutable state, and `CallScreenState.canSwitchAudioRoute` disables the control while no headset is connected (or during teardown). Added `AudioRouteControlTest` (7 JVM tests) and a no-headset preview. Verified `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass; no device/emulator is available for manual audio-routing verification.
 - **Acceptance Criteria:**
-  - With no headset connected the button shows "Głośnik telefonu", uses the speaker icon and cannot be toggled
+  - With no headset connected the button shows "Phone speaker", uses the speaker icon and cannot be toggled
   - With a headset connected the button toggles audio between the helmet/headset and the phone speaker
   - Headset connect/disconnect during a call updates the button's enabled state
   - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
@@ -435,9 +435,9 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
 
 ### Task_50_SkipIntercomConnectingWithoutHeadset: Use the phone speaker immediately when no headset is attached.
 - **Status:** COMPLETED
-- **Updates:** Device testing showed "Łączenie z interkomem" even with no headset connected. Two causes were removed from `BluetoothAudioRouter`: headset detection no longer uses `AudioManager.isBluetoothScoAvailableOffCall` (some devices report SCO as available with nothing attached), it now checks actually connected HFP/A2DP devices through `BluetoothManager.getConnectedDevices` plus wired/USB audio outputs; and SCO broadcasts are handled by `handleScoStateChanged`, which never publishes `ConnectingBluetooth`/`Error` unless a headset is genuinely connected, otherwise it immediately re-routes to the phone speaker. Added a JVM test proving that a pending SCO connection with no headset still resolves to the speaker. Verified `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass; physical re-verification is still needed.
+- **Updates:** Device testing showed "Connecting to intercom" even with no headset connected. Two causes were removed from `BluetoothAudioRouter`: headset detection no longer uses `AudioManager.isBluetoothScoAvailableOffCall` (some devices report SCO as available with nothing attached), it now checks actually connected HFP/A2DP devices through `BluetoothManager.getConnectedDevices` plus wired/USB audio outputs; and SCO broadcasts are handled by `handleScoStateChanged`, which never publishes `ConnectingBluetooth`/`Error` unless a headset is genuinely connected, otherwise it immediately re-routes to the phone speaker. Added a JVM test proving that a pending SCO connection with no headset still resolves to the speaker. Verified `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass; physical re-verification is still needed.
 - **Acceptance Criteria:**
-  - Without a connected headset the call screen shows "Głośnik telefonu" immediately and never "Łączenie z interkomem"
+  - Without a connected headset the call screen shows "Phone speaker" immediately and never "Connecting to intercom"
   - A connected Bluetooth headset is detected through active HFP/A2DP links, not a spurious SCO-available flag
   - SCO error/connecting broadcasts without a headset keep the phone-speaker route
   - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
@@ -445,7 +445,7 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
 
 ### Task_51_FixBluetoothProfileCrashOnCallStart: Prevent call-start crash on devices without HFP/A2DP profiles.
 - **Status:** COMPLETED
-- **Updates:** Reproduced the reported crash on `emulator-5554`: tapping "Dołącz do rozmowy" threw `java.lang.IllegalArgumentException: Profile not supported: 1` from `BluetoothManager.getConnectedDevices(BluetoothProfile.HEADSET)` inside `BluetoothAudioRouter.hasConnectedBluetoothHeadset()`, during `resetForNewCall()` before Jitsi could connect. Extracted a testable `hasConnectedBluetoothHeadset(connectedDevices)` helper that queries HFP and A2DP through a supplied lookup and treats any failed/unavailable profile query (including `IllegalArgumentException`, `SecurityException` from a permission race, and `null` results) as "no headset" instead of crashing. `BluetoothAudioRouter` now calls it via `manager::getConnectedDevices` behind the existing permission guard. Added `BluetoothHeadsetDetectionTest` with 5 JVM tests covering unsupported profiles, revoked permission, null/empty results and real HFP/A2DP links. Reinstalled the rebuilt universal debug APK on the emulator and repeated the join flow: no FATAL crash, app process stays alive, and the only remaining logs are caught, logged warnings for unsupported profiles. Verified `assembleDebug`, `testDebugUnitTest` (120 tests) and `lintDebug` pass.
+- **Updates:** Reproduced the reported crash on `emulator-5554`: tapping "Join call" threw `java.lang.IllegalArgumentException: Profile not supported: 1` from `BluetoothManager.getConnectedDevices(BluetoothProfile.HEADSET)` inside `BluetoothAudioRouter.hasConnectedBluetoothHeadset()`, during `resetForNewCall()` before Jitsi could connect. Extracted a testable `hasConnectedBluetoothHeadset(connectedDevices)` helper that queries HFP and A2DP through a supplied lookup and treats any failed/unavailable profile query (including `IllegalArgumentException`, `SecurityException` from a permission race, and `null` results) as "no headset" instead of crashing. `BluetoothAudioRouter` now calls it via `manager::getConnectedDevices` behind the existing permission guard. Added `BluetoothHeadsetDetectionTest` with 5 JVM tests covering unsupported profiles, revoked permission, null/empty results and real HFP/A2DP links. Reinstalled the rebuilt universal debug APK on the emulator and repeated the join flow: no FATAL crash, app process stays alive, and the only remaining logs are caught, logged warnings for unsupported profiles. Verified `assembleDebug`, `testDebugUnitTest` (120 tests) and `lintDebug` pass.
 - **Acceptance Criteria:**
   - Tapping join on a device/emulator that does not support Bluetooth HFP/A2DP no longer crashes
   - A failed profile lookup cannot hide a headset reported by the other supported profile
@@ -465,11 +465,11 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
 
 ### Task_53_ReworkInCallAudioRouting: Make helmet/headset routes reliable during an active conference.
 - **Status:** COMPLETED
-- **Updates:** Real-phone testing of issues 1–3 exposed three separate routing faults. (1) Bluetooth detection accepted A2DP, which Android cannot use for two-way calls (`setCommunicationDevice()` rejects it); HFP/SCO is now the only Bluetooth route tracked, in `AudioDeviceSelection.kt`, `AudioRouteControl.kt` and `hasConnectedBluetoothHeadset()`. (2) Profile/plug broadcasts can arrive before the audio device is enumerated, so `BluetoothAudioRouter` now registers an `AudioDeviceCallback`, tracks a `HeadsetKind` (NONE/BLUETOOTH/WIRED) and runs bounded, generation-guarded retries (250 ms … 3 s) with `startBluetoothSco()` for HFP; exhausted retries fall back to the phone speaker instead of leaving "Łączenie z interkomem" on screen. (3) A headset disconnect now clears `isSpeakerphoneForced` and resets SCO state, so reconnecting mid-call becomes the active route without restarting the conference; wired/USB devices (USB > wired > headphones) are selected via `setCommunicationDevice()` and never show the SCO "connecting" state. Jitsi keeps `audio-focus.disabled=true` (verified in SDK 12.1.5: this leaves mode/focus/SCO entirely to the app) and now also `audio-device-button.enabled=false` so its hidden UI cannot offer a route the native layer does not own. Added `AudioDeviceSelectionTest` (7) and updated `BluetoothHeadsetDetectionTest` (8) and `AudioRouteControlTest` (8) for HFP-only behavior. Verified `assembleDebug`, `testDebugUnitTest` (132 tests after Task_54) and `lintDebug` (0 errors) pass and all three ABI debug APKs build. A smoke join on `emulator-5554` reached `CONFERENCE_JOINED` with no crash; physical headset connect/reconnect/USB verification is still required.
+- **Updates:** Real-phone testing of issues 1–3 exposed three separate routing faults. (1) Bluetooth detection accepted A2DP, which Android cannot use for two-way calls (`setCommunicationDevice()` rejects it); HFP/SCO is now the only Bluetooth route tracked, in `AudioDeviceSelection.kt`, `AudioRouteControl.kt` and `hasConnectedBluetoothHeadset()`. (2) Profile/plug broadcasts can arrive before the audio device is enumerated, so `BluetoothAudioRouter` now registers an `AudioDeviceCallback`, tracks a `HeadsetKind` (NONE/BLUETOOTH/WIRED) and runs bounded, generation-guarded retries (250 ms … 3 s) with `startBluetoothSco()` for HFP; exhausted retries fall back to the phone speaker instead of leaving "Connecting to intercom" on screen. (3) A headset disconnect now clears `isSpeakerphoneForced` and resets SCO state, so reconnecting mid-call becomes the active route without restarting the conference; wired/USB devices (USB > wired > headphones) are selected via `setCommunicationDevice()` and never show the SCO "connecting" state. Jitsi keeps `audio-focus.disabled=true` (verified in SDK 12.1.5: this leaves mode/focus/SCO entirely to the app) and now also `audio-device-button.enabled=false` so its hidden UI cannot offer a route the native layer does not own. Added `AudioDeviceSelectionTest` (7) and updated `BluetoothHeadsetDetectionTest` (8) and `AudioRouteControlTest` (8) for HFP-only behavior. Verified `assembleDebug`, `testDebugUnitTest` (132 tests after Task_54) and `lintDebug` (0 errors) pass and all three ABI debug APKs build. A smoke join on `emulator-5554` reached `CONFERENCE_JOINED` with no crash; physical headset connect/reconnect/USB verification is still required.
 - **Acceptance Criteria:**
   - Bluetooth HFP headset connected during a call becomes the active route; A2DP-only outputs are ignored
   - Bluetooth disconnect/reconnect mid-call restores the headset route without rejoining the conference
-  - Wired/USB headset connects without a stuck "Łączenie z interkomem" state
+  - Wired/USB headset connects without a stuck "Connecting to intercom" state
   - Retry exhaustion always returns to the phone speaker; a no-headset state keeps the speaker route disabled
   - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
   - Manual: verify on the physical phone that reproduced issues 1–3
@@ -489,7 +489,7 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
 - **Status:** COMPLETED
 - **Updates:** Real-phone testing confirmed USB/BT connect/disconnect and USB→headset switching, but selecting the phone speaker while a USB headset stayed connected immediately returned to the headset. Three causes were removed from `BluetoothAudioRouter`: (1) `updateAudioRouting()` cleared `isSpeakerphoneForced` whenever a transient re-detection returned `HeadsetKind.NONE`, so a late device callback undid the rider's choice; the flag now resets only on a confirmed plug/profile/device-removal/noisy disconnect. (2) `handleScoStateChanged()` and every routing re-evaluation now go through the new `resolveRouteTarget()` helper, so a forced speaker outranks a connected headset and a late SCO connected/disconnected broadcast cannot undo it. (3) `routeToBuiltInSpeaker()` no longer ignores a failed `setCommunicationDevice()`; it clears any explicit communication device and enables the legacy speakerphone flag as a fallback, which is required on devices that reject the built-in speaker while a USB headset is enumerated. `AudioDeviceCallback` now forwards newly added headset families and real headset removals directly, and general API methods use `setSpeakerphoneFlag(false)` before selecting a headset so no legacy override fights the selected device. Added 4 JVM tests covering route precedence and callback-derived headset families (136 total). Verified `assembleDebug`, `testDebugUnitTest` (136 tests, 0 failures) and `lintDebug` (0 errors) pass and all three ABI debug APKs build; final USB→speaker retention still needs a physical-phone retest.
 - **Acceptance Criteria:**
-  - With a USB headset connected, tapping "Głośnik telefonu" keeps the speaker route until the rider taps back or a real disconnect occurs
+  - With a USB headset connected, tapping "Phone speaker" keeps the speaker route until the rider taps back or a real disconnect occurs
   - Late audio-device, SCO and plug callbacks cannot override the rider's explicit speaker choice
   - A real headset disconnect still clears the forced speaker so the next connection becomes active without rejoining
   - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
@@ -587,10 +587,10 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
 
 ### Task_65_StabilizeIntercomRouteWithBackgroundA2dpMusic: Keep the named headset label during transient SCO errors.
 - **Status:** COMPLETED
-- **Updates:** Background music playing over the same helmet's A2DP profile causes `ACTION_AUDIO_BECOMING_NOISY` when A2DP is suspended for the SCO call, and transient SCO errors published `AudioRoutingState.Error`, which the UI rendered as the generic `Interkom / słuchawki`. The fix keeps the existing noisy-audio disconnect handling intact (restored in `Task_66`) and only stabilizes the published state after a transient SCO error. Added the pure `resolveScoErrorRoutingState(kind, lastConnectedName)` decision: a transient error while a Bluetooth or wired headset remains attached keeps the last named route (or `ConnectingBluetooth` until a name is known), while no headset still reports `Error`. `BluetoothAudioRouter` now remembers the name through `publishHeadsetRoute(...)`, reuses it for all headset route assignments, and clears it at call teardown/reset boundaries so it cannot leak to a new call. The bounded `scheduleRouteRetry(kind)` retry remains unchanged, so a real failure is still retried. Added JVM tests for named Bluetooth/wired retention, unnamed fallback and the no-headset error case. Verified `./gradlew testDebugUnitTest assembleDebug lintDebug --no-daemon --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8"` passes (167 tests, 0 failures/errors; lint 0 errors / 25 warnings) and `git diff --check` is clean. Physical-helmet retest with A2DP music is still required; if the label still flaps, capture the SCO/noisy-audio logs before changing the watchdog.
+- **Updates:** Background music playing over the same helmet's A2DP profile causes `ACTION_AUDIO_BECOMING_NOISY` when A2DP is suspended for the SCO call, and transient SCO errors published `AudioRoutingState.Error`, which the UI rendered as the generic `Intercom / headset`. The fix keeps the existing noisy-audio disconnect handling intact (restored in `Task_66`) and only stabilizes the published state after a transient SCO error. Added the pure `resolveScoErrorRoutingState(kind, lastConnectedName)` decision: a transient error while a Bluetooth or wired headset remains attached keeps the last named route (or `ConnectingBluetooth` until a name is known), while no headset still reports `Error`. `BluetoothAudioRouter` now remembers the name through `publishHeadsetRoute(...)`, reuses it for all headset route assignments, and clears it at call teardown/reset boundaries so it cannot leak to a new call. The bounded `scheduleRouteRetry(kind)` retry remains unchanged, so a real failure is still retried. Added JVM tests for named Bluetooth/wired retention, unnamed fallback and the no-headset error case. Verified `./gradlew testDebugUnitTest assembleDebug lintDebug --no-daemon --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8"` passes (167 tests, 0 failures/errors; lint 0 errors / 25 warnings) and `git diff --check` is clean. Physical-helmet retest with A2DP music is still required; if the label still flaps, capture the SCO/noisy-audio logs before changing the watchdog.
 - **Acceptance Criteria:**
   - `ACTION_AUDIO_BECOMING_NOISY` keeps its original disconnect hint for route detection (corrected in `Task_66`)
-  - A transient SCO error with a headset still attached keeps the named `Interkom: nazwa` label
+  - A transient SCO error with a headset still attached keeps the named `Intercom: name` label
   - A real failure with no headset still reports an error and retries the Bluetooth route
   - The remembered device name cannot survive call teardown/reset
   - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
@@ -605,7 +605,7 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
 
 ### Task_67_FixScoDeviceMisclassifiedAsWired: Restore Bluetooth routing and reconnection.
 - **Status:** COMPLETED
-- **Updates:** The user reported that Bluetooth still never routed to the helmet after `Task_66`: the control showed the generic `Interkom / słuchawki`, audio went to the phone, and reconnecting after an interruption failed. Root cause: when `ignoreStaleBluetoothSignals` was latched by `Task_64`, `detectHeadsetKind()` still counted `TYPE_BLUETOOTH_SCO` as a wired headset because `isHeadsetDeviceType()` includes SCO. That resolved to `HeadsetKind.WIRED`, whose route calls `stopBluetoothSco()`, clears the communication device and publishes `HeadsetConnected(null)` — exactly the observed label and phone output. Added the pure `hasNonBluetoothHeadsetDevice()` helper and used it in `detectHeadsetKind()`, so suppressed Bluetooth SCO devices no longer create a false wired route. Also tightened `shouldIgnoreStaleBluetoothSignals()` to require an explicit disconnect event plus a negative HFP lookup; a lone negative lookup can be a transient permission/profile race and must not block reconnection. Added JVM tests for the SCO-not-wired helper and updated the suppression tests. Verified `./gradlew testDebugUnitTest assembleDebug lintDebug --no-daemon --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8"`: 168 tests, 0 failures/errors; lint 0 errors / 26 warnings (no findings in changed files, one extra dependency-version warning); `git diff --check` clean. IDE analysis tooling is unavailable in this session. Physical-helmet retest is still required, especially reconnect after an interruption.
+- **Updates:** The user reported that Bluetooth still never routed to the helmet after `Task_66`: the control showed the generic `Intercom / headset`, audio went to the phone, and reconnecting after an interruption failed. Root cause: when `ignoreStaleBluetoothSignals` was latched by `Task_64`, `detectHeadsetKind()` still counted `TYPE_BLUETOOTH_SCO` as a wired headset because `isHeadsetDeviceType()` includes SCO. That resolved to `HeadsetKind.WIRED`, whose route calls `stopBluetoothSco()`, clears the communication device and publishes `HeadsetConnected(null)` — exactly the observed label and phone output. Added the pure `hasNonBluetoothHeadsetDevice()` helper and used it in `detectHeadsetKind()`, so suppressed Bluetooth SCO devices no longer create a false wired route. Also tightened `shouldIgnoreStaleBluetoothSignals()` to require an explicit disconnect event plus a negative HFP lookup; a lone negative lookup can be a transient permission/profile race and must not block reconnection. Added JVM tests for the SCO-not-wired helper and updated the suppression tests. Verified `./gradlew testDebugUnitTest assembleDebug lintDebug --no-daemon --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8"`: 168 tests, 0 failures/errors; lint 0 errors / 26 warnings (no findings in changed files, one extra dependency-version warning); `git diff --check` clean. IDE analysis tooling is unavailable in this session. Physical-helmet retest is still required, especially reconnect after an interruption.
 - **Acceptance Criteria:**
   - A suppressed SCO device is no longer treated as a wired headset
   - A transient negative HFP lookup no longer latches Bluetooth suppression
@@ -631,7 +631,7 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
 
 ### Task_70_UpdateInviteCopyAndPipPosition: Apply the requested UI changes.
 - **Status:** COMPLETED
-- **Updates:** Changed `home_invite_message` in all 30 locale resource files. `values-pl/strings.xml` now contains exactly `Dołącz do mojej rozmowy w HelmChat!\nPokój: %1$s\nLink: %2$s`; the English fallback and the other translations now use "conversation/rozmowa" wording instead of "intercom". In `CallScreen.kt`, the Picture-in-Picture `IconButton` moved from the combined top-end row to its own `Alignment.TopStart` overlay, while the invite button stays at `Alignment.TopEnd`. The 64 dp touch target and 8 dp margin were preserved, and the `CallContent` KDoc now mentions the opposite top-corner actions. No routing, Jitsi, permission or PiP behavior changed. Verified `./gradlew testDebugUnitTest assembleDebug lintDebug --no-daemon --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8"`: 174 tests, 0 failures/errors; lint 0 errors / 26 warnings (only pre-existing JWT typo warnings on unchanged string lines); all 30 invite resources keep both format arguments; `git diff --check` clean. Physical S25 retest with the helmet intercom is still required.
+- **Updates:** Changed `home_invite_message` in all 30 locale resource files. `values-pl/strings.xml` now contains exactly `Join my HelmChat conversation!\nRoom: %1$s\nLink: %2$s`; the English fallback and the other translations now use "conversation/rozmowa" wording instead of "intercom". In `CallScreen.kt`, the Picture-in-Picture `IconButton` moved from the combined top-end row to its own `Alignment.TopStart` overlay, while the invite button stays at `Alignment.TopEnd`. The 64 dp touch target and 8 dp margin were preserved, and the `CallContent` KDoc now mentions the opposite top-corner actions. No routing, Jitsi, permission or PiP behavior changed. Verified `./gradlew testDebugUnitTest assembleDebug lintDebug --no-daemon --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8"`: 174 tests, 0 failures/errors; lint 0 errors / 26 warnings (only pre-existing JWT typo warnings on unchanged string lines); all 30 invite resources keep both format arguments; `git diff --check` clean. Physical S25 retest with the helmet intercom is still required.
 - **Acceptance Criteria:**
   - Polish invite text matches the requested string exactly
   - PiP icon is displayed at the top-left and invite at the top-right of the call screen
@@ -1018,11 +1018,11 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
 
 ### Task_97_PrepareFdroidReleaseV17: Pin the final V1.7 tag and F-Droid recipe.
 - **Status:** COMPLETED (GitHub tag push and fdroiddata merge request still pending)
-- **Updates:** Moved the published annotated `V1.7` tag from `03572db` to the final
-  master merge commit `3e2f332109e973e2a630472bf0595eae1ba642ac` and pushed it to
-  `origin`. The push to the `github` remote failed because HTTPS credentials were
-  unavailable in this session, so it must be done manually with `git push --force
-  github refs/tags/V1.7`. Updated both `commit:` fields in
+- **Updates:** Moved the annotated `V1.7` tag from `03572db` to the final master
+  merge commit `3e2f332109e973e2a630472bf0595eae1ba642ac`. The push to `github`
+  failed because HTTPS credentials were unavailable in this session, so it had
+  to be done manually with `git push --force github refs/tags/V1.7`. Updated both
+  `commit:` fields in
   `fdroid/dev.communicator.helmchatrisen.yml` to the final commit, refreshed the
   candidate README checklist and the F-Droid-readiness section of
   `RELEASE_NOTES.md`, and added the temporary `meet.jit.si` hide note to the
@@ -1061,104 +1061,104 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - Old recent rooms using `fairmeeting.net` fall back to custom-server mode with the URL pre-filled
   - `assembleDebug`, `testDebugUnitTest` and `lintDebug` pass
 
-### Task_99_ValidateFdroidBuildV17: Lokalna weryfikacja receptury F-Droid dla 1.7.
-- **Status:** COMPLETED (merge request do `fdroid/fdroiddata` do otwarcia ręcznie)
-- **Updates:** Skopiowano metadane do lokalnego `fdroiddata` i zatwierdzono je jako
-  `6aa2242323 Add HelmChatRisen (audio-only motorcycle intercom)` (6 plików: recipe,
-  opisy en-US i changelogi 7/701/702). Poprawiono kategorię `Communication` →
-  `Connectivity`, Changelog `/blob/master/` → `/blob/HEAD/` oraz dodano do `prebuild`
-  podmianę `./gradlew` → `gradle`, ponieważ F-Droid usuwa wrapper przed buildem.
-  Dodano niezatwierdzone lokalne helpery `scripts/fdroid-build-local.sh`,
-  `scripts/fdroid-build-701.sh` i `scripts/fdroid-build-702.sh` (ustawiają JDK 17,
-  Android SDK, disk-backed `TMPDIR`, Gradle 9.6 i tymczasowo łatają `config.yml`
-  dla `fdroidserver 2.2.1`; przywracają oryginał po buildzie).
+### Task_99_ValidateFdroidBuildV17: Local verification of the F-Droid recipe for 1.7.
+- **Status:** COMPLETED (merge request to `fdroid/fdroiddata` to be opened manually)
+- **Updates:** Copied the metadata into a local `fdroiddata` checkout and committed it as
+  `6aa2242323 Add HelmChatRisen (audio-only motorcycle intercom)` (6 files: recipe,
+  en-US descriptions and changelogs 7/701/702). Changed the category `Communication` →
+  `Connectivity`, the Changelog path `/blob/master/` → `/blob/HEAD/`, and added to `prebuild`
+  the `./gradlew` → `gradle` replacement, because F-Droid removes the wrapper before
+  the build. Added uncommitted local helpers `scripts/fdroid-build-local.sh`,
+  `scripts/fdroid-build-701.sh` and `scripts/fdroid-build-702.sh` (they set up JDK 17,
+  the Android SDK, a disk-backed `TMPDIR` and Gradle 9.6, and temporarily patch `config.yml`
+  for `fdroidserver 2.2.1`; they restore the original after the build).
 - **Verification:** `fdroid readmeta -W warn`, `fdroid rewritemeta
-  dev.communicator.helmchatrisen` i `fdroid lint dev.communicator.helmchatrisen`
-  zakończyły się bez uwag dla naszej aplikacji. `fdroid build` zbudował obie wersje
-  z pinnowanego commitu `3e2f332109e973e2a630472bf0595eae1ba642ac`:
+  dev.communicator.helmchatrisen` and `fdroid lint dev.communicator.helmchatrisen`
+  completed with no findings for our app. `fdroid build` built both versions
+  from the pinned commit `3e2f332109e973e2a630472bf0595eae1ba642ac`:
   `dev.communicator.helmchatrisen_701.apk` (32 MB, versionCode 701, armeabi-v7a)
-  oraz `_702.apk` (41 MB, versionCode 702, arm64-v8a), oba z versionName 1.7 i
-  minSdk 26; pliki leżą w `fdroiddata/unsigned/`. `config.yml` został przywrócony
-  do wersji z repo i nie jest częścią commitu. Obciążenie/błędy `npm ci` wynikały
-  z tmpfs `/tmp`; z `TMPDIR` na dysku instalacja przebiegła poprawnie.
+  and `_702.apk` (41 MB, versionCode 702, arm64-v8a), both with versionName 1.7 and
+  minSdk 26; the files are in `fdroiddata/unsigned/`. `config.yml` was restored
+  to the repository version and is not part of the commit. The `npm ci` load/errors came
+  from the `/tmp` tmpfs; with `TMPDIR` on disk the installation completed correctly.
 - **Acceptance Criteria:**
-  - Metadane przechodzą `readmeta`/`rewritemeta`/`lint` i zawierają tylko pliki przeznaczone do MR
-  - `fdroid build` produkuje poprawne APK-i 701 (armeabi-v7a) i 702 (arm64-v8a)
-  - `config.yml` i lokalne skrypty nie są zatwierdzone
-  - Manual: wypchnąć branch z `fdroiddata` na fork i otworzyć MR do `fdroid/fdroiddata`
+  - Metadata passes `readmeta`/`rewritemeta`/`lint` and contains only files intended for the MR
+  - `fdroid build` produces valid APKs 701 (armeabi-v7a) and 702 (arm64-v8a)
+  - `config.yml` and the local scripts are not committed
+  - Manual: push the branch from `fdroiddata` to a fork and open an MR to `fdroid/fdroiddata`
 
-### Task_100_DropFdroidArmeabiV7a: Publikuj w F-Droid tylko arm64-v8a.
-- **Status:** COMPLETED (merge request do `fdroid/fdroiddata` do otwarcia ręcznie)
-- **Updates:** Usunięto blok buildu 701 z receptury w `fdroid/` i z lokalnego
-  `fdroiddata`, usunięto odpowiedni changelog `701.txt` w obu repozytoriach oraz
-  nieaktualny helper `scripts/fdroid-build-701.sh`. `VercodeOperation` ma teraz
-  jedną operację `100 * %c + 2`, więc jedyny pakiet F-Droid zachowuje kod 702
-  (`arm64-v8a`) z tagu `V1.7`; kod upstream 7 i wersja 1.7 nie zmieniły się.
-  Zaktualizowano `fdroid/README.md`, `RELEASE_NOTES.md` i domyślny wariant
-  `scripts/fdroid-build-local.sh` (domyślnie 702). W `fdroiddata` dodano
-  nie-destrukcyjny commit `455cd5fd30 build(fdroid): publish only arm64-v8a
-  package` nad istniejącym `6aa2242323`; oba zawierają wyłącznie metadane.
+### Task_100_DropFdroidArmeabiV7a: Publish only arm64-v8a on F-Droid.
+- **Status:** COMPLETED (merge request to `fdroid/fdroiddata` to be opened manually)
+- **Updates:** Removed the 701 build block from the recipe in `fdroid/` and from the local
+  `fdroiddata`, removed the corresponding `701.txt` changelog in both repositories and the
+  obsolete `scripts/fdroid-build-701.sh` helper. `VercodeOperation` now has
+  a single operation `100 * %c + 2`, so the only F-Droid package keeps code 702
+  (`arm64-v8a`) from tag `V1.7`; upstream code 7 and version 1.7 are unchanged.
+  Updated `fdroid/README.md`, `RELEASE_NOTES.md` and the default variant of
+  `scripts/fdroid-build-local.sh` (702 by default). In `fdroiddata`, added a
+  non-destructive commit `455cd5fd30 build(fdroid): publish only arm64-v8a
+  package` on top of the existing `6aa2242323`; both contain metadata only.
 - **Verification:** `fdroid readmeta -W warn`, `fdroid rewritemeta
-  dev.communicator.helmchatrisen` i `fdroid lint dev.communicator.helmchatrisen`
-  zakończyły się kodem 0 (ostrzeżenia dotyczyły innych aplikacji w repozytorium
-  oraz lokalnych uprawnień `config.yml`). `config.yml` został przywrócony do
-  wersji z repo i nie jest częścią żadnego z commitów. Build `:702` z tego samego
-  pinnowanego commitu i tego samego bloku buildu wcześniej zakończył się
-  sukcesem; nowa receptura nie zmienia komend buildu. Skrypty
-  `scripts/fdroid-build-local.sh` i `scripts/fdroid-build-702.sh` przechodzą
-  `bash -n`. W repo aplikacji żadne zmiany nie zostały zatwierdzone.
+  dev.communicator.helmchatrisen` and `fdroid lint dev.communicator.helmchatrisen`
+  exited with code 0 (warnings concerned other apps in the repository
+  and local `config.yml` permissions). `config.yml` was restored to
+  the repository version and is not part of any commit. Build `:702` from the same
+  pinned commit and the same build block had already succeeded;
+  the new recipe does not change the build commands. The scripts
+  `scripts/fdroid-build-local.sh` and `scripts/fdroid-build-702.sh` pass
+  `bash -n`. No changes were committed in the app repository.
 - **Acceptance Criteria:**
-  - Receptura F-Droid ma jeden blok buildu, jeden `VercodeOperation` i kod 702
-  - Metadane przechodzą `readmeta`/`rewritemeta`/`lint`
-  - Changelog 701 i lokalny helper 701 nie są już częścią przygotowania do MR
-  - Manual: wypchnąć dwa commity z `fdroiddata` na fork i otworzyć MR
+  - The F-Droid recipe has one build block, one `VercodeOperation` and code 702
+  - Metadata passes `readmeta`/`rewritemeta`/`lint`
+  - Changelog 701 and the local 701 helper are no longer part of MR preparation
+  - Manual: push two commits from `fdroiddata` to a fork and open an MR
 
-### Task_101_UseFdroidVersionCode700: Jeden pakiet F-Droid z kodem 700.
-- **Status:** COMPLETED (merge request do `fdroid/fdroiddata` do otwarcia ręcznie)
-- **Updates:** Zmieniono jedyny blok F-Droid z kodu 702 na 700 oraz
-  `VercodeOperation: 100 * %c` (z upstreamowego kodu 7), `CurrentVersionCode:
-  700`, opisy w `fdroid/README.md`, `RELEASE_NOTES.md` i projekcie skill
-  `.opencode/skills/f-droid/SKILL.md`. Changelog `702.txt` zastąpiony przez
-  `700.txt` zarówno w `fastlane/`, jak i w `fdroiddata`. Helper
-  `scripts/fdroid-build-702.sh` zastąpiony przez `scripts/fdroid-build-700.sh`,
-  a `scripts/fdroid-build-local.sh` domyślnie buduje 700. W `fdroiddata` dodano
-  trzeci commit `0d615f31dd build(fdroid): use version code 700 for arm64 build`
-  nad `455cd5fd30` i `6aa2242323`; żaden nie zawiera `config.yml` ani APK.
+### Task_101_UseFdroidVersionCode700: One F-Droid package with code 700.
+- **Status:** COMPLETED (merge request to `fdroid/fdroiddata` to be opened manually)
+- **Updates:** Changed the only F-Droid block from code 702 to 700 and
+  `VercodeOperation: 100 * %c` (from upstream code 7), `CurrentVersionCode:
+  700`, and the descriptions in `fdroid/README.md`, `RELEASE_NOTES.md` and the skill
+  project `.opencode/skills/f-droid/SKILL.md`. Replaced changelog `702.txt` with
+  `700.txt` in both `fastlane/` and `fdroiddata`. Replaced the helper
+  `scripts/fdroid-build-702.sh` with `scripts/fdroid-build-700.sh`,
+  and `scripts/fdroid-build-local.sh` now builds 700 by default. In `fdroiddata`, added a
+  third commit `0d615f31dd build(fdroid): use version code 700 for arm64 build`
+  on top of `455cd5fd30` and `6aa2242323`; none contains `config.yml` or APKs.
 - **Verification:** `fdroid readmeta -W warn`, `fdroid rewritemeta
-  dev.communicator.helmchatrisen` i `fdroid lint dev.communicator.helmchatrisen`
-  zakończyły się kodem 0. Aby nie powtarzać ~30-minutowego rebuildu Jitsi,
-  z tagu `V1.7` zrobiono szybką weryfikację z lokalnie opublikowanym SDK
-  13.1.1: po zastosowaniu tego samego `prebuild` (`appVersionCode = 700`)
-  `gradle assembleRelease` zakończył się sukcesem w 3m42s
-  (`build/fdroid-700-verify.log`). `aapt dump badging` dla
-  `HelmChatRisen-1.7-release-arm64-v8a.apk` potwierdza versionCode 700,
-  versionName 1.7, `native-code: arm64-v8a` i minSdk 26. Skrypty `700`
-  przechodzą `bash -n`. Stary lokalny `unsigned/..._702.apk` pozostaje tylko
-  jako nieużywany artefakt i nie trafia do MR.
+  dev.communicator.helmchatrisen` and `fdroid lint dev.communicator.helmchatrisen`
+  exited with code 0. To avoid repeating the ~30-minute Jitsi rebuild,
+  a quick verification was run from tag `V1.7` with the locally published SDK
+  13.1.1: after applying the same `prebuild` (`appVersionCode = 700`),
+  `gradle assembleRelease` succeeded in 3m42s
+  (`build/fdroid-700-verify.log`). `aapt dump badging` for
+  `HelmChatRisen-1.7-release-arm64-v8a.apk` confirms versionCode 700,
+  versionName 1.7, `native-code: arm64-v8a` and minSdk 26. The `700` scripts
+  pass `bash -n`. The old local `unsigned/..._702.apk` remains only
+  as an unused artifact and is not included in the MR.
 - **Acceptance Criteria:**
-  - Receptura F-Droid ma jeden blok, kod 700 i jedną operację `100 * %c`
-  - Changelog i helpery używają wyłącznie 700
-  - Metadane przechodzą `readmeta`/`rewritemeta`/`lint`
-  - Manual: wypchnąć trzy commity z `fdroiddata` na fork i otworzyć MR
+  - The F-Droid recipe has one block, code 700 and one `100 * %c` operation
+  - The changelog and helpers use only 700
+  - Metadata passes `readmeta`/`rewritemeta`/`lint`
+  - Manual: push three commits from `fdroiddata` to a fork and open an MR
 
-### Task_102_ShellSkillAndEnglishComments: Konwencje SH w projekcie.
+### Task_102_ShellSkillAndEnglishComments: Project shell conventions.
 - **Status:** COMPLETED
-- **Updates:** Komentarze w `scripts/fdroid-build-local.sh` i
-  `scripts/fdroid-build-700.sh` przełożone na angielski. Dodano projektowy skill
-  `.opencode/skills/shell-scripts/SKILL.md` opisujący styl Bash, angielskie
-  komentarze, polskie komunikaty dla użytkownika, układ `scripts/` vs `build/`,
-  środowisko F-Droid (JDK, SDK, disk-backed TMPDIR, Gradle 9.6, config.yml),
-  zasady bezpieczeństwa i listę weryfikacji. Nie zmieniano
-  `.opencode/opencode.json` — katalog `.opencode/skills/` jest wykrywany
-  automatycznie.
-- **Verification:** `bash -n` przechodzi dla obu skryptów. Skill został
-  pomyślnie załadowany przez narzędzie `skill` jako `shell-scripts` i pojawił
-  się w zestawie dostępnych skilli. Żadne commitowane pliki aplikacji nie
-  zostały zmienione w ramach tego zadania.
+- **Updates:** Translated the comments in `scripts/fdroid-build-local.sh` and
+  `scripts/fdroid-build-700.sh` into English. Added a project skill
+  `.opencode/skills/shell-scripts/SKILL.md` describing the Bash style, English
+  comments, Polish user-facing messages, the `scripts/` vs `build/` layout,
+  the F-Droid environment (JDK, SDK, disk-backed TMPDIR, Gradle 9.6, config.yml),
+  safety rules and a verification checklist. `.opencode/opencode.json` was not
+  changed — the `.opencode/skills/` directory is detected
+  automatically.
+- **Verification:** `bash -n` passes for both scripts. The skill was
+  loaded successfully by the `skill` tool as `shell-scripts` and appeared
+  in the set of available skills. No committed application files were
+  changed as part of this task.
 - **Acceptance Criteria:**
-  - Wszystkie komentarze w skryptach SH są po angielsku
-  - Skill `shell-scripts` jest widoczny i możliwy do załadowania w OpenCode
-  - Skrypty przechodzą sprawdzanie składni
+  - All comments in shell scripts are in English
+  - The `shell-scripts` skill is visible and loadable in OpenCode
+  - Scripts pass syntax checking
 
 ### Task_103_RefreshLauncherIconsFromCurrentSvg: Regenerate launcher icons from `helmchat.svg` with safe-zone sizing.
 - **Status:** COMPLETED
@@ -1247,79 +1247,91 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - Skills require validation after metadata/toolchain changes
   - Documentation stays consistent with the current single-build code-700 recipe
 
-### Task_106_ForceFreshJitsiViewOnStalledReconnect: Ponawianie połączenia do skutku.
-- **Status:** COMPLETED (implementacja i weryfikacja lokalna; scenariusz rzeczywistego
-  zaniku sieci na telefonie S25 nadal wymaga potwierdzenia)
-- **Updates:** Zdiagnozowano, że w Jitsi 13.1.1 `reloadNow()` przechodzi przez
-  `appNavigate`, który przy tym samym pokoju i hoście wychodzi wcześniej bez
-  `disconnect()` — więc widok może bezskutecznie czekać, aż watchdog aplikacji
-  uzna próbę za zatrzymaną. `JitsiCallManager` po wygaśnięciu watchdoga żąda
-  nowej instancji `JitsiMeetView`: cofa subskrypcję starych zdarzeń, zachowuje
-  `currentRoomName`, znacznik czasu rozmowy i fakt wcześniejszego połączenia,
-  a następnie zwiększa `viewRecreationToken`. `JitsiConferenceView` używa tego
-  tokenu jako klucza `AndroidView`, więc Compose niszczy stary widok i buduje
-  świeży, który wykonuje prawdziwy `join()` do tego samego pokoju. Po uwzględnieniu
-  uwagi o trasie motocyklowej pętla jest nieograniczona: każdy kolejny timeout
-  (60 s dla własnego reloadu Jitsi, 150 s dla świeżego widoku) powoduje kolejną
-  próbę, a udany `CONFERENCE_JOINED` zeruje licznik. Pierwsze łączenie bez zasięgu
-  jest traktowane tak samo, z tanim sprawdzaniem co 10 s offline zamiast
-  niepotrzebnego tworzenia widoków. Terminalny błąd pozostaje tylko dla
-  wyjątku lokalnego `join()` oraz jawnego zakończenia przez jeźdźca; usunięto
-  nieużywany string `call_error_reconnect_timeout` ze wszystkich katalogów.
-  Stare `onViewReleased` nie przechodzi przez `finalizeSession`, więc trwająca
-  rozmowa nie znika z ekranu, a zdarzenia z usuwanego widoku są ignorowane.
+### Task_106_ForceFreshJitsiViewOnStalledReconnect: Retry the connection until it succeeds.
+- **Status:** COMPLETED (implementation and local verification; a real network-loss
+  scenario on the S25 phone still needs confirmation)
+- **Updates:** Diagnosed that in Jitsi 13.1.1 `reloadNow()` goes through
+  `appNavigate`, which exits early for the same room and host without
+  `disconnect()` — so the view can wait indefinitely until the app watchdog
+  considers the attempt stalled. After the watchdog expires, `JitsiCallManager` requests
+  a new `JitsiMeetView` instance: it unsubscribes from old events, preserves
+  `currentRoomName`, the call timestamp and the fact that a previous connection succeeded,
+  then increments `viewRecreationToken`. `JitsiConferenceView` uses this
+  token as the `AndroidView` key, so Compose destroys the old view and builds
+  a fresh one that performs a real `join()` to the same room. After accounting for
+  the motorcycle-route feedback, the loop is unbounded: each subsequent timeout
+  (60 s for Jitsi's own reload, 150 s for a fresh view) triggers another
+  attempt, and a successful `CONFERENCE_JOINED` resets the counter. An initial join without coverage
+  is treated the same way, with a cheap check every 10 s offline instead of
+  needlessly creating views. A terminal error remains only for
+  a local `join()` exception and an explicit hang-up by the rider; removed
+  the unused `call_error_reconnect_timeout` string from all catalogs.
+  Old `onViewReleased` events do not go through `finalizeSession`, so an ongoing
+  call does not disappear from the screen, and events from the disposed view are ignored.
 - **Verification:** `./gradlew testDebugUnitTest assembleDebug lintDebug
   --no-daemon --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4096m
   -Dfile.encoding=UTF-8"` passed: 203 JVM tests (0 failures/errors/skips),
-  lint 0 errors / 26 warnings (brak ostrzeżeń w zmienionych plikach) i trzy
-  debug APK-i (arm64-v8a, armeabi-v7a, universal). `./gradlew
+  lint 0 errors / 26 warnings (no warnings in changed files) and three
+  debug APKs (arm64-v8a, armeabi-v7a, universal). `./gradlew
   connectedDebugAndroidTest --no-daemon --max-workers=2` passed 3/3 on
-  `Medium_Phone_API_37.0`. Wewnętrzny test `emulator-5554` z trybem samolotowym
-  potwierdził wcześniej, że Jitsi potrafi samo odnowić XMPP bez
-  `CONFERENCE_TERMINATED`; nowa pętla jest uruchamiana wyłącznie przy rzeczywistym
-  zatrzymaniu watchdoga. `git diff --check` clean.
+  `Medium_Phone_API_37.0`. An earlier internal test on `emulator-5554` in airplane mode
+  confirmed that Jitsi can renew XMPP on its own without
+  `CONFERENCE_TERMINATED`; the new loop only starts on a genuine
+  watchdog timeout. `git diff --check` clean.
 - **Acceptance Criteria:**
-  - Zatrzymany reload nie kończy się błędem i jest ponawiany dowolną liczbę razy
-  - Długi brak zasięgu (5–10 min i dłużej) nie rozłącza rozmowy ani nie wygasza timera
-  - Timer, pokój, liczba uczestników i stan połączenia przetrwają każdą zamianę widoku
-  - Stale eventy i `onViewReleased` starego widoku nie kasują nowej rozmowy
-  - Offline nie powoduje niepotrzebnego odtwarzania widoku, tylko tanie sprawdzanie co 10 s
-  - Build, JVM tests, lint i instrumented tests przechodzą
-  - Manual: potwierdzić na S25 z rzeczywistym interkomem i logcatem z failing reconnectu
+  - A stalled reload does not end in an error and is retried any number of times
+  - A long loss of coverage (5–10 min or longer) neither disconnects the call nor expires the timer
+  - The timer, room, participant count and connection state survive every view swap
+  - Stale events and `onViewReleased` from the old view do not clear the new call
+  - Offline does not needlessly recreate the view, only performs a cheap check every 10 s
+  - Build, JVM tests, lint and instrumented tests pass
+  - Manual: confirm on the S25 with a real intercom and a logcat of a failing reconnect
 
-### Task_107_ApplyForcedRejoinReviewFixes: Nieaktualizowanie starych callbacków i natychmiastowy retry pierwszego joinu.
-- **Status:** COMPLETED (implementacja i weryfikacja lokalna; potwierdzenie failing reconnect na S25 nadal wymagane)
-- **Updates:** Zastosowano trzy uwagi po przeglądzie zmian z `Task_106`. (1) `JitsiCallManager` prowadzi `viewEpoch`: odbiornik `LocalBroadcastManager` i callback `ParticipantsService` zapamiętują epokę widoku, więc zdarzenia już zakolejkowane przez usuwany widok (np. `CONFERENCE_TERMINATED` / `CONFERENCE_WILL_JOIN`) oraz stare snapshoty uczestników są ignorowane po wymuszonym rejoinie. Epoka jest inkrementowana w `requestForcedRejoin()` oraz w `join()`, a `hasConferenceConfirmation` i sesja uczestników są resetowane już w momencie żądania nowego widoku. `localBroadcastManager` pozostaje dostępny dla hang-upu. (2) `ConnectivityManager.NetworkCallback.onAvailable()` wykrywa przejście z offlinu na online i, gdy pierwsze łączenie wciąż jest w `Connecting` z oczekującym `connectTimeout`, natychmiast przekłada kolejkę retry (`FIRST_JOIN_RETRY_ON_NETWORK_MS = 0`) zamiast czekać do kolejnego 10 s pollingu. Watchdog reconnectu i polityka nieograniczonych prób pozostały bez zmian. (3) Dodano testowalne, czyste decyzje (`ReconnectAttemptTracker`, `isCurrentViewEpoch`, `shouldPreserveCallSessionOnJoin`, `shouldRetryFirstJoinOnNetworkRestore`, `classifyForcedRejoinViewRelease`) i 6 JVM testów obejmujących liczenie prób, odrzucanie starych callbacków, zachowanie sesji przy właściwym widoku, warunki natychmiastowego retry po sieci, klasyfikację release'u starego widoku oraz brak limitu kolejnych timeoutów.
-- **Verification:** `./gradlew testDebugUnitTest lintDebug --no-daemon --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8"` zakończone `BUILD SUCCESSFUL`: 209 JVM testów (0 failures/errors/skips), lint 0 errors / 26 warnings (bez nowych ostrzeżeń w zmienionych plikach). `git diff --check` czysty. Nie uruchamiano testów instrumentowanych ani weryfikacji na telefonie w tej rundzie.
+### Task_107_ApplyForcedRejoinReviewFixes: Ignore stale callbacks and retry the first join immediately.
+- **Status:** COMPLETED (implementation and local verification; confirmation of a failing reconnect on the S25 still required)
+- **Updates:** Applied three review comments on the changes from `Task_106`. (1) `JitsiCallManager` tracks `viewEpoch`: the `LocalBroadcastManager` receiver and the `ParticipantsService` callback remember the view epoch, so events already queued by the view being disposed (e.g. `CONFERENCE_TERMINATED` / `CONFERENCE_WILL_JOIN`) and stale participant snapshots are ignored after a forced rejoin. The epoch is incremented in `requestForcedRejoin()` and in `join()`, and `hasConferenceConfirmation` and the participant session are reset as soon as a new view is requested. `localBroadcastManager` remains available for hang-up. (2) `ConnectivityManager.NetworkCallback.onAvailable()` detects the transition from offline to online and, when the first join is still `Connecting` with a pending `connectTimeout`, immediately moves the retry queue forward (`FIRST_JOIN_RETRY_ON_NETWORK_MS = 0`) instead of waiting for the next 10 s poll. The reconnect watchdog and the unbounded retry policy are unchanged. (3) Added testable, pure decisions (`ReconnectAttemptTracker`, `isCurrentViewEpoch`, `shouldPreserveCallSessionOnJoin`, `shouldRetryFirstJoinOnNetworkRestore`, `classifyForcedRejoinViewRelease`) and 6 JVM tests covering attempt counting, rejection of stale callbacks, session preservation for the correct view, conditions for an immediate retry after network restoration, classification of an old view's release, and the absence of a limit on subsequent timeouts.
+- **Verification:** `./gradlew testDebugUnitTest lintDebug --no-daemon --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8"` finished with `BUILD SUCCESSFUL`: 209 JVM tests (0 failures/errors/skips), lint 0 errors / 26 warnings (no new warnings in changed files). `git diff --check` clean. Instrumented tests and phone verification were not run in this round.
 - **Acceptance Criteria:**
-  - Stale eventy i snapshoty z poprzedniej epoki widoku nie zmieniają stanu ani nie uzbrajają watchdoga nowego widoku
-  - Utracone pierwsze łączenie jest wznawiane od razu po powrocie domyślnej sieci, bez zmiany 10 s pollingu offline
-  - Kluczowe decyzje maszyny stanów wymuszonego rejoinu mają deterministyczne testy JVM, a próby pozostają nieograniczone
-  - `testDebugUnitTest` i `lintDebug` przechodzą bez regresji
+  - Stale events and snapshots from a previous view epoch do not change state or arm the new view's watchdog
+  - A lost first join is resumed immediately after the default network returns, without changing the 10 s offline polling
+  - Key decisions of the forced-rejoin state machine have deterministic JVM tests, and attempts remain unbounded
+  - `testDebugUnitTest` and `lintDebug` pass without regressions
 
-### Task_108_PrepareFdroidScriptsForV17FinalRevision: Przypięcie F-Droid do rewizji 62b5752.
-- **Status:** COMPLETED (pełny `fdroid build` i force-push tagu na `origin` nadal ręcznie; GitHub OK)
-- **Updates:** Zaktualizowano kandydacką recepturę `fdroid/dev.communicator.helmchatrisen.yml`
-  do commitu `62b57523121fe33ea79c4598431c7b276bafe611` (lokalny tag `V1.7` wskazuje
-  dokładnie ten commit). `scripts/fdroid-build-local.sh` przed buildem sprawdza zgodność
-  tagu i dwóch kopii receptury z przypiętym commitem (`FDROID_RELEASE_TAG` /
-  `FDROID_RELEASE_COMMIT` mają wartości domyślne `V1.7` i `62b575…`). Odświeżono
-  `fdroid/README.md`, `RELEASE_NOTES.md`, changelogi 7/700 oraz skill `f-droid`: opis
-  zawiera teraz infinite-reconnect z finalnej rewizji, aktualne liczby testów (209)
-  i informację, że tag `V1.7` na GitHub jest już poprawny, a niespójny pozostaje tylko `origin` (stary `3e2f332`, obiekt tagu `8264f5e`).
-- **Verification:** `bash -n` dla wszystkich skryptów, parsowanie YAML (jeden blok,
-  kod 700, `commit: 62b575…`) i `git diff --check` przeszły. W tymczasowym
-  `build/fdroiddata-test` polecenia `fdroid readmeta -W warn`, `fdroid rewritemeta
-  dev.communicator.helmchatrisen` i `fdroid lint dev.communicator.helmchatrisen`
-  zakończyły się bez uwag; symulacja helpera z fake `fdroid` potwierdziła
-  akceptację poprawnego pinu i odrzucenie starego, z zachowaniem `config.yml`
-  (identyczna suma SHA-256 przed/po). `./gradlew testDebugUnitTest assembleDebug
-  lintDebug` oraz `./gradlew assembleRelease` z ograniczonymi workerami przeszły:
-  209 testów JVM (0 failures/errors/skips), lint 0 errors / 26 warnings, trzy
-  debug APK-i i trzy release APK-i. Pełny `fdroid build` nie został uruchomiony
-  (brak stałego katalogu `fdroiddata`, wymagane ~6 GiB `npm ci`).
+### Task_108_PrepareFdroidScriptsForV17FinalRevision: Pin F-Droid to revision 62b5752.
+- **Status:** COMPLETED (full `fdroid build` still manual; the GitHub `V1.7` tag is verified)
+- **Updates:** Updated the candidate recipe `fdroid/dev.communicator.helmchatrisen.yml`
+  to commit `62b57523121fe33ea79c4598431c7b276bafe611` (the local `V1.7` tag points
+  to exactly that commit). `scripts/fdroid-build-local.sh` verifies the tag and
+  both recipe copies against the pinned commit before invoking a build
+  (`FDROID_RELEASE_TAG` / `FDROID_RELEASE_COMMIT` default to `V1.7` and `62b575…`).
+  Refreshed `fdroid/README.md`, `RELEASE_NOTES.md`, changelogs 7/700 and the
+  `f-droid` skill: the description now covers the infinite reconnect from the
+  final revision, the current test count (209) and the verified GitHub `V1.7`
+  tag. The recipe documents only the public GitHub tag because that is the
+  source F-Droid builds from.
+- **Verification:** `bash -n` for all scripts, YAML parsing (one build, code 700,
+  `commit: 62b575…`) and `git diff --check` passed. In the temporary
+  `build/fdroiddata-test` checkout, `fdroid readmeta -W warn`, `fdroid rewritemeta
+  dev.communicator.helmchatrisen` and `fdroid lint dev.communicator.helmchatrisen`
+  completed without findings; a fake-`fdroid` helper simulation confirmed that a
+  valid pin is accepted and a stale pin is rejected before any file changes,
+  with `config.yml` preserved byte-for-byte (identical SHA-256 before/after).
+  `./gradlew testDebugUnitTest assembleDebug lintDebug` and `./gradlew assembleRelease`
+  with constrained workers passed: 209 JVM tests (0 failures/errors/skips),
+  lint 0 errors / 26 warnings, three debug APKs and three release APKs. A full
+  `fdroid build` was not run (no permanent `fdroiddata` checkout and ~6 GiB
+  needed for `npm ci`).
 - **Acceptance Criteria:**
-  - Receptura i lokalny helper wskazują wyłącznie rewizję `62b575…` tagu `V1.7`
-  - Stale copy receptury w `fdroiddata` jest odrzucana przed jakimikolwiek zmianami plików
-  - Metadane przechodzą `readmeta`/`rewritemeta`/`lint`, a build/test/lint/release przechodzą lokalnie
-  - Manual: force-push tagu `V1.7` na `origin` (GitHub już OK; tylko dla spójności), skopiować recepturę do właściwego `fdroiddata` i uruchomić pełny `fdroid build -v dev.communicator.helmchatrisen:700`
+  - The recipe and local helper reference only revision `62b575…` of tag `V1.7`
+  - A stale recipe copy in `fdroiddata` is rejected before any file changes
+  - Metadata passes `readmeta`/`rewritemeta`/`lint`, and build/test/lint/release pass locally
+  - Manual: copy the recipe into a real `fdroiddata` checkout and run the full `fdroid build -v dev.communicator.helmchatrisen:700`
+
+### Task_109_PrepareFdroiddataInclusionMR: Copy HelmChatRisen 1.7 metadata into fdroiddata.
+- **Status:** COMPLETED (full `fdroid build` verified; inclusion merge request still manual)
+- **Updates:** In `~/AndroidStudioProjects/fdroiddata`, added `metadata/dev.communicator.helmchatrisen.yml` from the candidate recipe, plus the en-US fastlane texts under `metadata/dev.communicator.helmchatrisen/`: `summary.txt`, `description.txt` and `changelogs/700.txt`. `fdroid rewritemeta` normalized the recipe; it still pins `62b575…`, publishes only arm64-v8a with code 700 and keeps `VercodeOperation: 100 * %c`. `scripts/fdroid-build-local.sh` now creates the F-Droid log webroot `repo/status` directory and lists APKs from the build tree.
+- **Verification:** With a temporary, restored `config.yml` rewrite of the `{env: ...}` placeholders (fdroidserver 2.2.1), `fdroid rewritemeta dev.communicator.helmchatrisen`, `fdroid lint -f dev.communicator.helmchatrisen` and `fdroid readmeta -W ignore` passed. Global `fdroid readmeta` without `-W ignore` is blocked by an unrelated pre-existing `TetheredNet` anti-feature in `ac.ella.peerpop` on this fdroidserver version. A full `fdroid build -v dev.communicator.helmchatrisen:700` succeeded via `scripts/fdroid-build-700.sh`; the log is `build/fdroid-logs/dev.communicator.helmchatrisen-700-20261127-233611.log`. The unsigned APK `fdroiddata/build/dev.communicator.helmchatrisen/app/build/outputs/apk/release/HelmChatRisen-1.7-release-arm64-v8a.apk` has SHA-256 `0c0f091ba68ce13a1556c40c94d948977bc8bf7e0f647bcf1a1d699f713d7bf2`; `aapt dump badging` reports package `dev.communicator.helmchatrisen`, versionCode `700` and versionName `1.7`. `config.yml` was restored byte-for-byte and `git diff --check` is clean in both repositories. The build log contains five non-fatal rsync errors for the missing local webroot `repo/status`; the helper was fixed afterwards but the full build was not rerun solely for that fix.
+- **Acceptance Criteria:**
+  - fdroiddata contains the recipe and en-US fastlane texts for code 700
+  - Metadata passes `rewritemeta` and targeted `lint -f`
+  - Full `fdroid build` is verified locally; the inclusion merge request remains manual

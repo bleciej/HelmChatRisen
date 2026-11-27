@@ -23,7 +23,8 @@ readonly RELEASE_COMMIT="${FDROID_RELEASE_COMMIT:-62b57523121fe33ea79c4598431c7b
 readonly RECIPE="$PROJECT_ROOT/fdroid/dev.communicator.helmchatrisen.yml"
 readonly FDROID_RECIPE="$FDROID_DATA/metadata/$APP_ID.yml"
 
-mkdir -p "$LOG_DIR" "$TMP_DIR" "$SHIM_DIR" "$BUILD_DIR/fdroid-local/gpg" "$BUILD_DIR/fdroid-local/webroot"
+mkdir -p "$LOG_DIR" "$TMP_DIR" "$SHIM_DIR" "$BUILD_DIR/fdroid-local/gpg" \
+  "$BUILD_DIR/fdroid-local/webroot/repo/status"
 touch "$BUILD_DIR/fdroid-local/dummy.jks"
 
 if [[ ! -d "$FDROID_DATA" ]]; then
@@ -163,5 +164,5 @@ for version in "${versions[@]}"; do
 done
 
 echo "=== Wygenerowane APK ==="
-find "$FDROID_DATA" -maxdepth 2 -name 'HelmChatRisen-*.apk' -print 2>/dev/null || true
+find "$FDROID_DATA/build/$APP_ID" -name 'HelmChatRisen-*.apk' -print 2>/dev/null || true
 exit "$overall"

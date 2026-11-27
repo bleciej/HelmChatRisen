@@ -498,10 +498,9 @@ Jitsi Maven repository is no longer configured, and built AARs are never
 committed — an F-Droid recipe must run the source build itself.
 
 Already compliant: MIT license with `LICENSE` at the repository root, public
-source on GitHub with a consistent `V*` tag scheme (the local and GitHub `V1.7`
-tags point at `62b575`; only `origin` still exposes the obsolete `3e2f332`
-annotated tag and needs a force-push for consistency), static
-`versionName`/`versionCode`, committed Gradle wrapper and
+source on GitHub with a consistent `V*` tag scheme (the local and `github`
+`V1.7` tags point at `62b575`), static `versionName`/`versionCode`, committed
+Gradle wrapper and
 jar, no ads and no application-level Firebase, Play Services or analytics,
 user-selectable/self-hostable Jitsi servers (no `TetheredNet` dependence), and
 no forbidden group in `releaseRuntimeClasspath`.
@@ -522,16 +521,14 @@ Remaining work before official inclusion:
   one build block (code 700) and an explicit `output` glob. The 32-bit build was
   dropped from F-Droid because it repeats the long Jitsi SDK/npm compile.
 - The `commit:` field pins the final 1.7 release commit
-  `62b57523121fe33ea79c4598431c7b276bafe611`; the local and GitHub `V1.7` tags
-  match it. `origin` still advertises the old annotated tag (object
-  `8264f5e...`, commit `3e2f332...`) and should be force-pushed for consistency.
-  `scripts/fdroid-build-local.sh` now rejects a build when the tag or either
-  recipe copy is pinned to a different commit.
-  `fdroid readmeta`/`rewritemeta`/`lint` pass on a temporary metadata-only
-  checkout with fdroidserver 2.2.1, and a local `assembleRelease` produced all
-  three 1.7 APKs. A full `fdroid build -v
-  dev.communicator.helmchatrisen:700` still has to be rerun in a complete
-  `fdroiddata` checkout.
+  `62b57523121fe33ea79c4598431c7b276bafe611`; the local and `github` `V1.7`
+  tags match it. `scripts/fdroid-build-local.sh` now rejects a build when the
+  tag or either recipe copy is pinned to a different commit.
+  `fdroid readmeta -W ignore`, `rewritemeta`, `lint -f` and a full
+  `fdroid build -v dev.communicator.helmchatrisen:700` passed in a complete
+  `fdroiddata` checkout with fdroidserver 2.2.1 on `2026-11-27`; the arm64-v8a
+  APK has versionCode `700` / versionName `1.7`. Plain `readmeta` is blocked by
+  unrelated pre-existing `ac.ella.peerpop` metadata.
 - The locally generated toolchain and checkout live in the gitignored
   `build/helmchat-jitsi-build` and `build/helmchat-jitsi-sdk` directories and
   must be recreated in F-Droid's build environment.
@@ -711,6 +708,6 @@ apksigner verify --print-certs \
 
 APKs are written under `app/build/outputs/apk/release/` and bundles under
 `app/build/outputs/bundle/release/`. Any manual copy under `app/release/` is
-local-only and ignored by Git. The GitHub `V1.7` tag matches the release commit;
-`origin` still has the stale annotated tag and should be updated before
-building published binaries from that remote.
+local-only and ignored by Git. The `V1.7` tag is published on `github` and
+matches the release commit used by the F-Droid recipe; verify it before
+building published binaries from a clean tag.

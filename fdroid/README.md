@@ -46,30 +46,31 @@ repository list.
       The `commit:` field pins that hash; the earlier pins `03572db` and
       `3e2f332` are obsolete.
 - [x] Force-push the local `V1.7` tag to `github`. Verified `2026-11-27`:
-      `refs/tags/V1.7` = `62b57523121fe33ea79c4598431c7b276bafe611` there.
-      F-Droid builds from GitHub, so the MR is no longer blocked by the tag.
-- [ ] Force-push the local `V1.7` tag to `origin` for consistency only. It still
-      exposes annotated tag object `8264f5e155aeca3fe0cc63a6084a4aff0a533e02`
-      peeling to stale commit `3e2f332109e973e2a630472bf0595eae1ba642ac`.
+      `refs/tags/V1.7` = `62b57523121fe33ea79c4598431c7b276bafe611`. F-Droid
+      builds from GitHub, whose tag matches the pinned commit, so the MR is not
+      blocked by the tag.
 - [x] Review the upstream short/full descriptions under
       `fastlane/metadata/android/en-US/` (they supply F-Droid's Summary and
       Description, so do not duplicate those fields in the `.yml`). Changelogs
       `7.txt` and `700.txt` are present; `701.txt` and `702.txt` were removed
       with the unpublished 32-bit/702 packages. Screenshots remain optional.
-- [ ] Confirm the F-Droid runner has enough disk: Jitsi's `node_modules` is
-      about 6 GiB and the toolchain adds roughly 0.5 GiB.
-- [ ] Re-validate the metadata in an `fdroidserver` checkout after adding the
+- [x] Confirm the F-Droid runner has enough disk: Jitsi's `node_modules` is
+      about 6 GiB and the toolchain adds roughly 0.5 GiB. The local build
+      succeeded with 22 GiB free.
+- [x] Re-validate the metadata in an `fdroidserver` checkout after adding the
       pinned Gradle install:
 
       ```bash
-      fdroid readmeta dev.communicator.helmchatrisen
+      fdroid readmeta -W ignore
       fdroid rewritemeta dev.communicator.helmchatrisen
-      fdroid lint dev.communicator.helmchatrisen
+      fdroid lint -f dev.communicator.helmchatrisen
       fdroid build -v dev.communicator.helmchatrisen:700
       ```
 
-      `readmeta`/`rewritemeta`/`lint` passed before that change; the full
-      `fdroid build` for code 700 has not been rerun yet.
+      Completed `2026-11-27` with fdroidserver 2.2.1. Plain `fdroid readmeta`
+      still fails on unrelated pre-existing `ac.ella.peerpop` metadata, hence
+      `-W ignore`. The full build succeeded from `62b575…` and produced the
+      arm64-v8a APK.
 - [x] Re-run `./gradlew :app:dependencies --configuration releaseRuntimeClasspath`
       on the tagged commit and confirm no Play Services, Firebase, GMS,
       install-referrer, Amplitude, Giphy or Google Sign-In dependency appears.
