@@ -2,3 +2,4 @@ F-Droid build for arm64-v8a of HelmChatRisen 1.7. Audio-only Jitsi calls, helmet
 The Application info dialog now shows the bundled Jitsi SDK version instead of the internal version code and tag.
 Updated AndroidX AppCompat to 1.8.0 for the Jitsi-compatible host theme.
 The meet.jit.si preset is temporarily hidden until its moderator sign-in flow is fixed.
+Stalled reconnects now recreate the Jitsi view and keep retrying the same room; stale callbacks from the old view are ignored and offline periods do not restart views needlessly.

@@ -18,6 +18,10 @@ readonly TMP_DIR="$BUILD_DIR/fdroid-tmp"
 readonly SHIM_DIR="$BUILD_DIR/gradle-shim"
 readonly CONFIG="$FDROID_DATA/config.yml"
 readonly CONFIG_BACKUP="$BUILD_DIR/fdroiddata-config.yml.backup"
+readonly RELEASE_TAG="${FDROID_RELEASE_TAG:-V1.7}"
+readonly RELEASE_COMMIT="${FDROID_RELEASE_COMMIT:-62b57523121fe33ea79c4598431c7b276bafe611}"
+readonly RECIPE="$PROJECT_ROOT/fdroid/dev.communicator.helmchatrisen.yml"
+readonly FDROID_RECIPE="$FDROID_DATA/metadata/$APP_ID.yml"
 
 mkdir -p "$LOG_DIR" "$TMP_DIR" "$SHIM_DIR" "$BUILD_DIR/fdroid-local/gpg" "$BUILD_DIR/fdroid-local/webroot"
 touch "$BUILD_DIR/fdroid-local/dummy.jks"
@@ -30,6 +34,35 @@ if [[ ! -f "$CONFIG" ]]; then
   echo "Brak pliku $CONFIG (ustaw FDROID_DATA)." >&2
   exit 1
 fi
+
+# Check that the local tag and both recipe copies point at the requested release commit.
+verify_release_pin() {
+  local tag_commit recipe
+  if [[ ! -f "$RECIPE" ]]; then
+    echo "Brak receptury $RECIPE." >&2
+    exit 1
+  fi
+  if [[ ! -f "$FDROID_RECIPE" ]]; then
+    echo "Brak receptury $FDROID_RECIPE w fdroiddata." >&2
+    exit 1
+  fi
+  if ! tag_commit="$(git -C "$PROJECT_ROOT" rev-parse --verify "refs/tags/${RELEASE_TAG}^{commit}" 2>/dev/null)"; then
+    echo "Brak tagu $RELEASE_TAG w repozytorium $PROJECT_ROOT." >&2
+    exit 1
+  fi
+  if [[ "$tag_commit" != "$RELEASE_COMMIT" ]]; then
+    echo "Tag $RELEASE_TAG wskazuje $tag_commit, a nie $RELEASE_COMMIT." >&2
+    exit 1
+  fi
+  for recipe in "$RECIPE" "$FDROID_RECIPE"; do
+    if ! grep -Eq "^[[:space:]]*commit:[[:space:]]*${RELEASE_COMMIT}[[:space:]]*$" "$recipe"; then
+      echo "$recipe nie jest przypięty do $RELEASE_COMMIT." >&2
+      exit 1
+    fi
+  done
+  echo "Zweryfikowano $RELEASE_TAG = $RELEASE_COMMIT w recepturze F-Droid."
+}
+verify_release_pin
 
 # 1. JDK 17 (Jitsi) - downloaded locally by Gradle; the buildserver installs it via sudo.
 export JDK17_HOME="${JDK17_HOME:-$HOME/.gradle/jdks/eclipse_adoptium-17-amd64-linux.2}"

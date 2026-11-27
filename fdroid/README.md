@@ -9,6 +9,10 @@ Only the `arm64-v8a` APK is submitted to F-Droid. Upstream still builds 32-bit a
 universal APKs, but the F-Droid recipe has a single build block with version code
 `700`; the 32-bit code `701` is deliberately not published.
 
+`scripts/fdroid-build-local.sh` refuses to run unless the local `V1.7` tag and
+both the candidate recipe and the `fdroiddata` copy pin commit
+`62b57523121fe33ea79c4598431c7b276bafe611`.
+
 ## What the recipe does
 
 1. `sudo` runs [`scripts/fdroid-install-deps.sh`](../scripts/fdroid-install-deps.sh)
@@ -37,12 +41,16 @@ repository list.
 
 ## Before opening the fdroiddata merge request
 
-- [x] Merge `V1.7-rc` into `master` and move the annotated `V1.7` tag to the
-      final `master` commit `3e2f332109e973e2a630472bf0595eae1ba642ac`. The
-      `commit:` field pins that hash; the published tag was force-moved from
-      `03572db` to include the final changes.
-- [x] Push the moved `V1.7` tag to GitHub. Verified:
-      `refs/tags/V1.7` = `3e2f332109e973e2a630472bf0595eae1ba642ac`.
+- [x] Merge `V1.7-rc` into `master` and move the local annotated `V1.7` tag to
+      the final `master` commit `62b57523121fe33ea79c4598431c7b276bafe611`.
+      The `commit:` field pins that hash; the earlier pins `03572db` and
+      `3e2f332` are obsolete.
+- [x] Force-push the local `V1.7` tag to `github`. Verified `2026-11-27`:
+      `refs/tags/V1.7` = `62b57523121fe33ea79c4598431c7b276bafe611` there.
+      F-Droid builds from GitHub, so the MR is no longer blocked by the tag.
+- [ ] Force-push the local `V1.7` tag to `origin` for consistency only. It still
+      exposes annotated tag object `8264f5e155aeca3fe0cc63a6084a4aff0a533e02`
+      peeling to stale commit `3e2f332109e973e2a630472bf0595eae1ba642ac`.
 - [x] Review the upstream short/full descriptions under
       `fastlane/metadata/android/en-US/` (they supply F-Droid's Summary and
       Description, so do not duplicate those fields in the `.yml`). Changelogs

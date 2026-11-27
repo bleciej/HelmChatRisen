@@ -376,6 +376,10 @@ source and advances the release metadata to version 1.7, code 7 and tag `V1.7`.
   F-Droid code 700; the 32-bit package is deliberately not submitted.
 - **Reconnect patch:** verified against the 13.1.1 JS bundle and applied to both
   debug and release assets.
+- **Stalled reconnect recovery:** a watchdog timeout requests a fresh Jitsi view
+  and retries the same room without a fixed attempt limit. Events queued by the
+  removed view are ignored, the call timer and room survive the swap, and a first
+  join retries immediately when the network returns.
 - **Startup crash fixed:** SDK 13.1.1 starts its bridgeless ReactHost from
   `JitsiInitializer` during Application startup and creates AppCompat widgets;
   the former `android:Theme.Material` parent aborted the process with "requires
@@ -399,8 +403,8 @@ source and advances the release metadata to version 1.7, code 7 and tag `V1.7`.
 
 - `./gradlew testDebugUnitTest assembleDebug lintDebug --console=plain
   --no-daemon --max-workers=2 -Dorg.gradle.jvmargs="-Xmx4096m
-  -Dfile.encoding=UTF-8"` passed: 199 JVM tests (0 failures/errors/skips),
-  lint 0 errors / 25 warnings,
+  -Dfile.encoding=UTF-8"` passed: 209 JVM tests (0 failures/errors/skips),
+  lint 0 errors / 26 warnings,
   three debug APKs.
 - `./gradlew connectedAndroidTest` passed on `Medium_Phone_API_37.0`: 3 tests,
   including the AppCompat theme smoke test and the call timer accessibility
@@ -494,19 +498,20 @@ Jitsi Maven repository is no longer configured, and built AARs are never
 committed — an F-Droid recipe must run the source build itself.
 
 Already compliant: MIT license with `LICENSE` at the repository root, public
-source on GitHub with a consistent `V*` tag scheme (the `V1.7` tag was moved to
-the final master commit `3e2f332` and pushed to both `origin` and GitHub),
-static `versionName`/`versionCode`, committed Gradle wrapper and jar, no ads
-and no application-level Firebase, Play Services or analytics,
+source on GitHub with a consistent `V*` tag scheme (the local and GitHub `V1.7`
+tags point at `62b575`; only `origin` still exposes the obsolete `3e2f332`
+annotated tag and needs a force-push for consistency), static
+`versionName`/`versionCode`, committed Gradle wrapper and
+jar, no ads and no application-level Firebase, Play Services or analytics,
 user-selectable/self-hostable Jitsi servers (no `TetheredNet` dependence), and
 no forbidden group in `releaseRuntimeClasspath`.
 
 Remaining work before official inclusion:
 
 - The candidate recipe and upstream descriptions in
-  [`fdroid/`](fdroid/README.md) and `fastlane/metadata/android/` were copied into
-  a local `fdroiddata` checkout. The inclusion merge request still has to be
-  pushed from that checkout; the recipe runs
+  [`fdroid/`](fdroid/README.md) and `fastlane/metadata/android/` must be copied
+  into an `fdroiddata` checkout before the inclusion merge request is opened;
+  the recipe runs
   `scripts/fdroid-install-deps.sh` first (JDK 17/21, build tools and a
   checksum-pinned Gradle 9.6), then `scripts/build-jitsi-libre-sdk.sh`
   (Node.js 24+ and a local Maven repository), and then builds the app.
@@ -517,13 +522,16 @@ Remaining work before official inclusion:
   one build block (code 700) and an explicit `output` glob. The 32-bit build was
   dropped from F-Droid because it repeats the long Jitsi SDK/npm compile.
 - The `commit:` field pins the final 1.7 release commit
-  `3e2f332109e973e2a630472bf0595eae1ba642ac`; the published `V1.7` tag was
-  force-moved from `03572db` to that commit and pushed to `origin` and GitHub.
-  `fdroid readmeta`/`rewritemeta`/`lint` passed before the Gradle provisioning
-  fix, and a quick Gradle build from that commit with `appVersionCode = 700`
-  produced the `arm64-v8a` APK. A full `fdroid build -v
-  dev.communicator.helmchatrisen:700` still has to be rerun in `fdroidserver`
-  after the pinned Gradle installation was added.
+  `62b57523121fe33ea79c4598431c7b276bafe611`; the local and GitHub `V1.7` tags
+  match it. `origin` still advertises the old annotated tag (object
+  `8264f5e...`, commit `3e2f332...`) and should be force-pushed for consistency.
+  `scripts/fdroid-build-local.sh` now rejects a build when the tag or either
+  recipe copy is pinned to a different commit.
+  `fdroid readmeta`/`rewritemeta`/`lint` pass on a temporary metadata-only
+  checkout with fdroidserver 2.2.1, and a local `assembleRelease` produced all
+  three 1.7 APKs. A full `fdroid build -v
+  dev.communicator.helmchatrisen:700` still has to be rerun in a complete
+  `fdroiddata` checkout.
 - The locally generated toolchain and checkout live in the gitignored
   `build/helmchat-jitsi-build` and `build/helmchat-jitsi-sdk` directories and
   must be recreated in F-Droid's build environment.
@@ -545,8 +553,8 @@ Remaining work before official inclusion:
   `dbce6bc9199558ae86ed0774d300adc2ecdd97b6438ae60c8af9e871876254c2` and the
   AAB passes `jarsigner -verify`.
 - Static analysis/inspections in the IDE or CI are recommended as well.
-- Latest run (`2026-11-24`, tag metadata `V1.7`, source-built SDK 13.1.1): 199 JVM tests pass with
-  0 failures/errors/skips; lint reports 0 errors / 25 warnings; `assembleDebug`,
+- Latest run (`2026-11-26`, tag metadata `V1.7`, source-built SDK 13.1.1): 209 JVM tests pass with
+  0 failures/errors/skips; lint reports 0 errors / 26 warnings; `assembleDebug`,
   `assembleRelease`, `bundleRelease` and `connectedAndroidTest` (3 tests on the
   x86_64 emulator) all pass, and the reconnect JS patch is applied to both debug
   and release bundles. The launch crash caused by the non-AppCompat theme was
@@ -569,7 +577,7 @@ recipe:
   route. `AUDIOFOCUS_LOSS` only clears the held flag; transient losses are
   logged. The intent is to make the rider's radio duck rather than stop.
 - Verified in the final 1.7 build: five `AudioFocusControllerTest` cases pass
-  within 199 JVM tests (0 failures/errors/skips), lint 0 errors / 25 warnings,
+  within 209 JVM tests (0 failures/errors/skips), lint 0 errors / 26 warnings,
   and `connectedAndroidTest` runs 3/3 on `Medium_Phone_API_37.0`. The release
   APKs and AAB were rebuilt with this code and re-signed.
 - **Device audit (`2026-11-23`, 16:44:11–16:45:37, app PID 27456, TuneIn PID
@@ -615,9 +623,9 @@ recipe:
   and teardown. The label and value are merged into one accessibility node. The
   label is translated in all 29 app locales and the base English entry no longer
   suppresses `MissingTranslation`.
-- Verified in the final 1.7 build: 199 JVM tests (0 failures/errors/skips,
+- Verified in the final 1.7 build: 209 JVM tests (0 failures/errors/skips,
   including formatter, ticker and timestamp-lifecycle cases), lint 0 errors /
-  25 warnings, `assembleDebug` with per-ABI outputs, and `connectedAndroidTest`
+  26 warnings, `assembleDebug` with per-ABI outputs, and `connectedAndroidTest`
   3/3 on `Medium_Phone_API_37.0`, including the timer semantics test. Release
   APKs and AAB were rebuilt with this code and re-signed.
 - The compact Picture-in-Picture layout has no route button and therefore no
@@ -703,5 +711,6 @@ apksigner verify --print-certs \
 
 APKs are written under `app/build/outputs/apk/release/` and bundles under
 `app/build/outputs/bundle/release/`. Any manual copy under `app/release/` is
-local-only and ignored by Git. The `V1.7` tag is published on `origin` and
-GitHub; verify it before building published binaries from a clean tag.
+local-only and ignored by Git. The GitHub `V1.7` tag matches the release commit;
+`origin` still has the stale annotated tag and should be updated before
+building published binaries from that remote.

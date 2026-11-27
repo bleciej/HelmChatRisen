@@ -1296,3 +1296,30 @@ HelmChatReborn is an Android voice communication (audio call) application tailor
   - Utracone pierwsze łączenie jest wznawiane od razu po powrocie domyślnej sieci, bez zmiany 10 s pollingu offline
   - Kluczowe decyzje maszyny stanów wymuszonego rejoinu mają deterministyczne testy JVM, a próby pozostają nieograniczone
   - `testDebugUnitTest` i `lintDebug` przechodzą bez regresji
+
+### Task_108_PrepareFdroidScriptsForV17FinalRevision: Przypięcie F-Droid do rewizji 62b5752.
+- **Status:** COMPLETED (pełny `fdroid build` i force-push tagu na `origin` nadal ręcznie; GitHub OK)
+- **Updates:** Zaktualizowano kandydacką recepturę `fdroid/dev.communicator.helmchatrisen.yml`
+  do commitu `62b57523121fe33ea79c4598431c7b276bafe611` (lokalny tag `V1.7` wskazuje
+  dokładnie ten commit). `scripts/fdroid-build-local.sh` przed buildem sprawdza zgodność
+  tagu i dwóch kopii receptury z przypiętym commitem (`FDROID_RELEASE_TAG` /
+  `FDROID_RELEASE_COMMIT` mają wartości domyślne `V1.7` i `62b575…`). Odświeżono
+  `fdroid/README.md`, `RELEASE_NOTES.md`, changelogi 7/700 oraz skill `f-droid`: opis
+  zawiera teraz infinite-reconnect z finalnej rewizji, aktualne liczby testów (209)
+  i informację, że tag `V1.7` na GitHub jest już poprawny, a niespójny pozostaje tylko `origin` (stary `3e2f332`, obiekt tagu `8264f5e`).
+- **Verification:** `bash -n` dla wszystkich skryptów, parsowanie YAML (jeden blok,
+  kod 700, `commit: 62b575…`) i `git diff --check` przeszły. W tymczasowym
+  `build/fdroiddata-test` polecenia `fdroid readmeta -W warn`, `fdroid rewritemeta
+  dev.communicator.helmchatrisen` i `fdroid lint dev.communicator.helmchatrisen`
+  zakończyły się bez uwag; symulacja helpera z fake `fdroid` potwierdziła
+  akceptację poprawnego pinu i odrzucenie starego, z zachowaniem `config.yml`
+  (identyczna suma SHA-256 przed/po). `./gradlew testDebugUnitTest assembleDebug
+  lintDebug` oraz `./gradlew assembleRelease` z ograniczonymi workerami przeszły:
+  209 testów JVM (0 failures/errors/skips), lint 0 errors / 26 warnings, trzy
+  debug APK-i i trzy release APK-i. Pełny `fdroid build` nie został uruchomiony
+  (brak stałego katalogu `fdroiddata`, wymagane ~6 GiB `npm ci`).
+- **Acceptance Criteria:**
+  - Receptura i lokalny helper wskazują wyłącznie rewizję `62b575…` tagu `V1.7`
+  - Stale copy receptury w `fdroiddata` jest odrzucana przed jakimikolwiek zmianami plików
+  - Metadane przechodzą `readmeta`/`rewritemeta`/`lint`, a build/test/lint/release przechodzą lokalnie
+  - Manual: force-push tagu `V1.7` na `origin` (GitHub już OK; tylko dla spójności), skopiować recepturę do właściwego `fdroiddata` i uruchomić pełny `fdroid build -v dev.communicator.helmchatrisen:700`

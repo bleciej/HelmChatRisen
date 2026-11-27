@@ -88,12 +88,16 @@ Fetch the current pages before an audit or submission: the policy and the list o
   `fastlane/metadata/android/en-US/` - do NOT duplicate `Summary` or
   `Description` in the `.yml`, F-Droid docs say the upstream fastlane text wins
   and the metadata field would override it.
-- The `commit:` field pins the published `V1.7` commit
-  `3e2f332109e973e2a630472bf0595eae1ba642ac`. `readmeta` / `rewritemeta` /
-  `lint` passed before the Gradle provisioning fix; rerun all three plus
-  `build -v ...:700` in an `fdroidserver` environment. Locally,
-  fdroidserver 2.2.1 needs a temporary rewrite of the `{env: ...}` values in
-  `config.yml`.
+- The `commit:` field pins the final `V1.7` commit
+  `62b57523121fe33ea79c4598431c7b276bafe611`; the local tag and GitHub `V1.7`
+  now match it. `origin` still exposes the old annotated `3e2f332` tag (object
+  `8264f5e`) and should be force-pushed for consistency, but F-Droid builds from
+  GitHub. `scripts/fdroid-build-local.sh` checks both recipe copies against the
+  pinned commit before invoking `fdroid build`.
+  `readmeta` / `rewritemeta` / `lint` passed before the Gradle provisioning fix;
+  rerun all three plus `build -v ...:700` in an `fdroidserver` environment.
+  Locally, fdroidserver 2.2.1 needs a temporary rewrite of the `{env: ...}`
+  values in `config.yml`.
 
 ### Project recipe invariants
 

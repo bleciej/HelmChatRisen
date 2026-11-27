@@ -29,15 +29,17 @@ MaintainerNotes: |
   Only arm64-v8a is submitted: compiling the 32-bit variant would repeat the
   long Jitsi SDK/npm build without adding a supported rider device class.
   The commit below is the final V1.7 release commit on master
-  (3e2f332109e973e2a630472bf0595eae1ba642ac). Upstream appVersionCode is 7, so
-  the VercodeOperation below derives F-Droid code 700 for arm64-v8a.
+  (62b57523121fe33ea79c4598431c7b276bafe611). The local tag and GitHub V1.7
+  match it; the origin remote still has the stale annotated tag and should be
+  force-pushed for consistency. Upstream appVersionCode is 7, so the
+  VercodeOperation below derives F-Droid code 700 for arm64-v8a.
   prebuild replaces ./gradlew with gradle on PATH because F-Droid removes the
   Gradle wrapper from the source archive.
 
 Builds:
   - versionName: '1.7'
     versionCode: 700
-    commit: 3e2f332109e973e2a630472bf0595eae1ba642ac
+    commit: 62b57523121fe33ea79c4598431c7b276bafe611
     timeout: 14400
     sudo: ./scripts/fdroid-install-deps.sh
     output: app/build/outputs/apk/release/HelmChatRisen-*-release-arm64-v8a.apk
